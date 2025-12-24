@@ -3,8 +3,8 @@
  */
 
 import { describe, test, expect, beforeEach } from "bun:test";
-import { InMemoryEventStore } from "./event-store";
-import type { DevaEvent } from "./types";
+import { InMemoryEventStore } from "@/events/event-store";
+import type { DevaEvent } from "@/events/types";
 
 describe("InMemoryEventStore", () => {
   let store: InMemoryEventStore;

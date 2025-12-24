@@ -1,17 +1,19 @@
-# Bun
-node_modules/
+# Dependencies
+**/node_modules/
 *.log
-bun.lockb
+**/bun.lockb
 
 # Build artifacts
-dist/
-build/
+**/dist/
+**/build/
 *.tsbuildinfo
 
 # Environment
 .env
 .env.local
 .env.*.local
+**/.env
+**/.env.local
 
 # IDE
 .vscode/
@@ -25,10 +27,20 @@ build/
 Thumbs.db
 
 # Testing
-coverage/
-.nyc_output/
+**/coverage/
+**/.nyc_output/
 
 # Temporary
 tmp/
 temp/
 *.tmp
+
+# Python (for llm-service)
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.so
+.venv/
+venv/
+ENV/

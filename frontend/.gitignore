@@ -1,0 +1,33 @@
+# Environment
+.env
+.env.local
+.env.production.local
+
+# Dependencies
+node_modules/
+bun.lockb
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build
+dist/
+build/
+.next/
+.nuxt/
+.output/
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+
+# Testing
+coverage/
+
+# Temp
+*.tmp
+.DS_Store

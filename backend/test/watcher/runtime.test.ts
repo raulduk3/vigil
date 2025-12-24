@@ -3,8 +3,8 @@
  */
 
 import { describe, test, expect } from "bun:test";
-import { replayEvents, evaluateThreadUrgency } from "./runtime";
-import type { DevaEvent, ThreadState } from "./runtime";
+import { replayEvents, evaluateThreadUrgency } from "@/watcher/runtime";
+import type { DevaEvent, ThreadState } from "@/watcher/runtime";
 
 describe("replayEvents", () => {
   test("should start with created status", () => {
