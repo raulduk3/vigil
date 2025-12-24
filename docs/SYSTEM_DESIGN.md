@@ -14,6 +14,7 @@ This document defines the complete, implementation-grade system design for DEVA.
 5. [Subsystem 2: Event-Sourced Runtime Executing Watchers](#5-subsystem-2-event-sourced-runtime-executing-watchers)
 6. [Subsystem 3: Bounded Semantic Intelligence](#6-subsystem-3-bounded-semantic-intelligence)
 7. [Subsystem 4: Notification and Inspection Interfaces](#7-subsystem-4-notification-and-inspection-interfaces)
+   - 7.3 [State Reconstruction and Query Strategy](#73-state-reconstruction-and-query-strategy)
 8. [Core Domain Concepts](#8-core-domain-concepts)
 9. [Event Model](#9-event-model)
 10. [Cross-Cutting Guarantees](#10-cross-cutting-guarantees)
@@ -836,6 +837,265 @@ Backend emits: THREAD_CLOSED event
 #### Configuration:
 See `frontend/.env.example`
 
+---
+
+### 7.3 State Reconstruction and Query Strategy
+
+When users view watchers, threads, and reminders in the dashboard, the system must provide **current derived state** efficiently while maintaining the guarantee that all state comes from events.
+
+#### The Two-Tier Approach
+
+DEVA uses a **two-tier state reconstruction strategy** that balances correctness with performance:
+
+**Tier 1: Real-Time Event Replay (Small Watchers)**
+
+For watchers with manageable event counts (typically < 10,000 events):
+
+```typescript
+// User requests: GET /api/watchers/w1/threads
+async function getWatcherThreads(watcherId: string) {
+  // 1. Load ALL events for this watcher from event store
+  const events = await eventStore.getEventsForWatcher(watcherId);
+  
+  // 2. Replay events to rebuild state (pure function, no side effects)
+  const state = replayEvents(events);
+  
+  // 3. Compute current urgency for each open thread
+  const currentTime = Date.now();
+  const threadsWithUrgency = Array.from(state.threads.values())
+    .map(thread => ({
+      ...thread,
+      urgency: evaluateThreadUrgency(thread, currentTime)
+    }));
+  
+  // 4. Return derived state as JSON
+  return { threads: threadsWithUrgency };
+}
+```
+
+**Properties:**
+- ✅ Always 100% correct (truth comes from events)
+- ✅ No stale data possible
+- ✅ No cache invalidation complexity
+- ✅ Deterministic (same events = same state)
+- ⏱️ Typical response time: 50-200ms for ~1000 events
+
+This is the **default mode** and works well for most users.
+
+**Tier 2: Cached Projections (High-Volume Watchers)**
+
+For watchers with many events (> 10,000) where replay becomes slow:
+
+```sql
+-- Projection table (disposable, rebuildable)
+CREATE TABLE thread_projections (
+  thread_id VARCHAR PRIMARY KEY,
+  watcher_id VARCHAR NOT NULL,
+  status VARCHAR NOT NULL,
+  opened_at BIGINT,
+  last_activity_at BIGINT,
+  deadline_timestamp BIGINT,
+  closed_at BIGINT,
+  email_ids JSONB,
+  
+  -- Metadata for cache management
+  last_event_id VARCHAR,      -- Last event that updated this projection
+  last_event_timestamp BIGINT, -- When projection was last updated
+  
+  INDEX idx_watcher_status (watcher_id, status)
+);
+```
+
+**Projection Maintenance:**
+
+1. **Initial Build:** When watcher is created or projection is missing
+   ```typescript
+   const events = await eventStore.getEventsForWatcher(watcherId);
+   const state = replayEvents(events);
+   await saveProjections(state.threads);
+   ```
+
+2. **Incremental Update:** When new events arrive
+   ```typescript
+   async function updateProjection(newEvent: DevaEvent) {
+     if (newEvent.type === "THREAD_OPENED") {
+       await db.insert("thread_projections", {
+         thread_id: newEvent.thread_id,
+         status: "open",
+         opened_at: newEvent.opened_at,
+         last_event_id: newEvent.event_id,
+         // ... other fields
+       });
+     }
+     else if (newEvent.type === "THREAD_CLOSED") {
+       await db.update("thread_projections")
+         .where("thread_id", newEvent.thread_id)
+         .set({ status: "closed", closed_at: newEvent.closed_at });
+     }
+   }
+   ```
+
+3. **Query:** Dashboard reads from projection table
+   ```typescript
+   async function getWatcherThreads(watcherId: string) {
+     const threads = await db
+       .select("*")
+       .from("thread_projections")
+       .where("watcher_id", watcherId)
+       .where("status", "open");
+     
+     // Still compute urgency in real-time (changes with time)
+     return threads.map(thread => ({
+       ...thread,
+       urgency: evaluateThreadUrgency(thread, Date.now())
+     }));
+   }
+   ```
+
+**Properties:**
+- ⚡ Very fast (< 10ms for queries)
+- 🔄 Eventually consistent (may lag slightly after new events)
+- 🗑️ **Disposable** - can be deleted and rebuilt anytime
+- ✅ **Never authoritative** - events are still the source of truth
+- 🔧 Rebuilds automatically if projection is missing or stale
+
+#### Strategy Selection
+
+| Scenario | Strategy | Rationale |
+|----------|----------|-----------|
+| New watcher (< 100 events) | Replay on every query | Fast enough, always fresh |
+| Active watcher (100-10K events) | Replay on every query | Still fast, simpler architecture |
+| High-volume watcher (> 10K events) | Cached projection | Necessary for performance |
+| Projection missing/corrupted | Fall back to replay | Self-healing, always correct |
+| Audit/debugging | Always replay | Verification against projection |
+| Report generation | Replay from events | Ensures accuracy for records |
+
+#### The Event Log View
+
+When users view the **raw event log** for a watcher:
+
+```typescript
+// GET /api/watchers/w1/events?limit=100&offset=0
+async function getWatcherEvents(watcherId: string, limit: number, offset: number) {
+  // Direct query from event store (no replay needed)
+  const events = await eventStore.query({
+    watcher_id: watcherId,
+    order: "timestamp DESC",
+    limit,
+    offset
+  });
+  
+  return { events };
+}
+```
+
+**This is always a direct read** from the event store - no replay, no derivation, just the raw immutable facts. This provides:
+- Complete audit trail
+- Exact timestamps of every action
+- Verbatim evidence from LLM extractions
+- User actions and system decisions
+- Alert delivery outcomes
+
+#### Projection Self-Healing
+
+Projections can become stale or corrupted. The system detects and rebuilds:
+
+```typescript
+// Health check: verify projection matches replay
+async function verifyProjection(watcherId: string): Promise<boolean> {
+  const projection = await loadProjection(watcherId);
+  const events = await eventStore.getEventsForWatcher(watcherId);
+  const replayedState = replayEvents(events);
+  
+  return deepEqual(projection, replayedState);
+}
+
+// If verification fails, rebuild
+async function rebuildProjection(watcherId: string) {
+  console.log(`Rebuilding projection for watcher ${watcherId}`);
+  
+  const events = await eventStore.getEventsForWatcher(watcherId);
+  const state = replayEvents(events);
+  
+  // Atomic replace
+  await db.transaction(async (tx) => {
+    await tx.delete("thread_projections").where("watcher_id", watcherId);
+    await tx.insert("thread_projections", Array.from(state.threads.values()));
+  });
+  
+  console.log(`Projection rebuilt from ${events.length} events`);
+}
+```
+
+**Rebuild triggers:**
+- Manual admin command
+- Scheduled verification job (nightly)
+- Automatic on query timeout
+- After major version upgrade
+- On projection schema change
+
+#### Example: User Login Flow
+
+Here's what happens when a user logs in and views a watcher:
+
+1. **User navigates to:** `https://deva.example.com/watchers/w1`
+
+2. **Frontend calls:** `GET /api/watchers/w1/threads`
+
+3. **Backend decides strategy:**
+   ```typescript
+   const eventCount = await eventStore.countEvents(watcherId);
+   
+   if (eventCount < 10000) {
+     // Tier 1: Replay
+     return await getThreadsViaReplay(watcherId);
+   } else {
+     // Tier 2: Projection (with freshness check)
+     return await getThreadsViaProjection(watcherId);
+   }
+   ```
+
+4. **If using replay (Tier 1):**
+   - Load all events for watcher
+   - Replay in memory (pure function)
+   - Compute urgency for each thread
+   - Return JSON to frontend
+   - **Total time: ~100ms**
+
+5. **If using projection (Tier 2):**
+   - Query projection table
+   - Check last_event_timestamp
+   - If stale (> 5 min old), trigger async rebuild
+   - Compute urgency for each thread (always live)
+   - Return JSON to frontend
+   - **Total time: ~10ms**
+
+6. **Frontend renders:**
+   - Thread cards with status badges
+   - Urgency indicators (color-coded)
+   - Last activity timestamps
+   - Deadline countdowns
+   - Links to view full thread details
+
+#### Architectural Guarantees
+
+**The Golden Rule:**  
+*If frontend displays a status, and you replay events, you MUST get the same status. If not, the projection is wrong and must be rebuilt.*
+
+**Benefits:**
+- ✅ **Always correct**: Events are source of truth
+- ✅ **Self-healing**: Projections rebuild if corrupted
+- ✅ **No cache invalidation**: Projections are disposable
+- ✅ **Debuggable**: Can always verify projection vs replay
+- ✅ **Scalable**: Handles both small and large watchers
+- ✅ **Simple**: No complex distributed cache coordination
+
+**Trade-offs:**
+- 🔄 Projections may lag slightly (typically < 1 second)
+- 💾 Duplicate storage (events + projections)
+- 🔧 Requires projection maintenance logic
+
+---
 
 ## 8. Core Domain Concepts
 
