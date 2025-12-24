@@ -17,7 +17,6 @@ Comprehensive documentation for the DEVA vigilance system.
 - **[Event Types Reference](../backend/src/events/types.ts)** - Complete event type definitions
 - **[Environment Configuration](DEPLOYMENT.md)** - Network routing and deployment setup (TBD)
 
----
 
 ## Quick Navigation
 
@@ -35,7 +34,6 @@ Comprehensive documentation for the DEVA vigilance system.
 - Check component `.env.example` files
 - Understand [System Design Document](SYSTEM_DESIGN.md) section 6 (Cross-Cutting Guarantees)
 
----
 
 ## Architectural Principles
 

@@ -39,8 +39,9 @@ export type WatcherCreatedEvent = BaseEvent & {
   readonly account_id: string;
   readonly watcher_id: string;
   readonly name: string;
-  readonly ingest_token: string; // unique token for email routing
+  readonly ingest_token: string; // unique token for email routing (e.g., "a7f3k9")
   readonly created_by: string; // user_id
+  readonly created_at: number; // creation timestamp (same as timestamp but explicit)
 };
 
 export type WatcherActivatedEvent = BaseEvent & {
@@ -69,15 +70,29 @@ export type PolicyUpdatedEvent = BaseEvent & {
 };
 
 export type WatcherPolicy = {
-  readonly allowed_senders: readonly string[]; // email addresses
-  readonly silence_threshold_hours: number;
-  readonly deadline_buffer_hours: number;
+  // Sender Control
+  readonly allowed_senders: readonly string[]; // Email allowlist (exact match, case-insensitive)
+  
+  // Timing Thresholds
+  readonly silence_threshold_hours: number; // Hours of inactivity before silence alert (default: 72)
+  readonly deadline_warning_hours: number; // Hours before deadline for warning alert (default: 24)
+  readonly deadline_critical_hours: number; // Hours before deadline for critical alert (default: 2)
+  
+  // Notification Configuration
   readonly notification_channels: readonly NotificationChannel[];
+  
+  // Reporting Configuration
+  readonly reporting_cadence: "daily" | "weekly" | "on_demand";
+  readonly reporting_recipients: readonly string[]; // Email addresses for summary reports
+  readonly reporting_time?: string; // ISO 8601 time (e.g., "09:00:00Z") for daily/weekly reports
+  readonly reporting_day?: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday"; // Required for weekly
 };
 
 export type NotificationChannel = {
   readonly type: "email" | "sms" | "webhook";
-  readonly destination: string;
+  readonly destination: string; // Email address, phone number (E.164), or HTTPS URL
+  readonly urgency_filter: "all" | "warning" | "critical"; // Minimum urgency to deliver
+  readonly enabled: boolean; // Allow disabling without removing
 };
 
 // ──────────────────────────────────────────────────────────────

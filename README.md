@@ -13,8 +13,6 @@ DEVA is intentionally constrained in scope:
 
 The system favors **determinism over intelligence**, **transparency over automation**, and **restraint over completeness**. Its core promise is not to manage email, but to provide confidence: confidence that important communication is being observed, that silence is not going unnoticed, and that when nothing happens, it is because nothing needs to happen—not because something was missed.
 
----
-
 ## Foundational Architecture
 
 **Events are the sole source of truth.** Every fact that can influence system behavior is captured once as an immutable, append-only event. No authoritative state is stored in mutable database tables, caches, or long-lived memory. All operational state—threads, due boundaries, reminder status, closures, and notification eligibility—is always derived by replaying events in order.
@@ -23,8 +21,6 @@ This guarantees:
 - **Determinism**: Same events always produce same state
 - **Auditability**: Complete history of all decisions
 - **Explainability**: Any alert or decision can be reconstructed offline by replaying the event log without invoking external systems or artificial intelligence
-
----
 
 ## Repository Structure
 
@@ -67,8 +63,6 @@ All services communicate over HTTP/network:
 - **SMTP Adapter** → Backend (forwards raw email)
 
 Each service has its own `.env.example` file defining connection endpoints.
-
----
 
 ## Architectural Invariants
 
@@ -131,8 +125,6 @@ These invariants are **non-negotiable** and define the system's foundational gua
 - This prevents alert fatigue, duplication, and drift
 - Closed threads never alert
 
----
-
 ## System Components
 
 DEVA consists of these components with **strict boundaries**:
@@ -147,27 +139,157 @@ DEVA consists of these components with **strict boundaries**:
 
 **ONLY the Backend Control Plane may make decisions.**
 
----
-
 ## Core Concepts
 
 ### Watchers
 
 The **watcher** is the primary configuration and operational unit in DEVA. A watcher represents a bounded area of responsibility, such as personal finance, legal correspondence, or client billing.
 
-Each watcher owns:
-- Its own event stream
-- Threads (obligations)
-- Reminders and due boundaries
-- Notification recipients
-- Reporting cadence
-- Unique ingestion email address: `<name>-<token>@ingest.deva.email`
+#### Watcher Properties
 
-Watchers are:
-- Created explicitly by users (never automatically)
-- Associated with a unique ingestion email address
-- Routed by **address only**—content is never used for routing
-- This ensures explicit user intent, eliminates ambiguity, and prevents accidental or adversarial misclassification
+Each watcher is defined by the following immutable and mutable properties:
+
+**Identity Properties (Immutable):**
+- `watcher_id` (string): Unique UUID identifier, assigned at creation, never changes
+- `account_id` (string): Parent account identifier
+- `ingest_token` (string): Unique cryptographic token for email routing (e.g., `a7f3k9`)
+- `created_at` (number): Unix timestamp (milliseconds) when watcher was created
+- `created_by` (string): User ID of creator
+
+**Configuration Properties (Mutable via POLICY_UPDATED events):**
+- `name` (string): Human-readable name (e.g., "Personal Finance", "Legal Matters")
+  - Used in email subjects, dashboard display, and reports
+  - Can be updated by users
+  - Must be non-empty, max 100 characters
+
+- `status` (enum): Operational state, derived from lifecycle events
+  - `"created"` - Watcher exists but not yet activated
+  - `"active"` - Monitoring enabled, threads open, alerts fire
+  - `"paused"` - Monitoring suspended, no new threads, no alerts
+  - Transitions: created → active (WATCHER_ACTIVATED), active ⇄ paused (WATCHER_PAUSED/RESUMED)
+
+**Policy Configuration (WatcherPolicy object):**
+
+```typescript
+type WatcherPolicy = {
+  allowed_senders: readonly string[];        // Email allowlist
+  silence_threshold_hours: number;           // Silence detection window
+  deadline_warning_hours: number;            // Warning threshold before deadline
+  deadline_critical_hours: number;           // Critical threshold before deadline
+  notification_channels: readonly NotificationChannel[];
+  reporting_cadence: "daily" | "weekly" | "on_demand";
+  reporting_recipients: readonly string[];   // Email addresses for reports
+};
+
+type NotificationChannel = {
+  type: "email" | "sms" | "webhook";
+  destination: string;                       // Email, phone, or URL
+  urgency_filter: "all" | "warning" | "critical"; // Minimum urgency to notify
+};
+```
+
+**Policy Field Definitions:**
+
+- `allowed_senders` (string[]): Email addresses permitted to create threads
+  - Exact match only (no wildcards or domains)
+  - Empty array = accept from anyone (not recommended)
+  - Example: `["alice@example.com", "bob@company.org"]`
+  - Emails from non-allowed senders are logged but don't create threads
+
+- `silence_threshold_hours` (number): Hours of inactivity before silence alerts
+  - Default: 72 (3 days)
+  - Minimum: 1, Maximum: 720 (30 days)
+  - Applies only to threads without explicit deadlines
+  - Timer resets on any thread activity (incoming or outgoing email)
+
+- `deadline_warning_hours` (number): Hours before deadline to trigger warning alert
+  - Default: 24 (1 day)
+  - Must be greater than `deadline_critical_hours`
+  - Alert fires once when urgency transitions from "ok" to "warning"
+
+- `deadline_critical_hours` (number): Hours before deadline to trigger critical alert
+  - Default: 2
+  - Must be positive
+  - Alert fires once when urgency transitions from "warning" to "critical"
+
+- `notification_channels` (NotificationChannel[]): Where to send alerts
+  - At least one channel required when watcher is activated
+  - Multiple channels supported (email + SMS + webhook)
+  - Each channel has urgency filter (e.g., only critical alerts to SMS)
+  - Delivery failures are recorded but don't block system
+
+- `reporting_cadence` (enum): How often to send summary reports
+  - `"daily"` - Every 24 hours at configured time
+  - `"weekly"` - Every 7 days at configured day/time
+  - `"on_demand"` - Only when explicitly requested by user
+
+- `reporting_recipients` (string[]): Email addresses to receive reports
+  - Separate from notification channels
+  - Can overlap with allowed_senders
+  - Reports are informational, not alerts
+
+#### Email Routing
+
+Each watcher has a unique ingestion email address constructed from its name and token:
+
+```
+<name>-<token>@ingest.deva.email
+```
+
+**Examples:**
+```
+finance-a7f3k9@ingest.deva.email
+legal-b2j8m1@ingest.deva.email
+client-billing-x4p9j2@ingest.deva.email
+```
+
+**Routing Rules:**
+- Routing is determined **solely by recipient address**
+- Email content, subject, or sender is **never** examined for routing
+- This ensures explicit user intent and prevents misclassification
+- Invalid tokens are rejected at SMTP layer (not forwarded to backend)
+
+#### Watcher Lifecycle
+
+**Creation:**
+1. User creates watcher via dashboard (POST /api/watchers)
+2. Backend emits WATCHER_CREATED event
+3. System generates unique watcher_id and ingest_token
+4. Status = "created" (not yet monitoring)
+
+**Activation:**
+1. User activates watcher (POST /api/watchers/:id/activate)
+2. Backend validates policy (at least one notification channel)
+3. Backend emits WATCHER_ACTIVATED event
+4. Status = "active" (monitoring begins)
+
+**Pause:**
+1. User pauses watcher (POST /api/watchers/:id/pause)
+2. Backend emits WATCHER_PAUSED event
+3. Status = "paused"
+4. Existing threads remain but no alerts fire
+5. New emails are accepted but don't create threads
+
+**Resume:**
+1. User resumes watcher (POST /api/watchers/:id/resume)
+2. Backend emits WATCHER_RESUMED event
+3. Status = "active"
+4. Existing threads re-evaluate urgency
+5. New emails can create threads again
+
+#### Watcher Ownership
+
+Each watcher owns:
+- Its own isolated event stream
+- All threads created from its ingestion address
+- All reminders and due boundaries for those threads
+- Its policy configuration history
+- Its notification and reporting settings
+
+**Watchers never:**
+- Share threads with other watchers
+- Access other watchers' events
+- Inherit configuration from account defaults
 
 ### Watcher Runtime
 
@@ -257,8 +379,6 @@ The dashboard is a **read-heavy inspection surface**, not a system of record.
 - Configure watcher policies
 
 **All authoritative changes flow through event creation.**
-
----
 
 ## System Components
 
@@ -387,8 +507,6 @@ Read-heavy inspection and control interface.
 - TypeScript
 - REST API client
 
----
-
 ## Getting Started
 
 ### Prerequisites
@@ -444,16 +562,13 @@ cp .env.example .env
 
 Services communicate over HTTP. Example development setup:
 
-| Service | Address | Purpose |
-|---------|---------|---------|
+| Service | Address | Purpose ||
 | Backend | `http://localhost:3000` | Main API |
 | LLM Service | `http://localhost:8000` | Fact extraction |
 | SMTP Adapter | `smtp://localhost:2525` | Email ingestion |
 | Frontend | `http://localhost:5173` | Web UI |
 
 For production or distributed deployment, update `.env` files accordingly.
-
----
 
 ## Documentation
 
@@ -466,8 +581,6 @@ For complete implementation details, see the **[System Design Document](docs/SYS
 - **[LLM Service README](llm-service/README.md)** - Fact extraction service details
 - **[SMTP Adapter README](smtp-adapter/README.md)** - Email ingress details
 - **[Frontend README](frontend/README.md)** - Dashboard interface details
-
----
 
 ## Event Model
 
@@ -490,8 +603,6 @@ Events are the single source of truth. See [backend/src/events/types.ts](backend
 - `INBOX_SCANNED`
 - `LLM_RETRIED`
 
----
-
 ## Coding Rules
 
 When writing code, ALWAYS:
@@ -505,8 +616,6 @@ When writing code, ALWAYS:
 
 **If behavior cannot be explained purely by replaying events, it is WRONG.**
 
----
-
 ## What NOT to Do
 
 DO NOT:
@@ -519,8 +628,6 @@ DO NOT:
 - Add confidence-based escalation
 - Add magic heuristics
 
----
-
 ## Mental Model
 
 - **Events are truth**
@@ -529,8 +636,6 @@ DO NOT:
 - **Code makes decisions**
 - **Time only affects urgency**
 - **Closed threads never reopen**
-
----
 
 ## License
 

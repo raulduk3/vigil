@@ -4,7 +4,6 @@
 
 This document defines the complete, implementation-grade system design for DEVA. It is written for engineers responsible for implementing, operating, and evolving the system. All behavior, including AI usage, is strictly bounded and explainable through immutable event replay.
 
----
 
 ## Table of Contents
 
@@ -21,7 +20,6 @@ This document defines the complete, implementation-grade system design for DEVA.
 11. [Implementation Constraints](#11-implementation-constraints)
 12. [Canonical System Rule](#12-canonical-system-rule)
 
----
 
 ## 1. System Purpose and Scope
 
@@ -55,7 +53,6 @@ The system favors:
 
 DEVA's core promise is not to manage email, but to provide **confidence**: confidence that important communication is being observed, that silence is not going unnoticed, and that when nothing happens, it is because nothing needs to happen—not because something was missed.
 
----
 
 ## 2. Foundational Architecture
 
@@ -96,7 +93,6 @@ Time is treated as an explicit trigger, not a source of facts:
 - Scheduled evaluations create time triggers but don't mutate state
 - All time-based decisions are deterministic given the same events
 
----
 
 ## 3. Four-Subsystem Architecture
 
@@ -134,7 +130,6 @@ All inter-component communication is:
 - Traceable through events
 - Fail-safe (degraded rather than broken)
 
----
 
 ## 4. Subsystem 1: Ingestion and Immutable Event Capture
 
@@ -174,7 +169,6 @@ See `smtp-adapter/.env.example`
 - Minimal SMTP library
 - HTTP client for backend forwarding
 
----
 
 ### 4.2 Backend Ingestion Endpoint
 
@@ -218,7 +212,6 @@ The backend ingestion endpoint is the **authoritative boundary** where email bec
 }
 ```
 
----
 
 ### 4.3 Event Store
 
@@ -265,7 +258,6 @@ CREATE INDEX idx_watcher_timestamp ON events(watcher_id, timestamp);
 - Events across watchers have no ordering guarantee
 - Timestamp + event_id provides tie-breaking
 
----
 
 ## 5. Subsystem 2: Event-Sourced Runtime Executing Watchers
 
@@ -310,7 +302,6 @@ The Backend Control Plane is the **sole decision-making authority**.
 #### Configuration:
 See `backend/.env.example`
 
----
 
 ### 5.2 Watcher Runtime Executor
 
@@ -391,7 +382,6 @@ async function runWatcher(
 - Each email updates last_activity_at
 - Used for silence detection
 
----
 
 ### 5.3 Reminder Evaluation Logic
 
@@ -450,7 +440,6 @@ function evaluateThreadUrgency(
 - Critical threshold (default: 2 hours)
 - Configurable per watcher via POLICY_UPDATED event
 
----
 
 ### 5.4 Scheduler / Time Trigger Source
 
@@ -490,7 +479,6 @@ The scheduler injects time into the system as an explicit trigger.
 - High-urgency watchers: Every 5 minutes
 - Low-urgency watchers: Hourly
 
----
 
 ## 6. Subsystem 3: Bounded Semantic Intelligence
 
@@ -519,7 +507,6 @@ Email Ingestion → EMAIL_RECEIVED event → Backend
 
 The LLM service is called **synchronously** after EMAIL_RECEIVED is emitted, but **never during replay**.
 
----
 
 ### 6.3 LLM Extraction Service (vLLM)
 
@@ -619,7 +606,6 @@ See `llm-service/.env.example`
 - FastAPI for HTTP endpoints
 - Pydantic for schema validation
 
----
 
 ### 6.4 Output Contract
 
@@ -643,7 +629,6 @@ function validateLLMOutput(output: LLMOutput): boolean {
 
 LLM output is **not authoritative** until the backend emits a corresponding event.
 
----
 
 ### 6.5 Constraints and Guarantees
 
@@ -683,7 +668,6 @@ When replaying events:
 - LLM is never called again
 - All extracted facts are frozen in events
 
----
 
 ### 6.6 Model Selection and Tuning
 
@@ -703,7 +687,6 @@ Prompt engineering:
 - Require evidence quotes
 - Test prompts against eval dataset
 
----
 
 ## 7. Subsystem 4: Notification and Inspection Interfaces
 
@@ -775,7 +758,6 @@ Alerts Sent: {count}
 - **No domain state mutation**
 - Delivery failure is acceptable and recorded
 
----
 
 ### 7.2 Frontend (Dashboard and Inspection UI)
 
@@ -854,7 +836,6 @@ Backend emits: THREAD_CLOSED event
 #### Configuration:
 See `frontend/.env.example`
 
----
 
 ## 8. Core Domain Concepts
 
@@ -868,47 +849,298 @@ A watcher represents a **bounded area of responsibility**, such as:
 - Legal matters
 - Client billing
 - Vendor contracts
+- Customer support escalations
+- Compliance deadlines
 
-#### Watcher Properties:
+Each watcher operates independently with its own event stream, policy, and notification configuration.
+
+#### Complete Watcher Schema:
+
 ```typescript
 type Watcher = {
-  watcher_id: string;
-  account_id: string;
-  name: string;
-  ingest_token: string; // for email routing
+  // Identity (immutable)
+  watcher_id: string;                // UUID, assigned at creation
+  account_id: string;                // Parent account
+  ingest_token: string;              // Unique token for email routing
+  created_at: number;                // Unix timestamp (ms)
+  created_by: string;                // User ID of creator
+  
+  // Configuration (mutable via events)
+  name: string;                      // Human-readable name
   status: "created" | "active" | "paused";
   policy: WatcherPolicy;
 };
 
 type WatcherPolicy = {
-  allowed_senders: readonly string[];
-  silence_threshold_hours: number;
-  deadline_buffer_hours: number;
+  // Sender Control
+  allowed_senders: readonly string[];        // Email allowlist (exact match)
+  
+  // Timing Thresholds
+  silence_threshold_hours: number;           // Hours of inactivity before silence alert
+  deadline_warning_hours: number;            // Hours before deadline for warning alert
+  deadline_critical_hours: number;           // Hours before deadline for critical alert
+  
+  // Notification Configuration
   notification_channels: readonly NotificationChannel[];
+  
+  // Reporting Configuration
+  reporting_cadence: "daily" | "weekly" | "on_demand";
+  reporting_recipients: readonly string[];   // Email addresses for reports
+  reporting_time?: string;                   // ISO 8601 time (e.g., "09:00:00Z")
+  reporting_day?: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
+};
+
+type NotificationChannel = {
+  type: "email" | "sms" | "webhook";
+  destination: string;                       // Email address, phone number, or URL
+  urgency_filter: "all" | "warning" | "critical"; // Minimum urgency to notify
+  enabled: boolean;                          // Allow disabling without removing
 };
 ```
 
+#### Field Definitions:
+
+**Identity Fields (Immutable):**
+
+- `watcher_id`: UUID assigned at creation, never changes, used in all events
+- `account_id`: Links watcher to parent account for access control
+- `ingest_token`: Cryptographically random string (8-12 characters) for email routing
+  - Must be unique across all watchers
+  - Used to construct ingestion email address
+  - Never exposed in logs or external APIs (PII-like sensitivity)
+- `created_at`: Timestamp of WATCHER_CREATED event
+- `created_by`: User who created the watcher (for audit trail)
+
+**Configuration Fields (Mutable):**
+
+- `name`: Human-readable identifier
+  - Displayed in dashboards, emails, and reports
+  - Used in ingestion email address (sanitized: lowercase, hyphens only)
+  - Validation: 1-100 characters, alphanumeric + spaces/hyphens
+  - Example: "Personal Finance" → `personal-finance-a7f3k9@ingest.deva.email`
+
+- `status`: Operational state derived from lifecycle events
+  - `"created"`: Watcher exists but not yet activated (no monitoring)
+  - `"active"`: Fully operational (emails create threads, alerts fire)
+  - `"paused"`: Temporarily suspended (emails accepted but no threads/alerts)
+  - State transitions:
+    - created → active: WATCHER_ACTIVATED (requires valid policy)
+    - active → paused: WATCHER_PAUSED (user action)
+    - paused → active: WATCHER_RESUMED (user action)
+
+**Policy Fields:**
+
+- `allowed_senders`: Email address allowlist
+  - Exact match only (no wildcards, no domain-level matching)
+  - Case-insensitive comparison
+  - Empty array = accept from anyone (not recommended for production)
+  - Emails from non-allowed senders:
+    - Logged as INFO (not ERROR)
+    - EMAIL_RECEIVED event still emitted
+    - But no thread creation or LLM extraction
+  - Example: `["alice@company.com", "billing@vendor.org"]`
+
+- `silence_threshold_hours`: Inactivity window for silence detection
+  - Default: 72 (3 days)
+  - Range: 1 to 720 (1 hour to 30 days)
+  - Applies only to threads without explicit deadlines
+  - Timer resets on any thread activity (EMAIL_RECEIVED with matching thread_id)
+  - If thread has both deadline and silence threshold, earliest boundary triggers alert
+
+- `deadline_warning_hours`: Pre-deadline warning threshold
+  - Default: 24 (1 day)
+  - Must be > deadline_critical_hours
+  - Alert fires once on state transition: ok → warning
+  - Used to compute urgency_state in REMINDER_EVALUATED events
+
+- `deadline_critical_hours`: Pre-deadline critical threshold
+  - Default: 2
+  - Must be > 0
+  - Alert fires once on state transition: warning → critical
+  - Separate alert fires on critical → overdue (when deadline passes)
+
+- `notification_channels`: Alert delivery destinations
+  - At least one enabled channel required for watcher activation
+  - Multiple channels supported (redundancy and escalation)
+  - Each channel has:
+    - `type`: Delivery mechanism
+      - `"email"`: SMTP delivery to email address
+      - `"sms"`: SMS via Twilio/similar (future)
+      - `"webhook"`: HTTP POST to URL with JSON payload
+    - `destination`: Address/URL for delivery
+      - Email: RFC 5322 valid email address
+      - SMS: E.164 format phone number (future)
+      - Webhook: HTTPS URL (HTTP allowed for dev only)
+    - `urgency_filter`: Minimum urgency to deliver
+      - `"all"`: ok, warning, critical, overdue
+      - `"warning"`: warning, critical, overdue (not ok)
+      - `"critical"`: critical, overdue only
+      - Used for escalation: email for warnings, SMS for critical
+    - `enabled`: Allows disabling without removing from array
+  - Delivery failure handling:
+    - Retry 3 times with exponential backoff (1s, 5s, 25s)
+    - If all retries fail, emit ALERT_FAILED event
+    - System continues (doesn't block on notification delivery)
+
+- `reporting_cadence`: Summary report frequency
+  - `"daily"`: Every 24 hours at specified time
+  - `"weekly"`: Every 7 days at specified day/time
+  - `"on_demand"`: Only when user explicitly requests
+  - Used by scheduler to emit REPORT_GENERATED events
+
+- `reporting_recipients`: Email addresses for reports
+  - Separate from notification_channels (different content and urgency)
+  - Can overlap with allowed_senders
+  - Reports emphasize reassurance (what's resolved/stable) before items requiring attention
+
+- `reporting_time` (optional): ISO 8601 time for daily/weekly reports
+  - Format: "HH:MM:SSZ" (UTC timezone)
+  - Example: "09:00:00Z" = 9 AM UTC
+  - If omitted, defaults to "09:00:00Z"
+
+- `reporting_day` (optional): Day of week for weekly reports
+  - Required if cadence is "weekly"
+  - Example: "monday" = weekly report every Monday at reporting_time
+
 #### Watcher Lifecycle:
-1. **Created** - User creates watcher via dashboard
-2. **Activated** - Watcher begins monitoring
-3. **Paused** - Temporarily stop monitoring (user action)
-4. **Resumed** - Resume monitoring
+
+**1. Creation (WATCHER_CREATED event):**
+```typescript
+{
+  type: "WATCHER_CREATED",
+  watcher_id: "w_a1b2c3d4",
+  account_id: "acc_x9y8z7",
+  name: "Personal Finance",
+  ingest_token: "a7f3k9",
+  created_by: "user_abc123",
+  timestamp: 1703001600000
+}
+```
+- User submits POST /api/watchers with name and initial policy
+- Backend generates watcher_id and ingest_token
+- Backend validates policy (allowed_senders, thresholds, channels)
+- Backend emits WATCHER_CREATED event
+- Status = "created" (not yet monitoring)
+- Ingestion email address is immediately active but won't create threads
+
+**2. Activation (WATCHER_ACTIVATED event):**
+```typescript
+{
+  type: "WATCHER_ACTIVATED",
+  watcher_id: "w_a1b2c3d4",
+  timestamp: 1703002000000
+}
+```
+- User submits POST /api/watchers/:id/activate
+- Backend validates:
+  - Watcher exists and status is "created" or "paused"
+  - Policy has at least one enabled notification channel
+  - Thresholds are valid (warning > critical > 0)
+- Backend emits WATCHER_ACTIVATED event
+- Status = "active"
+- Monitoring begins: emails can create threads, alerts can fire
+
+**3. Pause (WATCHER_PAUSED event):**
+```typescript
+{
+  type: "WATCHER_PAUSED",
+  watcher_id: "w_a1b2c3d4",
+  paused_by: "user_abc123",
+  reason: "On vacation until Jan 15",
+  timestamp: 1703088000000
+}
+```
+- User submits POST /api/watchers/:id/pause with optional reason
+- Backend emits WATCHER_PAUSED event
+- Status = "paused"
+- Effects:
+  - Emails still accepted at ingestion address (logged)
+  - EMAIL_RECEIVED events still emitted (audit trail)
+  - But no THREAD_OPENED, no LLM extraction, no alerts
+  - Existing open threads remain open but don't evaluate urgency
+- Use case: Temporary absence, system maintenance, testing
+
+**4. Resume (WATCHER_RESUMED event):**
+```typescript
+{
+  type: "WATCHER_RESUMED",
+  watcher_id: "w_a1b2c3d4",
+  resumed_by: "user_abc123",
+  timestamp: 1703174400000
+}
+```
+- User submits POST /api/watchers/:id/resume
+- Backend emits WATCHER_RESUMED event
+- Status = "active"
+- Effects:
+  - All existing open threads re-evaluate urgency (may fire alerts if overdue)
+  - New emails can create threads and trigger LLM extraction
+  - Alerts resume firing
+
+**5. Policy Update (POLICY_UPDATED event):**
+```typescript
+{
+  type: "POLICY_UPDATED",
+  watcher_id: "w_a1b2c3d4",
+  policy: {
+    allowed_senders: ["alice@company.com"],
+    silence_threshold_hours: 48,
+    deadline_warning_hours: 12,
+    deadline_critical_hours: 2,
+    notification_channels: [...],
+    reporting_cadence: "weekly",
+    reporting_recipients: ["user@example.com"]
+  },
+  updated_by: "user_abc123",
+  timestamp: 1703260800000
+}
+```
+- User submits PATCH /api/watchers/:id/policy
+- Backend validates new policy (same rules as activation)
+- Backend emits POLICY_UPDATED event with complete new policy
+- Effects apply immediately:
+  - New thresholds used in next urgency evaluation
+  - New notification channels used for next alert
+  - Historical events unchanged (policy is forward-only)
 
 #### Email Routing:
+
 Each watcher has a unique ingestion email address:
+
 ```
-<name>-<token>@ingest.deva.email
+<sanitized-name>-<ingest_token>@ingest.deva.email
 ```
 
-Example:
+**Address Construction:**
+1. Take watcher name: "Personal Finance"
+2. Sanitize: lowercase, replace spaces with hyphens: "personal-finance"
+3. Append hyphen and ingest_token: "personal-finance-a7f3k9"
+4. Append domain: "personal-finance-a7f3k9@ingest.deva.email"
+
+**Examples:**
 ```
-finance-a7f3k9@ingest.deva.email
-legal-b2j8m1@ingest.deva.email
+name: "Personal Finance"  → personal-finance-a7f3k9@ingest.deva.email
+name: "Legal Matters"     → legal-matters-b2j8m1@ingest.deva.email
+name: "Client Billing"    → client-billing-x4p9j2@ingest.deva.email
+name: "Vendor Contracts"  → vendor-contracts-k5n7p9@ingest.deva.email
 ```
 
-Routing is **address-only**. Content is never examined for routing.
+**Routing Rules:**
+- SMTP adapter extracts recipient address from SMTP envelope
+- Parses address to extract ingest_token
+- Forwards raw email to backend POST /api/ingestion/email with token
+- Backend looks up watcher_id by ingest_token
+- Backend emits EMAIL_RECEIVED event with watcher_id
+- **Email content, subject, sender, or headers are NEVER examined for routing**
+- Invalid tokens (not found) are rejected at SMTP layer (400 response)
 
----
+**Security:**
+- Ingest tokens are cryptographically random (8-12 chars, base36)
+- Collision probability is negligible (36^8 = 2.8 trillion combinations)
+- Tokens are never logged in plaintext (hash for lookups)
+- Changing a watcher's name does NOT change its token
+- Token rotation is not currently supported (would require new address)
+
 
 ### 8.2 Threads
 
@@ -953,7 +1185,6 @@ type Thread = {
 - Subsequent emails may create **new threads** if new obligations
 - They never resurrect closed threads
 
----
 
 ### 8.3 Reminders and Urgency
 
@@ -974,7 +1205,6 @@ critical → overdue → ALERT_QUEUED(overdue)
 
 Alerts fire **exactly once per transition**, never on steady state.
 
----
 
 ### 8.4 Obligations and Due Boundaries
 
@@ -1005,7 +1235,6 @@ Alerts fire **exactly once per transition**, never on steady state.
 → No thread created
 ```
 
----
 
 ## 9. Event Model
 
@@ -1075,7 +1304,6 @@ These events **must never exist** as they violate architectural invariants:
 
 See [backend/src/events/types.ts](../backend/src/events/types.ts) for complete TypeScript definitions.
 
----
 
 ## 10. Cross-Cutting Guarantees
 
@@ -1128,7 +1356,6 @@ These guarantees apply **across all subsystems**:
 - Projections are disposable
 - When in doubt, replay
 
----
 
 ## 11. Implementation Constraints
 
@@ -1202,7 +1429,6 @@ These constraints **must be enforced** in all implementations:
 - ❌ Access database directly
 - ❌ Emit events
 
----
 
 ## 12. Canonical System Rule
 
@@ -1238,7 +1464,6 @@ This is the ultimate test of architectural correctness.
 ❌ Inferring thread relationships from content  
 → Routing is address-based, not content-based
 
----
 
 ## 13. Summary
 
@@ -1253,7 +1478,6 @@ All behavior is explainable through event replay. LLMs are subordinate fact extr
 
 **If it's not in an event, it didn't happen.**
 
----
 
 ## Appendices
 
@@ -1322,7 +1546,6 @@ All behavior is explainable through event replay. LLMs are subordinate fact extr
 - No external service calls during replay
 - Idempotence verification
 
----
 
 **Document Version:** 1.0.0  
 **Last Updated:** December 24, 2025  

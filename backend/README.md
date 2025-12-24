@@ -31,6 +31,67 @@ backend/
 └── package.json
 ```
 
+## Watcher Configuration
+
+Watchers are the primary operational unit. Each watcher is configured through events and managed via the backend API.
+
+### Core Configuration Fields
+
+**Identity (Immutable):**
+- `watcher_id`: UUID identifier
+- `account_id`: Parent account
+- `ingest_token`: Unique token for email routing (e.g., `a7f3k9`)
+- `created_at`: Creation timestamp
+- `created_by`: Creator user ID
+
+**Operational State:**
+- `name`: Human-readable name (mutable)
+- `status`: `"created"` | `"active"` | `"paused"`
+- `policy`: Complete policy configuration (mutable)
+
+### Policy Configuration (WatcherPolicy)
+
+```typescript
+type WatcherPolicy = {
+  allowed_senders: string[];              // Email allowlist
+  silence_threshold_hours: number;        // Default: 72
+  deadline_warning_hours: number;         // Default: 24
+  deadline_critical_hours: number;        // Default: 2
+  notification_channels: NotificationChannel[];
+  reporting_cadence: "daily" | "weekly" | "on_demand";
+  reporting_recipients: string[];
+};
+```
+
+**Key Policy Rules:**
+- `allowed_senders`: Exact email match, case-insensitive, no wildcards
+- `deadline_warning_hours` must be > `deadline_critical_hours`
+- At least one enabled notification channel required for activation
+- Thresholds: silence (1-720 hours), warning (> critical), critical (> 0)
+
+### Lifecycle Events
+
+**Creation:** `WATCHER_CREATED` → status = "created"
+**Activation:** `WATCHER_ACTIVATED` → status = "active" (monitoring begins)
+**Pause:** `WATCHER_PAUSED` → status = "paused" (monitoring suspended)
+**Resume:** `WATCHER_RESUMED` → status = "active" (monitoring resumes)
+**Policy Change:** `POLICY_UPDATED` → new policy applies immediately
+
+### Email Routing
+
+Each watcher has a unique ingestion address:
+```
+<sanitized-name>-<ingest_token>@ingest.deva.email
+```
+
+Examples:
+- `personal-finance-a7f3k9@ingest.deva.email`
+- `legal-matters-b2j8m1@ingest.deva.email`
+
+Routing is **address-only** (content never examined).
+
+See [System Design Document](../docs/SYSTEM_DESIGN.md#81-watchers) for complete specification.
+
 ## Network Communication
 
 The backend communicates with external services over HTTP:
