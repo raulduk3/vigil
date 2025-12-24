@@ -455,6 +455,20 @@ For production or distributed deployment, update `.env` files accordingly.
 
 ---
 
+## Documentation
+
+For complete implementation details, see the **[System Design Document](docs/SYSTEM_DESIGN.md)**.
+
+### Key Documents:
+- **[System Design Document](docs/SYSTEM_DESIGN.md)** - Complete implementation-grade specification
+- **[Documentation Index](docs/README.md)** - Full documentation catalog
+- **[Backend README](backend/README.md)** - Backend control plane details
+- **[LLM Service README](llm-service/README.md)** - Fact extraction service details
+- **[SMTP Adapter README](smtp-adapter/README.md)** - Email ingress details
+- **[Frontend README](frontend/README.md)** - Dashboard interface details
+
+---
+
 ## Event Model
 
 Events are the single source of truth. See [backend/src/events/types.ts](backend/src/events/types.ts) for complete definitions.
