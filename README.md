@@ -380,6 +380,36 @@ The dashboard is a **read-heavy inspection surface**, not a system of record.
 
 **All authoritative changes flow through event creation.**
 
+### State Reconstruction (How You See Current State)
+
+When you log in and view your watcher's threads and reminders, the system provides current state through a **two-tier approach**:
+
+**For Most Watchers (< 10,000 events):**
+- Every dashboard query **replays all events in real-time**
+- Guarantees 100% accuracy (no stale data possible)
+- Response time: 50-200ms
+- This is the default and works for most users
+
+**For High-Volume Watchers (> 10,000 events):**
+- Queries read from **cached projections** (derived tables)
+- Projections are **disposable and rebuildable** from events
+- If projection is missing/stale, system falls back to replay
+- Response time: < 10ms
+- Urgency is still computed in real-time (time-relative)
+
+**Event Log View:**
+- Always a direct read from event store
+- No replay or derivation
+- Shows raw immutable facts with timestamps
+- Complete audit trail of all actions
+
+**Key Guarantee:**  
+*If you replay events, you MUST get the same state as displayed. If not, the projection is corrupted and automatically rebuilds.*
+
+See [System Design Document - Section 7.3](docs/SYSTEM_DESIGN.md#73-state-reconstruction-and-query-strategy) for complete implementation details.
+
+---
+
 ## System Components
 
 ### 1. Backend Control Plane (TypeScript/Bun)

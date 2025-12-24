@@ -92,6 +92,96 @@ Routing is **address-only** (content never examined).
 
 See [System Design Document](../docs/SYSTEM_DESIGN.md#81-watchers) for complete specification.
 
+## State Reconstruction Implementation
+
+The backend provides current watcher state through a **two-tier query strategy**:
+
+### Tier 1: Event Replay (Default)
+
+```typescript
+// For watchers with < 10,000 events
+async function getWatcherState(watcherId: string) {
+  const events = await eventStore.getEventsForWatcher(watcherId);
+  const state = replayEvents(events);  // Pure function from runtime.ts
+  return state;
+}
+```
+
+**Characteristics:**
+- Always correct (events are source of truth)
+- No cache invalidation needed
+- Typical latency: 50-200ms
+- Used for most watchers
+
+### Tier 2: Cached Projections (Performance)
+
+```typescript
+// For watchers with > 10,000 events
+async function getWatcherState(watcherId: string) {
+  const projection = await db.query(
+    "SELECT * FROM thread_projections WHERE watcher_id = ?",
+    [watcherId]
+  );
+  
+  // Verify freshness, rebuild if stale
+  if (isStale(projection)) {
+    await rebuildProjection(watcherId);
+  }
+  
+  return projection;
+}
+```
+
+**Projection Properties:**
+- Disposable (can delete and rebuild anytime)
+- Never authoritative (events are truth)
+- Self-healing (rebuilds if corrupted)
+- Typical latency: < 10ms
+
+### Implementation Strategy
+
+**When to use replay:**
+- Event count < 10,000
+- Audit/debugging queries
+- Projection verification
+- Report generation
+
+**When to use projections:**
+- Event count > 10,000
+- High-frequency dashboard queries
+- Performance-critical endpoints
+
+**Fallback behavior:**
+- If projection missing → replay
+- If projection stale → async rebuild + serve projection
+- If projection corrupted → replay + trigger rebuild
+
+### Event Store Queries
+
+```typescript
+interface EventStore {
+  // Full replay
+  getEventsForWatcher(watcherId: string): Promise<DevaEvent[]>;
+  
+  // Partial replay (since timestamp)
+  getEventsSince(watcherId: string, timestamp: number): Promise<DevaEvent[]>;
+  
+  // Event log pagination
+  query(options: {
+    watcher_id: string,
+    limit: number,
+    offset: number,
+    order: "ASC" | "DESC"
+  }): Promise<DevaEvent[]>;
+  
+  // Performance queries
+  countEvents(watcherId: string): Promise<number>;
+  getLastEvent(watcherId: string): Promise<DevaEvent | null>;
+}
+```
+
+See [System Design Document - Section 7.3](../docs/SYSTEM_DESIGN.md#73-state-reconstruction-and-query-strategy) for complete specification.
+
 ## Network Communication
 
 The backend communicates with external services over HTTP:
