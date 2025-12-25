@@ -1,17 +1,40 @@
-# DEVA
+# Vigil
 
 **Deterministic, Event-Sourced Vigilance System for Time-Sensitive Email Oversight**
 
-DEVA is a deterministic, event-sourced vigilance system that provides **delegated oversight** over explicitly routed email streams. The system exists to reduce the risk of quiet failure in time-sensitive email communication by observing elapsed time, silence, and stated or implied deadlines, and by surfacing advisory notifications when attention may be warranted.
+## SDD Traceability
+
+This document provides a high-level overview of the Vigil system. The authoritative specification is the [Software Design Document (SDD)](docs/SDD.md).
+
+| Section | SDD Requirements |
+|---------|------------------|
+| Core Principles | [SDD 1.2 System Boundaries](docs/SDD.md#12-system-boundaries) |
+| Foundational Architecture | [SDD 1.4 Core Primitives](docs/SDD.md#14-core-system-primitives), CONS-1 through CONS-8 |
+| Architectural Invariants | FR-16, FR-20, CONS-1, CONS-2 |
+| Watchers | [SDD 1.4 Watcher](docs/SDD.md#watcher), FR-1 through FR-4 |
+| Watcher Runtime | MR-WatcherRuntime-1 through MR-WatcherRuntime-6 |
+| Email Ingestion | FR-5, MR-BackendIngestion-1 through MR-BackendIngestion-4, IR-8, IR-9 |
+| LLM Extraction | FR-6, FR-6b, FR-6c, FR-7, MR-LLMService-1 through MR-LLMService-5 |
+| Notifications | FR-11, FR-12, MR-NotificationWorker-1 through MR-NotificationWorker-3 |
+| Reports | FR-15, MR-Scheduler-2 |
+
+For complete requirement specifications, acceptance criteria, and unit test requirements, see the [SDD](docs/SDD.md).
+
+---
+
+Vigil is a deterministic, event-sourced vigilance system that provides **delegated oversight** over explicitly routed email streams. The system exists to reduce the risk of quiet failure in time-sensitive email communication by observing elapsed time, silence, and stated or implied deadlines, and by surfacing advisory notifications when attention may be warranted.
 
 ## Core Principles
 
-DEVA is intentionally constrained in scope:
+Vigil is intentionally constrained in scope:
 - **Does NOT** access inboxes, automate replies, infer intent, assign tasks, or act autonomously
+- **Does NOT** connect to financial accounts, track balances, or reconcile transactions
 - **Never** becomes a decision-maker
 - **Humans** retain full responsibility and control at all times
 
 The system favors **determinism over intelligence**, **transparency over automation**, and **restraint over completeness**. Its core promise is not to manage email, but to provide confidence: confidence that important communication is being observed, that silence is not going unnoticed, and that when nothing happens, it is because nothing needs to happen—not because something was missed.
+
+**Domain Scope:** Vigil tracks time commitments expressed in communication, not money. Bills and payment notices can be monitored, but only as communications with deadlines—Vigil extracts due dates and measures silence, nothing more. This same capability applies to legal deadlines, client requests, or any obligation expressed in language.
 
 ## Foundational Architecture
 
@@ -27,7 +50,7 @@ This guarantees:
 This repository is organized as a **monorepo** where each top-level directory is its own independent Git repository with network-routed service communication:
 
 ```
-deva/
+Vigil/
 ├── backend/              # Backend Control Plane (TypeScript/Bun)
 │   ├── src/
 │   │   ├── events/      # Event type definitions and store
@@ -104,30 +127,67 @@ These invariants are **non-negotiable** and define the system's foundational gua
   - Retry autonomously
 - The system must function correctly if the LLM is offline
 
-### 5. Thread Model (Obligations)
+### 5. Thread Model (Tracked Conversations)
 
-- **Threads represent obligations, not conversations**
-- A thread exists **if and only if a due boundary exists**—explicitly stated, implicitly windowed, or conservatively inferred from silence-sensitive language
-- Threads are created only by events that establish such a boundary
-- They track the lifecycle of a single obligation over time and are independent of conversational back-and-forth
+- **Threads represent tracked conversations**, not just obligations
+- The router LLM runs on every inbound email and determines thread creation based on what it detects
+- Thread creation is driven by extraction, NOT by explicit user intent
+- **Threads do NOT own deadlines**—deadlines belong to Reminders derived from threads
+- Threads are monitored for silence (no new messages) and inactivity (no updates)
+- **Core tracking feature:** When communications were sent, responded to, fulfilled, and when obligations were due
+- Threads cannot be merged or reassigned to different watchers
 - Threads may be closed:
   - a) Automatically when an email contains explicit, evidence-backed closure language
   - b) Manually by a user through the dashboard
 - **Closure is terminal**: Once closed, a thread can **NEVER** reopen
-- Subsequent emails may create new threads if they introduce new obligations, but they never resurrect resolved ones
+- Closed threads are preserved for tracking and audit, but excluded from reports by default
+- Subsequent emails may create new threads if they introduce new signals, but they never resurrect closed ones
 
-### 6. Reminder Model (Urgency)
+### 6. Message Model (Non-Persistence)
+
+- **Messages are NOT persisted as first-class entities**
+- The system does NOT store full email body content after ingestion
+- Only metadata is retained: from, subject, headers, received_at, original_date
+- Email bodies are parsed, sent to LLM for extraction, then discarded
+- If a watcher misses an email, the sender must resend and clearly label it as forwarded/resent
+- This constraint preserves state machine integrity and minimizes PII storage
+- All metadata is tracked for user traceability and transparency
+
+### 7. Reminder Model (Urgency)
 
 - Reminder state is **derived and time-relative**, not stored as authoritative data
-- Computed on demand by comparing current time to a thread's due boundary and last observed activity, using policy-defined thresholds
+- **Reminders carry deadline information**—deadlines belong to reminders, not threads
+- `deadline_type` and `deadline_utc` are reminder-level fields
+- Computed on demand by comparing current time to extraction event deadlines and last observed activity, using policy-defined thresholds
 - **Time never changes facts—only urgency**
 - **Alerts fire only on state transitions** (e.g., from stable to due), never on steady state, and only once per transition
 - This prevents alert fatigue, duplication, and drift
 - Closed threads never alert
 
+### 8. Extraction Event Audit Trail
+
+- Extraction events are ALWAYS emitted and persisted for audit purposes
+- Even when a thread already exists for a message
+- Even when policy would not generate reminders
+- Extraction events form the complete audit trail of what the LLM detected
+
+### 9. Watcher Deletion
+
+- Watchers are deletable entities
+- Deletion removes the oversight role without mutating historical data
+- All historical threads, extraction records, and events remain in the event store
+- Deleted watchers do not receive TIME_TICKs or generate reports
+
+### 10. Data Traceability
+
+- All pipeline data is tracked and saved for user transparency
+- Every email captured with: received_at, from, original_date, threading metadata
+- Every extraction event persisted with source_span and causal_event_id
+- Complete trace from alert → reminder → thread → extraction → message possible
+
 ## System Components
 
-DEVA consists of these components with **strict boundaries**:
+Vigil consists of these components with **strict boundaries**:
 
 1. **Backend Control Plane** (authoritative)
 2. **Event Store** (authoritative)
@@ -143,7 +203,7 @@ DEVA consists of these components with **strict boundaries**:
 
 ### Watchers
 
-The **watcher** is the primary configuration and operational unit in DEVA. A watcher represents a bounded area of responsibility, such as personal finance, legal correspondence, or client billing.
+The **watcher** is the primary configuration and operational unit in Vigil. A watcher represents a bounded area of responsibility, such as personal finance, legal correspondence, or client billing.
 
 #### Watcher Properties
 
@@ -182,8 +242,8 @@ type WatcherPolicy = {
 };
 
 type NotificationChannel = {
-  type: "email" | "sms" | "webhook";
-  destination: string;                       // Email, phone, or URL
+  type: "email" | "webhook";
+  destination: string;                       // Email address or webhook URL
   urgency_filter: "all" | "warning" | "critical"; // Minimum urgency to notify
 };
 ```
@@ -214,8 +274,8 @@ type NotificationChannel = {
 
 - `notification_channels` (NotificationChannel[]): Where to send alerts
   - At least one channel required when watcher is activated
-  - Multiple channels supported (email + SMS + webhook)
-  - Each channel has urgency filter (e.g., only critical alerts to SMS)
+  - Multiple channels supported (email + webhook)
+  - Each channel has urgency filter (e.g., only critical alerts to webhook)
   - Delivery failures are recorded but don't block system
 
 - `reporting_cadence` (enum): How often to send summary reports
@@ -233,14 +293,14 @@ type NotificationChannel = {
 Each watcher has a unique ingestion email address constructed from its name and token:
 
 ```
-<name>-<token>@ingest.deva.email
+<name>-<token>@ingest.vigil.email
 ```
 
 **Examples:**
 ```
-finance-a7f3k9@ingest.deva.email
-legal-b2j8m1@ingest.deva.email
-client-billing-x4p9j2@ingest.deva.email
+finance-a7f3k9@ingest.vigil.email
+legal-b2j8m1@ingest.vigil.email
+client-billing-x4p9j2@ingest.vigil.email
 ```
 
 **Routing Rules:**
@@ -320,9 +380,9 @@ Email ingestion is handled through a lightweight, **non-authoritative transport 
 - Parses and normalizes message
 - Validates sender allowlists
 - Performs deduplication
-- Emits canonical `EMAIL_RECEIVED` event
+- Emits canonical `MESSAGE_RECEIVED` event
 
-At the moment of event emission, the email becomes part of DEVA's permanent record. **No inference or state mutation occurs prior to event creation.**
+At the moment of event emission, the email becomes part of Vigil's permanent record. **No inference or state mutation occurs prior to event creation.**
 
 ### LLM as Fact Extractor
 
@@ -334,24 +394,24 @@ Artificial intelligence is used in a **strictly bounded and subordinate role**. 
 **LLM Constraints:**
 - Never plan, infer intent, decide outcomes, or influence control flow
 - Each email triggers **at most one extraction task**
-- Outputs are frozen into immutable events (e.g., `DEADLINE_EXTRACTED`, `CLOSURE_EXTRACTED`) with verbatim evidence quotes
+- Outputs are frozen into immutable events (e.g., `HARD_DEADLINE_OBSERVED`, `CLOSURE_SIGNAL_OBSERVED`) with verbatim evidence quotes
 - **Never invoked during event replay, reminder evaluation, reporting, or auditing**
 - If LLM service is unavailable, system continues to function safely with reduced informational fidelity
 
 **LLM Service:**
 - Separate deployment (Python/vLLM)
 - Private network only
-- Minimal HTTP endpoints:
-  - `/route` - Classify email to thread (optional)
-  - `/extract/deadline` - Extract deadline information
-  - `/extract/risk` - Extract silence-sensitive language
+- HTTP endpoints:
+  - `/extract/deadline` - Extract hard deadline information
+  - `/extract/soft_deadline` - Extract soft deadline signals
+  - `/extract/urgency` - Extract urgency signals (questions, requests)
   - `/extract/closure` - Detect explicit closure
 - Returns structured JSON + verbatim evidence
 - Does NOT chain prompts, call tools, retry autonomously, or emit events
 
 ### Notifications and Reports
 
-Notifications and reports are the **only outward-facing actions** DEVA performs.
+Notifications and reports are the **only outward-facing actions** Vigil performs.
 
 **Alerts:**
 - Generated based on derived watcher state
@@ -408,7 +468,6 @@ When you log in and view your watcher's threads and reminders, the system provid
 
 See [System Design Document - Section 7.3](docs/SYSTEM_DESIGN.md#73-state-reconstruction-and-query-strategy) for complete implementation details.
 
----
 
 ## System Components
 
@@ -604,7 +663,7 @@ For production or distributed deployment, update `.env` files accordingly.
 
 For complete implementation details, see the **[System Design Document](docs/SYSTEM_DESIGN.md)**.
 
-### Key Documents:
+### Key Documents
 - **[System Design Document](docs/SYSTEM_DESIGN.md)** - Complete implementation-grade specification
 - **[Documentation Index](docs/README.md)** - Full documentation catalog
 - **[Backend README](backend/README.md)** - Backend control plane details
