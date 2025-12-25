@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * Simple release script for DEVA
+ * Simple release script for Vigil
  * 
  * Usage:
  *   bun run scripts/release.ts [patch|minor|major]

@@ -4,7 +4,7 @@
 
 import { describe, test, expect, beforeEach } from "bun:test";
 import { InMemoryEventStore } from "@/events/event-store";
-import type { DevaEvent } from "@/events/types";
+import type { VigilEvent } from "@/events/types";
 
 describe("InMemoryEventStore", () => {
   let store: InMemoryEventStore;
@@ -14,7 +14,7 @@ describe("InMemoryEventStore", () => {
   });
 
   test("should append events", async () => {
-    const event: DevaEvent = {
+    const event: VigilEvent = {
       event_id: "e1",
       timestamp: Date.now(),
       type: "ACCOUNT_CREATED",
@@ -28,7 +28,7 @@ describe("InMemoryEventStore", () => {
   });
 
   test("should prevent duplicate event IDs", async () => {
-    const event: DevaEvent = {
+    const event: VigilEvent = {
       event_id: "e1",
       timestamp: Date.now(),
       type: "ACCOUNT_CREATED",
@@ -44,7 +44,7 @@ describe("InMemoryEventStore", () => {
   });
 
   test("should retrieve events for watcher", async () => {
-    const events: DevaEvent[] = [
+    const events: VigilEvent[] = [
       {
         event_id: "e1",
         timestamp: Date.now(),
@@ -85,7 +85,7 @@ describe("InMemoryEventStore", () => {
   });
 
   test("should retrieve events by IDs", async () => {
-    const events: DevaEvent[] = [
+    const events: VigilEvent[] = [
       {
         event_id: "e1",
         timestamp: Date.now(),
@@ -114,7 +114,7 @@ describe("InMemoryEventStore", () => {
 
   test("should retrieve events since timestamp", async () => {
     const baseTime = Date.now();
-    const events: DevaEvent[] = [
+    const events: VigilEvent[] = [
       {
         event_id: "e1",
         timestamp: baseTime - 2000,

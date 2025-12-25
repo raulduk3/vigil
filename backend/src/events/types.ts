@@ -1,5 +1,5 @@
 /**
- * DEVA Event Types
+ * Vigil Event Types
  * 
  * All events are immutable and append-only.
  * Events are the single source of truth.
@@ -96,13 +96,13 @@ export type NotificationChannel = {
 };
 
 // ──────────────────────────────────────────────────────────────
-// EMAIL INGRESS EVENTS
+// MESSAGE INGRESS EVENTS
 // ──────────────────────────────────────────────────────────────
 
-export type EmailReceivedEvent = BaseEvent & {
-  readonly type: "EMAIL_RECEIVED";
+export type MessageReceivedEvent = BaseEvent & {
+  readonly type: "MESSAGE_RECEIVED";
   readonly watcher_id: string;
-  readonly email_id: string; // unique identifier for deduplication
+  readonly message_id: string; // unique identifier for deduplication
   readonly from: string;
   readonly subject: string;
   readonly body_text: string;
@@ -114,43 +114,58 @@ export type EmailReceivedEvent = BaseEvent & {
 // LLM EXTRACTION EVENTS (frozen facts)
 // ──────────────────────────────────────────────────────────────
 
-export type EmailRoutedEvent = BaseEvent & {
-  readonly type: "EMAIL_ROUTED";
+export type MessageRoutedEvent = BaseEvent & {
+  readonly type: "MESSAGE_ROUTED";
   readonly watcher_id: string;
-  readonly email_id: string;
+  readonly message_id: string;
   readonly routed_to_thread_id: string | null; // null = new thread
   readonly evidence: string; // verbatim text excerpt
   readonly confidence: "high" | "medium" | "low";
 };
 
-export type DeadlineExtractedEvent = BaseEvent & {
-  readonly type: "DEADLINE_EXTRACTED";
+export type HardDeadlineObservedEvent = BaseEvent & {
+  readonly type: "HARD_DEADLINE_OBSERVED";
   readonly watcher_id: string;
-  readonly email_id: string;
-  readonly thread_id: string;
-  readonly deadline_timestamp: number | null; // null = no deadline found
-  readonly deadline_text: string; // verbatim text from email
-  readonly evidence: string;
+  readonly message_id: string;
+  readonly deadline_utc: number; // Unix timestamp of the deadline
+  readonly deadline_text: string; // verbatim text from message (e.g., "Friday 5pm")
+  readonly source_span: string; // exact text excerpt for evidence
+  readonly confidence: "high" | "medium";
+  readonly extractor_version: string;
+  readonly binding: true; // always true for hard deadlines
 };
 
-export type RiskExtractedEvent = BaseEvent & {
-  readonly type: "RISK_EXTRACTED";
+export type SoftDeadlineSignalObservedEvent = BaseEvent & {
+  readonly type: "SOFT_DEADLINE_SIGNAL_OBSERVED";
   readonly watcher_id: string;
-  readonly email_id: string;
-  readonly thread_id: string;
-  readonly risk_level: "none" | "low" | "medium" | "high";
-  readonly risk_indicators: readonly string[]; // specific phrases
-  readonly evidence: string;
+  readonly message_id: string;
+  readonly signal_text: string; // verbatim fuzzy temporal language (e.g., "next week")
+  readonly source_span: string; // exact text excerpt for evidence
+  readonly estimated_horizon_hours: number; // estimated hours until soft deadline
+  readonly confidence: "high" | "medium";
+  readonly extractor_version: string;
+  readonly binding: false; // always false for soft signals
 };
 
-export type ClosureExtractedEvent = BaseEvent & {
-  readonly type: "CLOSURE_EXTRACTED";
+export type UrgencySignalObservedEvent = BaseEvent & {
+  readonly type: "URGENCY_SIGNAL_OBSERVED";
   readonly watcher_id: string;
-  readonly email_id: string;
-  readonly thread_id: string;
-  readonly is_closure: boolean;
-  readonly closure_type: "explicit" | "implicit" | "none";
-  readonly evidence: string;
+  readonly message_id: string;
+  readonly signal_type: "question" | "escalation" | "waiting" | "follow_up";
+  readonly signal_text: string; // verbatim urgency language
+  readonly source_span: string; // exact text excerpt for evidence
+  readonly confidence: "high" | "medium";
+  readonly extractor_version: string;
+  readonly binding: false; // always false for urgency signals
+};
+
+export type ClosureSignalObservedEvent = BaseEvent & {
+  readonly type: "CLOSURE_SIGNAL_OBSERVED";
+  readonly watcher_id: string;
+  readonly message_id: string;
+  readonly closure_type: "explicit" | "implicit";
+  readonly source_span: string; // exact text excerpt for evidence
+  readonly extractor_version: string;
 };
 
 // ──────────────────────────────────────────────────────────────
@@ -161,7 +176,7 @@ export type ThreadOpenedEvent = BaseEvent & {
   readonly type: "THREAD_OPENED";
   readonly watcher_id: string;
   readonly thread_id: string;
-  readonly email_id: string; // triggering email
+  readonly message_id: string; // triggering message
   readonly opened_at: number;
 };
 
@@ -169,16 +184,16 @@ export type ThreadUpdatedEvent = BaseEvent & {
   readonly type: "THREAD_UPDATED";
   readonly watcher_id: string;
   readonly thread_id: string;
-  readonly email_id: string; // new email in thread
+  readonly message_id: string; // new message in thread
   readonly deadline_timestamp: number | null;
 };
 
-export type ThreadActivitySeenEvent = BaseEvent & {
-  readonly type: "THREAD_ACTIVITY_SEEN";
+export type ThreadActivityObservedEvent = BaseEvent & {
+  readonly type: "THREAD_ACTIVITY_OBSERVED";
   readonly watcher_id: string;
   readonly thread_id: string;
-  readonly email_id: string;
-  readonly seen_at: number;
+  readonly message_id: string;
+  readonly observed_at: number;
 };
 
 export type ThreadClosedEvent = BaseEvent & {
@@ -186,7 +201,7 @@ export type ThreadClosedEvent = BaseEvent & {
   readonly watcher_id: string;
   readonly thread_id: string;
   readonly closed_at: number;
-  readonly closed_by: "email_evidence" | "user_action";
+  readonly closed_by: "message_evidence" | "user_action";
   readonly closure_event_id: string; // references triggering event
 };
 
@@ -210,6 +225,23 @@ export type ReminderEvaluatedEvent = BaseEvent & {
   readonly hours_since_activity: number;
 };
 
+/**
+ * Generated when urgency transitions to a higher level (warning/critical/overdue).
+ * This is the derived artifact that triggers alert queuing.
+ * Contains causal traceability back to originating thread event.
+ */
+export type ReminderGeneratedEvent = BaseEvent & {
+  readonly type: "REMINDER_GENERATED";
+  readonly watcher_id: string;
+  readonly thread_id: string;
+  readonly reminder_id: string;
+  readonly reminder_type: "hard_deadline" | "soft_deadline" | "silence";
+  readonly urgency_level: "warning" | "critical" | "overdue";
+  readonly causal_event_id: string; // FR-19: Traceability to thread event
+  readonly binding: boolean; // true for hard deadlines, false for soft/silence
+  readonly generated_at: number;
+};
+
 // ──────────────────────────────────────────────────────────────
 // NOTIFICATION EVENTS
 // ──────────────────────────────────────────────────────────────
@@ -219,8 +251,10 @@ export type AlertQueuedEvent = BaseEvent & {
   readonly watcher_id: string;
   readonly thread_id: string;
   readonly alert_id: string;
+  readonly reminder_id: string; // FR-19: Links to ReminderGeneratedEvent
   readonly urgency_state: "warning" | "critical" | "overdue";
   readonly channels: readonly NotificationChannel[];
+  readonly causal_event_id: string; // FR-19: Traceability chain
 };
 
 export type AlertSentEvent = BaseEvent & {
@@ -256,7 +290,7 @@ export type ReportSummary = {
   readonly threads_closed: number;
   readonly threads_active: number;
   readonly alerts_sent: number;
-  readonly emails_received: number;
+  readonly messages_received: number;
 };
 
 export type ReportSentEvent = BaseEvent & {
@@ -270,7 +304,7 @@ export type ReportSentEvent = BaseEvent & {
 // DISCRIMINATED UNION OF ALL EVENTS
 // ──────────────────────────────────────────────────────────────
 
-export type DevaEvent =
+export type VigilEvent =
   // Control Plane
   | AccountCreatedEvent
   | UserCreatedEvent
@@ -279,21 +313,23 @@ export type DevaEvent =
   | WatcherPausedEvent
   | WatcherResumedEvent
   | PolicyUpdatedEvent
-  // Email Ingress
-  | EmailReceivedEvent
-  // LLM Extraction
-  | EmailRoutedEvent
-  | DeadlineExtractedEvent
-  | RiskExtractedEvent
-  | ClosureExtractedEvent
+  // Message Ingress
+  | MessageReceivedEvent
+  // LLM Extraction (Three-Tier Model)
+  | MessageRoutedEvent
+  | HardDeadlineObservedEvent
+  | SoftDeadlineSignalObservedEvent
+  | UrgencySignalObservedEvent
+  | ClosureSignalObservedEvent
   // Thread Lifecycle
   | ThreadOpenedEvent
   | ThreadUpdatedEvent
-  | ThreadActivitySeenEvent
+  | ThreadActivityObservedEvent
   | ThreadClosedEvent
   // Time & Reminders
   | TimeTickEvent
   | ReminderEvaluatedEvent
+  | ReminderGeneratedEvent
   // Notifications
   | AlertQueuedEvent
   | AlertSentEvent
@@ -305,9 +341,9 @@ export type DevaEvent =
 /**
  * Type guard for event type checking
  */
-export function isEventOfType<T extends DevaEvent["type"]>(
-  event: DevaEvent,
+export function isEventOfType<T extends VigilEvent["type"]>(
+  event: VigilEvent,
   type: T
-): event is Extract<DevaEvent, { type: T }> {
+): event is Extract<VigilEvent, { type: T }> {
   return event.type === type;
 }

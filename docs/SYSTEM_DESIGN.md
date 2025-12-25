@@ -1,59 +1,65 @@
-# DEVA System Design Document (SDD)
+# Vigil System Design Document (SDD)
 
 **Deterministic, Event-Sourced Vigilance System for Time-Sensitive Email Oversight**
 
-This document defines the complete, implementation-grade system design for DEVA. It is written for engineers responsible for implementing, operating, and evolving the system. All behavior, including AI usage, is strictly bounded and explainable through immutable event replay.
+This document defines the complete, implementation-grade system design for Vigil. It is written for engineers responsible for implementing, operating, and evolving the system. All behavior, including AI usage, is strictly bounded and explainable through immutable event replay.
 
+## SDD Traceability
 
-## Table of Contents
+The [Software Design Document (SDD)](SDD.md) is the **authoritative source of truth** for all system requirements. This technical design document elaborates on SDD architecture and behaviors.
 
-1. [System Purpose and Scope](#1-system-purpose-and-scope)
-2. [Foundational Architecture](#2-foundational-architecture)
-3. [Four-Subsystem Architecture](#3-four-subsystem-architecture)
-4. [Subsystem 1: Ingestion and Immutable Event Capture](#4-subsystem-1-ingestion-and-immutable-event-capture)
-5. [Subsystem 2: Event-Sourced Runtime Executing Watchers](#5-subsystem-2-event-sourced-runtime-executing-watchers)
-6. [Subsystem 3: Bounded Semantic Intelligence](#6-subsystem-3-bounded-semantic-intelligence)
-7. [Subsystem 4: Notification and Inspection Interfaces](#7-subsystem-4-notification-and-inspection-interfaces)
-   - 7.3 [State Reconstruction and Query Strategy](#73-state-reconstruction-and-query-strategy)
-8. [Core Domain Concepts](#8-core-domain-concepts)
-9. [Event Model](#9-event-model)
-10. [Cross-Cutting Guarantees](#10-cross-cutting-guarantees)
-11. [Implementation Constraints](#11-implementation-constraints)
-12. [Canonical System Rule](#12-canonical-system-rule)
+| This Document Section | SDD Requirements |
+|-----------------------|------------------|
+| System Purpose and Scope | FR-16 (Delegated Vigilance), FR-20 (Expressly Constrained Behavior) |
+| Foundational Architecture | FR-16, CONS-1 through CONS-8, ASSUM-1 through ASSUM-8 |
+| Event Store | MR-EventStore-1, MR-EventStore-2, MR-EventStore-3 |
+| Watcher Runtime | MR-WatcherRuntime-1 through MR-WatcherRuntime-6 |
+| API Endpoints | FR-2, FR-3, FR-4, FR-5, FR-6, FR-6b, FR-6c, FR-9, FR-15 |
+| LLM Integration | FR-7, FR-7a, FR-8, FR-10, FR-11, FR-12, FR-13 |
+| Notification System | FR-14, MR-NotificationWorker-1 through MR-NotificationWorker-3 |
+| Infrastructure | IR-1 through IR-24 |
+| Security | SEC-1 through SEC-8 |
 
+See [SDD Section 5: Implementation Coverage Table](SDD.md#implementation-coverage-table) for complete mapping of requirements to implementations.
+
+---
 
 ## 1. System Purpose and Scope
 
-### 1.1 What DEVA Is
+### 1.1 What Vigil Is
 
-DEVA is a deterministic, event-sourced vigilance system that provides **delegated oversight** over explicitly routed email streams. The system exists to reduce the risk of quiet failure in time-sensitive email communication by:
+Vigil is a deterministic, event-sourced vigilance system that provides **delegated oversight** over explicitly routed email streams. The system exists to reduce the risk of quiet failure in time-sensitive email communication by:
 
 - Observing elapsed time and silence
 - Tracking stated or implied deadlines
 - Surfacing advisory notifications when attention may be warranted
 
-### 1.2 What DEVA Is NOT
+### 1.2 What Vigil Is NOT
 
-DEVA is intentionally constrained and:
+Vigil is intentionally constrained and:
+
 - **Does NOT** access inboxes
 - **Does NOT** automate replies
 - **Does NOT** infer intent beyond explicit extraction
 - **Does NOT** assign tasks
 - **Does NOT** act autonomously
+- **Does NOT** connect to financial accounts, track balances, detect payments, or reconcile transactions
 - **Never** becomes a decision-maker
 
 **Humans retain full responsibility and control at all times.**
 
+**Note on Financial Communications:** Bills, payment notices, and transaction emails can be routed to Vigil, but they are treated solely as communications asserting time-bound obligations—not as financial records. Vigil records when an email arrived, extracts any explicit deadlines stated in the message, and measures elapsed time and silence. This makes it useful for monitoring bill-related communication (noticing due dates, missing confirmations) while remaining fully general across all contexts where obligations emerge from language. Vigil tracks time commitments, not money.
+
 ### 1.3 Design Philosophy
 
 The system favors:
+
 - **Determinism over intelligence**
 - **Transparency over automation**
 - **Restraint over completeness**
 - **Auditability over convenience**
 
-DEVA's core promise is not to manage email, but to provide **confidence**: confidence that important communication is being observed, that silence is not going unnoticed, and that when nothing happens, it is because nothing needs to happen—not because something was missed.
-
+Vigil's core promise is not to manage email, but to provide **confidence**: confidence that important communication is being observed, that silence is not going unnoticed, and that when nothing happens, it is because nothing needs to happen—not because something was missed.
 
 ## 2. Foundational Architecture
 
@@ -62,6 +68,7 @@ DEVA's core promise is not to manage email, but to provide **confidence**: confi
 **Events are the sole source of truth.** Every fact that can influence system behavior is captured once as an immutable, append-only event. No authoritative state is stored in mutable database tables, caches, or long-lived memory.
 
 All operational state is **always derived** by replaying events in order:
+
 - Threads and their status
 - Due boundaries
 - Reminder status
@@ -81,6 +88,7 @@ This architecture guarantees:
 ### 2.3 State Reconstruction
 
 Projections (derived state) may be stored in databases for performance, but:
+
 - Projections are **disposable**
 - Projections are **rebuildable** from events at any time
 - Projections are **never authoritative**
@@ -89,15 +97,15 @@ Projections (derived state) may be stored in databases for performance, but:
 ### 2.4 Time Handling
 
 Time is treated as an explicit trigger, not a source of facts:
+
 - Time enters the system through explicit TIME_TICK events
 - **Time never changes facts—only urgency**
 - Scheduled evaluations create time triggers but don't mutate state
 - All time-based decisions are deterministic given the same events
 
-
 ## 3. Four-Subsystem Architecture
 
-DEVA is organized around four conceptual subsystems. These subsystems define **responsibility boundaries**, not deployment boundaries. Each subsystem contains one or more concrete components that may be independently deployed or scaled, but which do not constitute separate architectural domains.
+Vigil is organized around four conceptual subsystems. These subsystems define **responsibility boundaries**, not deployment boundaries. Each subsystem contains one or more concrete components that may be independently deployed or scaled, but which do not constitute separate architectural domains.
 
 ### 3.1 The Four Subsystems
 
@@ -116,6 +124,7 @@ DEVA is organized around four conceptual subsystems. These subsystems define **r
 ### 3.2 Deployment Independence
 
 While organized into four subsystems conceptually, components may be:
+
 - Deployed independently
 - Scaled independently
 - Versioned independently
@@ -126,11 +135,11 @@ However, they remain within their subsystem's responsibility boundary.
 ### 3.3 Communication
 
 All inter-component communication is:
+
 - Network-routed over HTTP/SMTP
 - Explicitly configured via environment variables
 - Traceable through events
 - Fail-safe (degraded rather than broken)
-
 
 ## 4. Subsystem 1: Ingestion and Immutable Event Capture
 
@@ -142,13 +151,15 @@ This subsystem observes external reality and converts it into immutable internal
 
 The SMTP server is a transport-layer adapter that accepts inbound email and forwards it into the system.
 
-#### Responsibilities:
+#### Responsibilities
+
 - Listen for SMTP connections on configured port
 - Accept inbound email delivery
 - Extract recipient address identifying the watcher
 - Forward raw email payload to backend ingestion endpoint
 
-#### Implementation Constraints:
+#### Implementation Constraints
+
 - **Must NOT** persist email content
 - **Must NOT** apply business logic
 - **Must NOT** emit events (only backend emits events)
@@ -156,20 +167,22 @@ The SMTP server is a transport-layer adapter that accepts inbound email and forw
 - **Must NOT** retry indefinitely
 - Failure is acceptable and visible
 
-#### Routing Model:
+#### Routing Model
+
 - Email routing is determined **solely by recipient address**
-- Format: `<name>-<token>@ingest.deva.email`
+- Format: `<name>-<token>@ingest.vigil.email`
 - Content is never examined for routing decisions
 - This ensures explicit user intent and prevents misclassification
 
-#### Configuration:
+#### Configuration
+
 See `smtp-adapter/.env.example`
 
-#### Tech Stack:
+#### Tech Stack
+
 - Node.js/TypeScript or Python
 - Minimal SMTP library
 - HTTP client for backend forwarding
-
 
 ### 4.2 Backend Ingestion Endpoint
 
@@ -177,42 +190,161 @@ See `smtp-adapter/.env.example`
 
 The backend ingestion endpoint is the **authoritative boundary** where email becomes part of the system.
 
-#### Responsibilities:
+#### Responsibilities
+
 - Receive forwarded email from SMTP adapter
 - Parse headers and body deterministically
 - Normalize content (charset conversion, whitespace, etc.)
 - Validate sender against watcher allowlists
 - Deduplicate messages (by Message-ID or hash)
-- Emit canonical `EMAIL_RECEIVED` event
+- Emit canonical `MESSAGE_RECEIVED` event (baseline fact)
+- Emit `THREAD_ACTIVITY_OBSERVED` event (activity tracking)
+- Orchestrate LLM extraction (if sender allowed and watcher active)
+- Emit extraction record events based on LLM output
 
-#### Invariants:
-- **No inference occurs before event emission**
+#### Invariants
+
+- **No inference occurs before baseline event emission**
 - **No state mutation occurs before event emission**
-- EMAIL_RECEIVED is sworn evidence—it represents that an email was delivered, not what it means
+- MESSAGE_RECEIVED is sworn evidence—represents that an email was delivered, not what it means
+- THREAD_ACTIVITY_OBSERVED is emitted for every message, establishing temporal baseline
+- LLM extraction is called AFTER baseline events are persisted
 - Parsing failures result in ERROR events, not silent drops
 
-#### Deduplication Strategy:
-- Use Message-ID header if present and valid
-- Fall back to content hash (subject + from + timestamp)
-- Store deduplication keys in event store
-- Duplicate detection is itself recorded as an event
+#### Message Non-Persistence Constraint
 
-#### Event Emission:
+**Messages are NOT persisted as first-class entities.** The system does NOT store full email body content after ingestion.
+
+- **Metadata Only Retained:** `from`, `subject`, `headers` (threading-related), `received_at`, `original_date`, `message_id`
+- **Processing Pipeline:**
+  1. Email body parsed for metadata extraction
+  2. Body text sent to LLM service for fact extraction
+  3. Body text discarded after extraction records are created
+- **Recovery:** If a watcher misses an email (watcher paused, sender not in allowlist), the sender must resend and clearly label it as forwarded/resent
+- **Rationale:** Minimizes PII storage, preserves state machine integrity, simplifies compliance
+- **Data Traceability:** All pipeline metadata is preserved for user transparency—`received_at`, `from`, `original_date`, threading headers
+
+#### Event Emission Sequence (Deterministic Pipeline)
+
+**Step 1: Parse and Validate**
+
+- Parse RFC 5322 email
+- Normalize charset and whitespace
+- Validate sender against allowlist
+- Generate or retrieve message_id for deduplication
+
+**Step 2: Emit Baseline Events (Always)**
+
 ```typescript
+// Event 1: Message received (immutable fact)
 {
-  type: "EMAIL_RECEIVED",
+  type: "MESSAGE_RECEIVED",
   event_id: "uuid",
   timestamp: number,
   watcher_id: "w1",
-  email_id: "unique-id",
+  message_id: "msg_abc123",        // Unique message identifier
   from: "sender@example.com",
   subject: "...",
   body_text: "...",
   received_at: number,
-  headers: { ... }
+  headers: { ... },
+  sender_allowed: boolean           // Result of allowlist check
+}
+
+// Event 2: Activity observed (temporal baseline for silence tracking)
+{
+  type: "THREAD_ACTIVITY_OBSERVED",
+  event_id: "uuid",
+  timestamp: number,
+  watcher_id: "w1",
+  message_id: "msg_abc123",
+  observed_at: number               // When activity occurred
 }
 ```
 
+**Step 3: LLM Extraction (If Conditions Met)**
+
+Conditions:
+
+- Watcher status is `active`
+- Sender is in allowlist (`sender_allowed: true`)
+- LLM service is available
+
+Extract structured facts:
+
+- Hard deadlines (absolute timestamps with explicit language)
+- Soft deadline signals (relative or fuzzy temporal language)
+- Urgency signals (priority indicators without deadlines)
+- Closure signals (completion or resolution language)
+
+**Step 4: Emit Extraction Record Events**
+
+Based on LLM output, emit zero or more:
+
+```typescript
+// Hard deadline found (binding obligation)
+{
+  type: "HARD_DEADLINE_OBSERVED",
+  event_id: "uuid",
+  timestamp: number,
+  watcher_id: "w1",
+  message_id: "msg_abc123",
+  deadline_utc: number,             // Absolute UTC timestamp
+  deadline_text: "by Friday 5pm EST",
+  source_span: "Please reply by Friday 5pm EST",
+  confidence: "high" | "medium" | "low",
+  extractor_version: "v1.0.0",
+  binding: true                      // This is a hard constraint
+}
+
+// Soft deadline signal (risk indicator, non-binding)
+{
+  type: "SOFT_DEADLINE_SIGNAL_OBSERVED",
+  event_id: "uuid",
+  timestamp: number,
+  watcher_id: "w1",
+  message_id: "msg_abc123",
+  signal_text: "soon",
+  source_span: "Please reply soon",
+  estimated_horizon_hours: 48,      // Heuristic estimate
+  confidence: "medium",
+  extractor_version: "v1.0.0",
+  binding: false                     // This is advisory only
+}
+
+// Urgency signal (attention indicator, no deadline)
+{
+  type: "URGENCY_SIGNAL_OBSERVED",
+  event_id: "uuid",
+  timestamp: number,
+  watcher_id: "w1",
+  message_id: "msg_abc123",
+  urgency_level: "high" | "medium" | "low",
+  indicators: ["urgent", "time-sensitive"],
+  source_span: "This is urgent and time-sensitive",
+  extractor_version: "v1.0.0"
+}
+
+// Closure signal (resolution language)
+{
+  type: "CLOSURE_SIGNAL_OBSERVED",
+  event_id: "uuid",
+  timestamp: number,
+  watcher_id: "w1",
+  message_id: "msg_abc123",
+  closure_type: "explicit" | "implicit",
+  source_span: "This issue is now resolved",
+  confidence: "high",
+  extractor_version: "v1.0.0"
+}
+```
+
+#### Deduplication Strategy
+
+- Use Message-ID header if present and valid
+- Fall back to content hash (SHA-256 of from + subject + received_at)
+- Store deduplication keys with message_id
+- Duplicate detection prevents re-processing but logs occurrence
 
 ### 4.3 Event Store
 
@@ -220,7 +352,8 @@ The backend ingestion endpoint is the **authoritative boundary** where email bec
 
 The Event Store persists all immutable events.
 
-#### Responsibilities:
+#### Responsibilities
+
 - Append-only event storage
 - Preserve ordering per watcher
 - Support full replay (all events)
@@ -228,12 +361,14 @@ The Event Store persists all immutable events.
 - Support event retrieval by ID
 - Support schema versioning
 
-#### Implementation Options:
+#### Implementation Options
+
 - **PostgreSQL** with JSONB and append-only table (recommended)
 - **EventStoreDB** for dedicated event sourcing
 - **DynamoDB** for distributed deployment
 
-#### Storage Schema:
+#### Storage Schema
+
 ```sql
 CREATE TABLE events (
   event_id UUID PRIMARY KEY,
@@ -248,17 +383,18 @@ CREATE TABLE events (
 CREATE INDEX idx_watcher_timestamp ON events(watcher_id, timestamp);
 ```
 
-#### Constraints:
+#### Constraints
+
 - **No updates** to events
 - **No deletes** (except compliance-required data removal)
 - **No reinterpretation** of past events
 - All system state must be reconstructible from events alone
 
-#### Event Ordering:
+#### Event Ordering
+
 - Events for a single watcher are totally ordered by timestamp
 - Events across watchers have no ordering guarantee
 - Timestamp + event_id provides tie-breaking
-
 
 ## 5. Subsystem 2: Event-Sourced Runtime Executing Watchers
 
@@ -270,7 +406,8 @@ This subsystem evaluates events and determines whether new events should be emit
 
 The Backend Control Plane is the **sole decision-making authority**.
 
-#### Responsibilities:
+#### Responsibilities
+
 - Expose authenticated HTTP APIs
 - Validate commands and user actions
 - Create and persist events
@@ -279,7 +416,8 @@ The Backend Control Plane is the **sole decision-making authority**.
 - Orchestrate notification dispatching
 - Enforce access control
 
-#### API Surface (Planned):
+#### API Surface (Planned)
+
 - `POST /api/watchers` - Create watcher
 - `POST /api/watchers/:id/activate` - Activate watcher
 - `POST /api/watchers/:id/pause` - Pause watcher
@@ -287,22 +425,24 @@ The Backend Control Plane is the **sole decision-making authority**.
 - `GET /api/watchers/:id/threads` - Get current thread projections
 - `POST /api/ingestion/email` - Receive email from SMTP adapter
 
-#### Architecture:
+#### Architecture
+
 - Stateless HTTP API (no session state)
 - Event-sourced state management
 - Synchronous event emission
 - Asynchronous watcher runtime invocation (queued)
 
-#### Constraints:
+#### Constraints
+
 - **No authoritative state stored outside event store**
 - **No background reasoning loops**
 - **No LLM calls during replay**
 - Stateless between requests
 - All decisions traceable to events
 
-#### Configuration:
-See `backend/.env.example`
+#### Configuration
 
+See `backend/.env.example`
 
 ### 5.2 Watcher Runtime Executor
 
@@ -310,57 +450,69 @@ See `backend/.env.example`
 
 The Watcher Runtime Executor is a **stateless evaluation engine**.
 
-#### Execution Sequence:
+#### Execution Sequence
 
 1. **Load Events**  
    Fetch all events for watcher from event store
 
 2. **Replay Events**  
    Reconstruct state deterministically:
+
    ```typescript
    type WatcherState = {
      watcher_id: string;
-     status: "created" | "active" | "paused";
+     status: "created" | "active" | "paused" | "deleted";
      threads: Map<string, ThreadState>;
+     policy: WatcherPolicy | null;
    };
-   
+
    type ThreadState = {
      thread_id: string;
      opened_at: number;
      last_activity_at: number;
-     deadline_timestamp: number | null;
+     trigger_type: "hard_deadline" | "soft_deadline" | "urgency_signal";
+     // NOTE: Threads do NOT own deadlines. References to extraction events for audit:
+     hard_deadline_event_id: string | null;
+     soft_deadline_event_id: string | null;
+     urgency_signal_event_id: string | null;
+     original_sender: string;
+     original_received_at: number;
      status: "open" | "closed";
      closed_at: number | null;
-     email_ids: readonly string[];
+     message_ids: readonly string[];
    };
    ```
 
 3. **Evaluate Transitions**  
    Check for state transitions:
-   - New thread creation (if EMAIL_RECEIVED + DEADLINE_EXTRACTED)
-   - Thread closure (if CLOSURE_EXTRACTED or user action)
+
+   - New thread creation (if MESSAGE_RECEIVED + HARD_DEADLINE_OBSERVED)
+   - Thread closure (if CLOSURE_SIGNAL_OBSERVED or user action)
    - Reminder state change (if TIME_TICK)
 
 4. **Emit New Events**  
    Generate events for any transitions:
+
    - THREAD_OPENED
    - THREAD_CLOSED
-   - REMINDER_EVALUATED
+   - REMINDER_GENERATED
    - ALERT_QUEUED
 
 5. **Exit**  
    Runtime execution completes
 
-#### Invocation Model:
+#### Invocation Model
+
 ```typescript
 async function runWatcher(
   watcherId: string,
   eventStore: EventStore,
   triggerEventId?: string
-): Promise<readonly DevaEvent[]>
+): Promise<readonly VigilEvent[]>;
 ```
 
-#### Constraints:
+#### Constraints
+
 - **No persistence** of internal state
 - **No waiting** or looping
 - **No external service calls** during replay
@@ -368,79 +520,203 @@ async function runWatcher(
 - Must be **deterministic** (same events → same output)
 - **No LLM calls** during execution
 
-#### Thread Lifecycle Rules:
+#### Thread Lifecycle Rules
 
-**Thread Opening:**
-- Thread opens when EMAIL_RECEIVED + evidence of obligation (deadline or silence-sensitive)
-- Each thread has unique thread_id
+**Message Reception (Always):**
+
+- Every email generates MESSAGE_RECEIVED event (immutable fact)
+- Every email generates THREAD_ACTIVITY_OBSERVED event (temporal baseline)
+- These are baseline observations, not interpretations
+
+**Thread Opening (Extraction-Driven):**
+
+- Thread opens when ANY extraction event is emitted
+- **Router LLM runs on every email** and determines thread creation based on what it detects
+- Thread creation is driven by extraction, NOT by explicit user intent
+- Hard deadline observed → thread created (always)
+- Soft deadline signal observed → thread created (always, but reminder generation controlled by policy)
+- Urgency signal observed → thread created (always, but reminder generation controlled by policy)
+- **Policy controls reminders, NOT thread creation**—threads are always created for audit and silence monitoring
+- Opening decision is made by watcher runtime during replay when extraction events are present
+
+**Thread Purpose:**
+
+- Threads represent tracked conversations requiring monitoring
+- **Threads do NOT own deadlines**—deadlines belong to Reminders
+- Threads track silence (no new messages) and inactivity (no updates)
+- Core feature: tracking when communications were sent, responded to, fulfilled, and when obligations were due
+- Threads cannot be merged or reassigned across watchers
+
+**Thread Tracking:**
+
+- Threads track message_ids (chronological message history)
+- Threads track references to extraction events (hard_deadline_event_id, soft_deadline_event_id)
+- Threads maintain last_activity_at from THREAD_ACTIVITY_OBSERVED events
+- Thread state is derived exclusively from events
 
 **Thread Closure:**
-- CLOSURE_EXTRACTED (explicit closure language in email)
-- User manual closure action
-- **Once closed, thread NEVER reopens**
 
-**Activity Tracking:**
-- Each email updates last_activity_at
-- Used for silence detection
+- CLOSURE_SIGNAL_OBSERVED triggers closure evaluation
+- User manual closure action (explicit user command)
+- **Once closed, thread NEVER reopens** (terminal state)
+- Closed threads preserved for tracking and audit
+- Closed threads excluded from reports by default
+- Messages matching closed threads create NEW threads
 
+**Activity Tracking (Silence Detection):**
+
+- THREAD_ACTIVITY_OBSERVED events update last_activity_at
+- Silence is computed by comparing current_time vs last_activity_at
+- If (current_time - last_activity_at) > silence_threshold_hours, emit SILENCE_THRESHOLD_EXCEEDED
+- Silence events are derived facts, not baseline observations
+
+**Extraction Event Audit Trail:**
+
+- Extraction events are ALWAYS emitted when LLM detects signals
+- Even when a thread already exists for the message
+- Even when policy would not generate reminders
+- Forms complete audit trail of what the system detected
 
 ### 5.3 Reminder Evaluation Logic
 
 **Location:** `backend/src/watcher/runtime.ts` (evaluateThreadUrgency)
 
-Reminder state is **derived and time-relative**, computed on demand.
+Reminder state is **derived artifact**, not stored state. Reminders are **attention prompts**, not obligations.
 
-#### Evaluation Formula:
+#### Critical Distinction
+
+**Observed Facts (from events):**
+
+- MESSAGE_RECEIVED (email arrived)
+- HARD_DEADLINE_OBSERVED (explicit deadline found in message)
+- SOFT_DEADLINE_SIGNAL_OBSERVED (temporal language detected)
+- THREAD_ACTIVITY_OBSERVED (activity timestamp)
+- SILENCE_THRESHOLD_EXCEEDED (derived from activity gaps)
+
+**Derived Artifacts (computed by runtime):**
+
+- Reminders (attention prompts based on policy + events)
+- Urgency levels (risk assessment based on time-to-deadline)
+- Reminder eligibility (based on thread events + configuration)
+
+#### Reminder Generation Rules
+
+**Reminders are created when:**
+
+1. Hard deadline exists AND time-to-deadline crosses policy threshold
+2. Soft deadline signal exists AND policy allows soft deadline reminders AND estimated horizon crossed
+3. Silence threshold exceeded (no activity for N hours)
+4. Thread is open (closed threads generate no reminders)
+
+**Reminders are NOT created when:**
+
+- Thread has no deadline and silence threshold not exceeded
+- Thread is closed
+- Watcher is paused
+- Policy disables specific reminder type
+
+#### Evaluation Formula
 
 ```typescript
-function evaluateThreadUrgency(
+function evaluateThreadReminders(
   thread: ThreadState,
-  currentTime: number
-): UrgencyState {
+  currentTime: number,
+  policy: WatcherPolicy
+): ReminderState {
   if (thread.status === "closed") {
-    return { urgency_state: "ok" };
+    return {
+      reminders: [],
+      reason: "thread_closed",
+    };
   }
 
-  const hours_since_activity = 
+  const reminders: Reminder[] = [];
+  const hours_since_activity =
     (currentTime - thread.last_activity_at) / (1000 * 60 * 60);
-  
-  if (thread.deadline_timestamp === null) {
-    // No deadline - only check silence
-    if (hours_since_activity > 72) {
-      return { urgency_state: "warning" };
+
+  // Check hard deadline reminders (binding obligations)
+  if (thread.hard_deadline_utc !== null) {
+    const hours_until_deadline =
+      (thread.hard_deadline_utc - currentTime) / (1000 * 60 * 60);
+
+    if (hours_until_deadline < 0) {
+      reminders.push({
+        type: "deadline_overdue",
+        urgency: "critical",
+        causal_event_id: thread.hard_deadline_event_id,
+        message: "Hard deadline has passed",
+        binding: true,
+      });
+    } else if (hours_until_deadline < policy.deadline_critical_hours) {
+      reminders.push({
+        type: "deadline_approaching",
+        urgency: "high",
+        causal_event_id: thread.hard_deadline_event_id,
+        message: `${hours_until_deadline.toFixed(1)} hours until hard deadline`,
+        binding: true,
+      });
+    } else if (hours_until_deadline < policy.deadline_warning_hours) {
+      reminders.push({
+        type: "deadline_approaching",
+        urgency: "medium",
+        causal_event_id: thread.hard_deadline_event_id,
+        message: `${hours_until_deadline.toFixed(1)} hours until hard deadline`,
+        binding: true,
+      });
     }
-    return { urgency_state: "ok" };
   }
 
-  const hours_until_deadline = 
-    (thread.deadline_timestamp - currentTime) / (1000 * 60 * 60);
+  // Check soft deadline signals (non-binding, if enabled by policy)
+  if (policy.enable_soft_deadline_reminders && thread.soft_deadline_signal) {
+    const estimated_hours = thread.soft_deadline_signal.estimated_horizon_hours;
+    const hours_since_signal =
+      (currentTime - thread.soft_deadline_signal.observed_at) /
+      (1000 * 60 * 60);
 
-  if (hours_until_deadline < 0) {
-    return { urgency_state: "overdue" };
-  }
-  if (hours_until_deadline < 2) {
-    return { urgency_state: "critical" };
-  }
-  if (hours_until_deadline < 24) {
-    return { urgency_state: "warning" };
+    if (hours_since_signal > estimated_hours) {
+      reminders.push({
+        type: "soft_deadline_elapsed",
+        urgency: "low",
+        causal_event_id: thread.soft_deadline_signal_event_id,
+        message: `Soft deadline signal "${thread.soft_deadline_signal.signal_text}" time elapsed`,
+        binding: false, // Advisory only
+      });
+    }
   }
 
-  return { urgency_state: "ok" };
+  // Check silence threshold (independent of deadlines)
+  if (hours_since_activity > policy.silence_threshold_hours) {
+    reminders.push({
+      type: "silence_exceeded",
+      urgency: "medium",
+      causal_event_id: thread.last_activity_event_id,
+      message: `No activity for ${hours_since_activity.toFixed(1)} hours`,
+      binding: false, // Attention prompt, not obligation
+    });
+  }
+
+  return {
+    reminders,
+    evaluated_at: currentTime,
+  };
 }
 ```
 
-#### Alert Firing Rules:
-- Alerts fire **only on state transitions**
-- Never fire on steady state
-- Track previous urgency in REMINDER_EVALUATED events
-- Fire exactly once per transition
+#### Reminder Emission Rules
 
-#### Policy Configuration:
-- Silence threshold (default: 72 hours)
-- Warning threshold (default: 24 hours)
-- Critical threshold (default: 2 hours)
-- Configurable per watcher via POLICY_UPDATED event
+- Reminders are emitted as REMINDER_GENERATED events
+- Each reminder references its causal thread event (traceability)
+- Reminders fire **only on state transitions** (prevents spam)
+- Previous reminder state tracked in REMINDER_GENERATED events
+- Reminders are labeled as "attention prompts" in user-facing messages
 
+#### Policy Configuration
+
+- `silence_threshold_hours` (default: 72)
+- `deadline_warning_hours` (default: 24)
+- `deadline_critical_hours` (default: 2)
+- `enable_soft_deadline_reminders` (boolean, default: false)
+- `reminder_throttle_minutes` (minimum interval between same-type reminders, default: 60)
 
 ### 5.4 Scheduler / Time Trigger Source
 
@@ -448,17 +724,20 @@ function evaluateThreadUrgency(
 
 The scheduler injects time into the system as an explicit trigger.
 
-#### Responsibilities:
+#### Responsibilities
+
 - Periodically emit TIME_TICK trigger events
 - Schedule watcher runtime execution
 - Configurable evaluation frequency per watcher
 
-#### Implementation Options:
+#### Implementation Options
+
 - **Cron jobs** triggering API endpoints
 - **Cloud scheduler** (AWS EventBridge, GCP Cloud Scheduler)
 - **In-process scheduler** (node-cron, Bun timer)
 
-#### Event Emission:
+#### Event Emission
+
 ```typescript
 {
   type: "TIME_TICK",
@@ -469,17 +748,18 @@ The scheduler injects time into the system as an explicit trigger.
 }
 ```
 
-#### Constraints:
+#### Constraints
+
 - Does **not** emit authoritative events (only triggers)
 - Does **not** store state
 - Does **not** evaluate business logic
 - **Time never creates facts, only urgency**
 
-#### Frequency Recommendations:
+#### Frequency Recommendations
+
 - Default: Every 15 minutes
 - High-urgency watchers: Every 5 minutes
 - Low-urgency watchers: Hourly
-
 
 ## 6. Subsystem 3: Bounded Semantic Intelligence
 
@@ -487,27 +767,50 @@ This subsystem provides **bounded semantic extraction** from unstructured email 
 
 ### 6.1 Purpose and Scope
 
-The LLM exists only to answer narrowly-scoped questions:
-- "Is there a deadline stated in this text?"
-- "Is there language indicating silence-sensitive risk?"
-- "Is there explicit language confirming resolution or completion?"
+The LLM exists only to extract **structured observations** from email text. It never interprets meaning, never infers intent, never asserts obligation.
 
-**The LLM never decides what the system should do.** It only produces candidate facts that the backend may choose to record as events.
+**Narrow Extraction Tasks:**
+
+1. **Hard Deadline Extraction**: Identify explicit temporal constraints with absolute timestamps
+
+   - "Please respond by December 31, 2025 at 5pm EST"
+   - Output: UTC timestamp + source text span + confidence
+
+2. **Soft Deadline Signal Detection**: Identify fuzzy temporal language without absolute deadlines
+
+   - "Please reply soon", "by end of week", "at your earliest convenience"
+   - Output: Signal text + estimated horizon + source span + confidence + binding=false
+
+3. **Urgency Signal Detection**: Identify priority indicators without temporal constraints
+
+   - "urgent", "critical", "time-sensitive", "ASAP"
+   - Output: Urgency level + indicator list + source span
+
+4. **Closure Signal Detection**: Identify resolution or completion language
+   - "This issue is resolved", "Thanks, we're all set"
+   - Output: Closure type + source span + confidence
+
+**The LLM NEVER:**
+
+- ❌ Decides if thread should open (backend decides via policy)
+- ❌ Decides if reminder should fire (runtime decides via evaluation)
+- ❌ Asserts that message contains obligation (only extracts signals)
+- ❌ Interprets what user "meant" (only extracts what text states)
+- ❌ Chains reasoning or makes inferences beyond explicit extraction
 
 ### 6.2 Architectural Position
 
 ```
-Email Ingestion → EMAIL_RECEIVED event → Backend
+Email Ingestion → MESSAGE_RECEIVED event → Backend
                                             ↓
                                     Call LLM Service
                                             ↓
                                     Structured Facts
                                             ↓
-                                    DEADLINE_EXTRACTED event
+                                    HARD_DEADLINE_OBSERVED event
 ```
 
-The LLM service is called **synchronously** after EMAIL_RECEIVED is emitted, but **never during replay**.
-
+The LLM service is called **synchronously** after MESSAGE_RECEIVED is emitted, but **never during replay**.
 
 ### 6.3 LLM Extraction Service (vLLM)
 
@@ -515,25 +818,28 @@ The LLM service is called **synchronously** after EMAIL_RECEIVED is emitted, but
 
 The LLM Extraction Service is a dedicated, non-authoritative service backed by vLLM.
 
-#### Responsibilities:
+#### Responsibilities
+
 - Perform deadline extraction
 - Perform silence-sensitive risk extraction
 - Perform explicit closure detection
 - Optionally classify which extraction should be attempted
 
-#### Architecture:
+#### Architecture
+
 - Separate deployment (can run on different machine with GPU)
 - vLLM-backed inference for performance
 - Private network only (not publicly accessible)
 - HTTP API with minimal endpoints
 - Stateless request/response model
 
-#### Supported Endpoints:
+#### Supported Endpoints
 
 **POST /route**  
 Classify which extraction to perform.
 
 Request:
+
 ```json
 {
   "email_text": "Please confirm by Friday",
@@ -543,6 +849,7 @@ Request:
 ```
 
 Response:
+
 ```json
 {
   "classification": "EXTRACT_DEADLINE",
@@ -551,89 +858,158 @@ Response:
 ```
 
 **POST /extract/deadline**  
-Extract deadline information.
+Extract hard deadline (absolute timestamp with explicit language).
 
 Request:
+
 ```json
 {
-  "email_text": "Please reply by Friday EOD",
+  "email_text": "Please reply by Friday December 27, 2025 at 5pm EST",
+  "reference_timestamp": 1703462400000,
+  "reference_timezone": "America/New_York"
+}
+```
+
+Response:
+
+```json
+{
+  "deadline_found": true,
+  "deadline_utc": 1735344000000,
+  "deadline_text": "Friday December 27, 2025 at 5pm EST",
+  "source_span": "Please reply by Friday December 27, 2025 at 5pm EST",
+  "confidence": "high",
+  "extractor_version": "v1.0.0",
+  "is_absolute": true,
+  "binding_language": true
+}
+```
+
+**POST /extract/soft_deadline**  
+Extract soft deadline signals (fuzzy temporal language).
+
+Request:
+
+```json
+{
+  "email_text": "Please respond at your earliest convenience",
   "reference_timestamp": 1703462400000
 }
 ```
 
 Response:
+
 ```json
 {
-  "deadline_timestamp": 1703721600000,
-  "deadline_text": "Friday EOD",
-  "evidence": "Please reply by Friday EOD",
+  "signal_found": true,
+  "signal_text": "at your earliest convenience",
+  "source_span": "Please respond at your earliest convenience",
+  "estimated_horizon_hours": 72,
+  "confidence": "medium",
+  "extractor_version": "v1.0.0",
+  "is_absolute": false,
+  "binding_language": false
+}
+```
+
+**POST /extract/urgency**  
+Extract urgency signals (priority indicators).
+
+Response:
+
+```json
+{
+  "urgency_found": true,
+  "urgency_level": "high",
+  "indicators": ["urgent", "time-sensitive"],
+  "source_span": "This is urgent and time-sensitive",
   "confidence": "high",
   "extractor_version": "v1.0.0"
 }
 ```
 
-**POST /extract/risk**  
-Extract silence-sensitive language.
-
-Response:
-```json
-{
-  "risk_level": "medium",
-  "risk_indicators": ["urgent", "ASAP"],
-  "evidence": "This is urgent, please respond ASAP",
-  "extractor_version": "v1.0.0"
-}
-```
-
 **POST /extract/closure**  
-Detect explicit closure confirmation.
+Detect explicit closure language.
 
 Response:
+
 ```json
 {
-  "is_closure": true,
+  "closure_found": true,
   "closure_type": "explicit",
-  "evidence": "This matter is now resolved. Thank you.",
+  "source_span": "This matter is now resolved. Thank you.",
+  "confidence": "high",
   "extractor_version": "v1.0.0"
 }
 ```
 
-#### Configuration:
+#### Configuration
+
 See `llm-service/.env.example`
 
-#### Tech Stack:
+#### Tech Stack
+
 - Python 3.11+
 - vLLM for inference
 - FastAPI for HTTP endpoints
 - Pydantic for schema validation
 
-
 ### 6.4 Output Contract
 
 All LLM outputs must:
+
 - Be fully structured (JSON schema validated)
-- Include **verbatim evidence quotes** from email text
-- Include extractor version metadata
+- Include **source_span** (verbatim text excerpt from email)
+- Include **extractor_version** metadata
+- Include **confidence** level (high/medium/low)
+- Include **binding_language** flag for deadlines (true = hard deadline, false = soft signal)
 - Be validated by backend before event emission
 - Be deterministic given same input (temperature near-zero)
 
-#### Backend Validation:
+#### Backend Validation
+
 ```typescript
-function validateLLMOutput(output: LLMOutput): boolean {
-  // Schema validation
-  // Evidence quote verification
-  // Timestamp sanity checks
-  // Confidence threshold checks
-  return isValid;
+function validateLLMOutput(output: LLMExtractionOutput): boolean {
+  // Schema validation (all required fields present)
+  if (!output.source_span || !output.confidence || !output.extractor_version) {
+    return false;
+  }
+
+  // Evidence verification (source_span must exist in email text)
+  const normalized_text = email_text.toLowerCase();
+  const normalized_span = output.source_span.toLowerCase();
+  if (!normalized_text.includes(normalized_span)) {
+    return false;
+  }
+
+  // Deadline sanity checks
+  if (output.deadline_found && output.deadline_utc) {
+    // Deadline must be future-dated
+    if (output.deadline_utc < Date.now()) {
+      return false;
+    }
+    // Deadline must be within 5 years
+    const five_years = 5 * 365 * 24 * 60 * 60 * 1000;
+    if (output.deadline_utc > Date.now() + five_years) {
+      return false;
+    }
+  }
+
+  // Confidence threshold (reject low confidence extractions)
+  if (output.confidence === "low") {
+    return false; // Or log for analysis, don't emit event
+  }
+
+  return true;
 }
 ```
 
-LLM output is **not authoritative** until the backend emits a corresponding event.
-
+LLM output is **not authoritative** until backend converts it to thread event.
 
 ### 6.5 Constraints and Guarantees
 
 The LLM Extraction Service **MUST NOT**:
+
 - ❌ Emit events (only backend emits events)
 - ❌ Store long-lived state
 - ❌ Chain prompts (one task per request)
@@ -643,51 +1019,56 @@ The LLM Extraction Service **MUST NOT**:
 - ❌ Participate in event replay
 
 The LLM service **MUST**:
+
 - ✅ Return deterministic outputs (low temperature)
 - ✅ Include verbatim evidence
 - ✅ Timeout within configured limit
 - ✅ Return errors explicitly (not silent failures)
 
-#### Failure Handling:
+#### Failure Handling
 
 If LLM service is unavailable:
+
 - Backend logs warning
-- EMAIL_RECEIVED event is still emitted
+- MESSAGE_RECEIVED event is still emitted
 - Thread may be created with null deadline
 - System remains correct but with reduced informational fidelity
 
 If LLM returns low confidence:
+
 - Backend may choose not to emit extraction event
 - This is a policy decision, not an LLM decision
 
-#### Replay Guarantee:
+#### Replay Guarantee
 
 **LLM calls occur only at ingestion time or explicit evaluation points and are never repeated during replay.**
 
 When replaying events:
-- DEADLINE_EXTRACTED event is used as-is
+
+- HARD_DEADLINE_OBSERVED event is used as-is
 - LLM is never called again
 - All extracted facts are frozen in events
-
 
 ### 6.6 Model Selection and Tuning
 
 Recommended models:
+
 - **Llama 3.1 8B Instruct** - Good balance of speed/accuracy
 - **Mistral 7B Instruct** - Faster, slightly lower accuracy
 - **Llama 3.1 70B Instruct** - Highest accuracy, slower
 
 Inference parameters:
+
 - Temperature: 0.1 (near-deterministic)
 - Max tokens: 512
 - Top-p: 0.9
 
 Prompt engineering:
+
 - Use few-shot examples
 - Require structured output (JSON)
 - Require evidence quotes
 - Test prompts against eval dataset
-
 
 ## 7. Subsystem 4: Notification and Inspection Interfaces
 
@@ -697,14 +1078,15 @@ This subsystem handles outward-facing effects and human interaction. It **never 
 
 **Location:** `backend/src/notification/` (to be implemented)
 
-#### Responsibilities:
+#### Responsibilities
+
 - Monitor event stream for ALERT_QUEUED and REPORT_GENERATED events
 - Send alert emails to configured recipients
 - Send periodic watcher reports
 - Retry delivery with exponential backoff
 - Emit delivery outcome events (ALERT_SENT, ALERT_FAILED)
 
-#### Event-Driven Model:
+#### Event-Driven Model
 
 ```
 Watcher Runtime → ALERT_QUEUED event → Notification Worker
@@ -716,11 +1098,12 @@ Watcher Runtime → ALERT_QUEUED event → Notification Worker
 
 Watchers do **not** send emails directly. They emit events that **cause** emails to be sent.
 
-#### Email Templates:
+#### Email Templates
 
 **Alert Email:**
+
 ```
-Subject: [DEVA Alert] Thread requires attention
+Subject: [Vigil Alert] Thread requires attention
 
 Watcher: {watcher_name}
 Thread: {thread_id}
@@ -732,8 +1115,9 @@ View thread: {dashboard_url}/threads/{thread_id}
 ```
 
 **Report Email:**
+
 ```
-Subject: [DEVA Report] {watcher_name} - {date}
+Subject: [Vigil Report] {watcher_name} - {date}
 
 Threads Opened: {count}
 Threads Closed: {count}
@@ -748,17 +1132,18 @@ Alerts Sent: {count}
 ⚠ {warning_count} threads approaching deadline
 ```
 
-#### Configuration:
+#### Configuration
+
 - SMTP server for outbound email
 - Email templates
 - Retry policy (max 3 attempts, exponential backoff)
 
-#### Constraints:
+#### Constraints
+
 - **No decision-making** (only executes based on events)
 - **No LLM usage**
 - **No domain state mutation**
 - Delivery failure is acceptable and recorded
-
 
 ### 7.2 Frontend (Dashboard and Inspection UI)
 
@@ -766,9 +1151,10 @@ Alerts Sent: {count}
 
 Read-heavy inspection and control interface.
 
-#### Responsibilities:
+#### Responsibilities
 
 **Display (Read-Heavy):**
+
 - Current threads with status, urgency, deadlines
 - Alert history and delivery status
 - Extracted signals (deadlines, risks, closures) with evidence quotes
@@ -776,18 +1162,21 @@ Read-heavy inspection and control interface.
 - Watcher configuration and policies
 
 **User Actions:**
+
 - Manual thread closure
 - Watcher pause/resume
 - Policy updates (silence threshold, notification channels)
 - On-demand report generation
 
-#### Architecture:
+#### Architecture
+
 - Communicates with backend via REST API
 - Optional: WebSocket for real-time updates
 - Displays **projections** (derived state), not authoritative events
 - All mutations flow through backend APIs → event creation
 
-#### Example API Calls:
+#### Example API Calls
+
 ```typescript
 // Get thread projections
 GET /api/watchers/w1/threads
@@ -810,34 +1199,37 @@ Body: { reason: "manually_resolved" }
 Backend emits: THREAD_CLOSED event
 ```
 
-#### Design Principles:
+#### Design Principles
 
 **Reassurance-First:**
+
 - Reports emphasize what is resolved or stable
 - Then show what appears on track
 - Finally show what may require attention (last, not first)
 
 **Transparency:**
+
 - Every displayed status links to specific events
 - Every alert shows the state transition that triggered it
 - Every extracted signal shows verbatim evidence from email
 
-#### Constraints:
+#### Constraints
+
 - ❌ **No business logic** in frontend
 - ❌ **No direct database access**
 - ❌ **No event emission** (only via backend API)
 - ✅ All state derived from backend API responses
 
-#### Tech Stack (TBD):
+#### Tech Stack (TBD)
+
 - React/Next.js or similar
 - TypeScript
 - REST API client
 - Optional: WebSocket for real-time
 
-#### Configuration:
-See `frontend/.env.example`
+#### Configuration
 
----
+See `frontend/.env.example`
 
 ### 7.3 State Reconstruction and Query Strategy
 
@@ -845,7 +1237,7 @@ When users view watchers, threads, and reminders in the dashboard, the system mu
 
 #### The Two-Tier Approach
 
-DEVA uses a **two-tier state reconstruction strategy** that balances correctness with performance:
+Vigil uses a **two-tier state reconstruction strategy** that balances correctness with performance:
 
 **Tier 1: Real-Time Event Replay (Small Watchers)**
 
@@ -856,24 +1248,26 @@ For watchers with manageable event counts (typically < 10,000 events):
 async function getWatcherThreads(watcherId: string) {
   // 1. Load ALL events for this watcher from event store
   const events = await eventStore.getEventsForWatcher(watcherId);
-  
+
   // 2. Replay events to rebuild state (pure function, no side effects)
   const state = replayEvents(events);
-  
+
   // 3. Compute current urgency for each open thread
   const currentTime = Date.now();
-  const threadsWithUrgency = Array.from(state.threads.values())
-    .map(thread => ({
+  const threadsWithUrgency = Array.from(state.threads.values()).map(
+    (thread) => ({
       ...thread,
-      urgency: evaluateThreadUrgency(thread, currentTime)
-    }));
-  
+      urgency: evaluateThreadUrgency(thread, currentTime),
+    })
+  );
+
   // 4. Return derived state as JSON
   return { threads: threadsWithUrgency };
 }
 ```
 
 **Properties:**
+
 - ✅ Always 100% correct (truth comes from events)
 - ✅ No stale data possible
 - ✅ No cache invalidation complexity
@@ -896,12 +1290,12 @@ CREATE TABLE thread_projections (
   last_activity_at BIGINT,
   deadline_timestamp BIGINT,
   closed_at BIGINT,
-  email_ids JSONB,
-  
+  message_ids JSONB,
+
   -- Metadata for cache management
   last_event_id VARCHAR,      -- Last event that updated this projection
   last_event_timestamp BIGINT, -- When projection was last updated
-  
+
   INDEX idx_watcher_status (watcher_id, status)
 );
 ```
@@ -909,6 +1303,7 @@ CREATE TABLE thread_projections (
 **Projection Maintenance:**
 
 1. **Initial Build:** When watcher is created or projection is missing
+
    ```typescript
    const events = await eventStore.getEventsForWatcher(watcherId);
    const state = replayEvents(events);
@@ -916,8 +1311,9 @@ CREATE TABLE thread_projections (
    ```
 
 2. **Incremental Update:** When new events arrive
+
    ```typescript
-   async function updateProjection(newEvent: DevaEvent) {
+   async function updateProjection(newEvent: VigilEvent) {
      if (newEvent.type === "THREAD_OPENED") {
        await db.insert("thread_projections", {
          thread_id: newEvent.thread_id,
@@ -926,9 +1322,9 @@ CREATE TABLE thread_projections (
          last_event_id: newEvent.event_id,
          // ... other fields
        });
-     }
-     else if (newEvent.type === "THREAD_CLOSED") {
-       await db.update("thread_projections")
+     } else if (newEvent.type === "THREAD_CLOSED") {
+       await db
+         .update("thread_projections")
          .where("thread_id", newEvent.thread_id)
          .set({ status: "closed", closed_at: newEvent.closed_at });
      }
@@ -943,16 +1339,17 @@ CREATE TABLE thread_projections (
        .from("thread_projections")
        .where("watcher_id", watcherId)
        .where("status", "open");
-     
+
      // Still compute urgency in real-time (changes with time)
-     return threads.map(thread => ({
+     return threads.map((thread) => ({
        ...thread,
-       urgency: evaluateThreadUrgency(thread, Date.now())
+       urgency: evaluateThreadUrgency(thread, Date.now()),
      }));
    }
    ```
 
 **Properties:**
+
 - ⚡ Very fast (< 10ms for queries)
 - 🔄 Eventually consistent (may lag slightly after new events)
 - 🗑️ **Disposable** - can be deleted and rebuilt anytime
@@ -961,14 +1358,14 @@ CREATE TABLE thread_projections (
 
 #### Strategy Selection
 
-| Scenario | Strategy | Rationale |
-|----------|----------|-----------|
-| New watcher (< 100 events) | Replay on every query | Fast enough, always fresh |
-| Active watcher (100-10K events) | Replay on every query | Still fast, simpler architecture |
-| High-volume watcher (> 10K events) | Cached projection | Necessary for performance |
-| Projection missing/corrupted | Fall back to replay | Self-healing, always correct |
-| Audit/debugging | Always replay | Verification against projection |
-| Report generation | Replay from events | Ensures accuracy for records |
+| Scenario                           | Strategy              | Rationale                        |
+| ---------------------------------- | --------------------- | -------------------------------- |
+| New watcher (< 100 events)         | Replay on every query | Fast enough, always fresh        |
+| Active watcher (100-10K events)    | Replay on every query | Still fast, simpler architecture |
+| High-volume watcher (> 10K events) | Cached projection     | Necessary for performance        |
+| Projection missing/corrupted       | Fall back to replay   | Self-healing, always correct     |
+| Audit/debugging                    | Always replay         | Verification against projection  |
+| Report generation                  | Replay from events    | Ensures accuracy for records     |
 
 #### The Event Log View
 
@@ -976,20 +1373,25 @@ When users view the **raw event log** for a watcher:
 
 ```typescript
 // GET /api/watchers/w1/events?limit=100&offset=0
-async function getWatcherEvents(watcherId: string, limit: number, offset: number) {
+async function getWatcherEvents(
+  watcherId: string,
+  limit: number,
+  offset: number
+) {
   // Direct query from event store (no replay needed)
   const events = await eventStore.query({
     watcher_id: watcherId,
     order: "timestamp DESC",
     limit,
-    offset
+    offset,
   });
-  
+
   return { events };
 }
 ```
 
 **This is always a direct read** from the event store - no replay, no derivation, just the raw immutable facts. This provides:
+
 - Complete audit trail
 - Exact timestamps of every action
 - Verbatim evidence from LLM extractions
@@ -1006,28 +1408,29 @@ async function verifyProjection(watcherId: string): Promise<boolean> {
   const projection = await loadProjection(watcherId);
   const events = await eventStore.getEventsForWatcher(watcherId);
   const replayedState = replayEvents(events);
-  
+
   return deepEqual(projection, replayedState);
 }
 
 // If verification fails, rebuild
 async function rebuildProjection(watcherId: string) {
   console.log(`Rebuilding projection for watcher ${watcherId}`);
-  
+
   const events = await eventStore.getEventsForWatcher(watcherId);
   const state = replayEvents(events);
-  
+
   // Atomic replace
   await db.transaction(async (tx) => {
     await tx.delete("thread_projections").where("watcher_id", watcherId);
     await tx.insert("thread_projections", Array.from(state.threads.values()));
   });
-  
+
   console.log(`Projection rebuilt from ${events.length} events`);
 }
 ```
 
 **Rebuild triggers:**
+
 - Manual admin command
 - Scheduled verification job (nightly)
 - Automatic on query timeout
@@ -1038,14 +1441,15 @@ async function rebuildProjection(watcherId: string) {
 
 Here's what happens when a user logs in and views a watcher:
 
-1. **User navigates to:** `https://deva.example.com/watchers/w1`
+1. **User navigates to:** `https://Vigil.example.com/watchers/w1`
 
 2. **Frontend calls:** `GET /api/watchers/w1/threads`
 
 3. **Backend decides strategy:**
+
    ```typescript
    const eventCount = await eventStore.countEvents(watcherId);
-   
+
    if (eventCount < 10000) {
      // Tier 1: Replay
      return await getThreadsViaReplay(watcherId);
@@ -1056,6 +1460,7 @@ Here's what happens when a user logs in and views a watcher:
    ```
 
 4. **If using replay (Tier 1):**
+
    - Load all events for watcher
    - Replay in memory (pure function)
    - Compute urgency for each thread
@@ -1063,6 +1468,7 @@ Here's what happens when a user logs in and views a watcher:
    - **Total time: ~100ms**
 
 5. **If using projection (Tier 2):**
+
    - Query projection table
    - Check last_event_timestamp
    - If stale (> 5 min old), trigger async rebuild
@@ -1080,9 +1486,10 @@ Here's what happens when a user logs in and views a watcher:
 #### Architectural Guarantees
 
 **The Golden Rule:**  
-*If frontend displays a status, and you replay events, you MUST get the same status. If not, the projection is wrong and must be rebuilt.*
+_If frontend displays a status, and you replay events, you MUST get the same status. If not, the projection is wrong and must be rebuilt._
 
 **Benefits:**
+
 - ✅ **Always correct**: Events are source of truth
 - ✅ **Self-healing**: Projections rebuild if corrupted
 - ✅ **No cache invalidation**: Projections are disposable
@@ -1091,20 +1498,21 @@ Here's what happens when a user logs in and views a watcher:
 - ✅ **Simple**: No complex distributed cache coordination
 
 **Trade-offs:**
+
 - 🔄 Projections may lag slightly (typically < 1 second)
 - 💾 Duplicate storage (events + projections)
 - 🔧 Requires projection maintenance logic
-
----
 
 ## 8. Core Domain Concepts
 
 ### 8.1 Watchers
 
-The **watcher** is the primary configuration and operational unit in DEVA.
+The **watcher** is the primary configuration and operational unit in Vigil.
 
-#### Definition:
+#### Definition
+
 A watcher represents a **bounded area of responsibility**, such as:
+
 - Personal finance correspondence
 - Legal matters
 - Client billing
@@ -1114,51 +1522,58 @@ A watcher represents a **bounded area of responsibility**, such as:
 
 Each watcher operates independently with its own event stream, policy, and notification configuration.
 
-#### Complete Watcher Schema:
+#### Complete Watcher Schema
 
 ```typescript
 type Watcher = {
   // Identity (immutable)
-  watcher_id: string;                // UUID, assigned at creation
-  account_id: string;                // Parent account
-  ingest_token: string;              // Unique token for email routing
-  created_at: number;                // Unix timestamp (ms)
-  created_by: string;                // User ID of creator
-  
+  watcher_id: string; // UUID, assigned at creation
+  account_id: string; // Parent account
+  ingest_token: string; // Unique token for email routing
+  created_at: number; // Unix timestamp (ms)
+  created_by: string; // User ID of creator
+
   // Configuration (mutable via events)
-  name: string;                      // Human-readable name
+  name: string; // Human-readable name
   status: "created" | "active" | "paused";
   policy: WatcherPolicy;
 };
 
 type WatcherPolicy = {
   // Sender Control
-  allowed_senders: readonly string[];        // Email allowlist (exact match)
-  
+  allowed_senders: readonly string[]; // Email allowlist (exact match)
+
   // Timing Thresholds
-  silence_threshold_hours: number;           // Hours of inactivity before silence alert
-  deadline_warning_hours: number;            // Hours before deadline for warning alert
-  deadline_critical_hours: number;           // Hours before deadline for critical alert
-  
+  silence_threshold_hours: number; // Hours of inactivity before silence alert
+  deadline_warning_hours: number; // Hours before deadline for warning alert
+  deadline_critical_hours: number; // Hours before deadline for critical alert
+
   // Notification Configuration
   notification_channels: readonly NotificationChannel[];
-  
+
   // Reporting Configuration
   reporting_cadence: "daily" | "weekly" | "on_demand";
-  reporting_recipients: readonly string[];   // Email addresses for reports
-  reporting_time?: string;                   // ISO 8601 time (e.g., "09:00:00Z")
-  reporting_day?: "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
+  reporting_recipients: readonly string[]; // Email addresses for reports
+  reporting_time?: string; // ISO 8601 time (e.g., "09:00:00Z")
+  reporting_day?:
+    | "monday"
+    | "tuesday"
+    | "wednesday"
+    | "thursday"
+    | "friday"
+    | "saturday"
+    | "sunday";
 };
 
 type NotificationChannel = {
-  type: "email" | "sms" | "webhook";
-  destination: string;                       // Email address, phone number, or URL
+  type: "email" | "webhook";
+  destination: string; // Email address or webhook URL
   urgency_filter: "all" | "warning" | "critical"; // Minimum urgency to notify
-  enabled: boolean;                          // Allow disabling without removing
+  enabled: boolean; // Allow disabling without removing
 };
 ```
 
-#### Field Definitions:
+#### Field Definitions
 
 **Identity Fields (Immutable):**
 
@@ -1174,10 +1589,11 @@ type NotificationChannel = {
 **Configuration Fields (Mutable):**
 
 - `name`: Human-readable identifier
+
   - Displayed in dashboards, emails, and reports
   - Used in ingestion email address (sanitized: lowercase, hyphens only)
   - Validation: 1-100 characters, alphanumeric + spaces/hyphens
-  - Example: "Personal Finance" → `personal-finance-a7f3k9@ingest.deva.email`
+  - Example: "Personal Finance" → `personal-finance-a7f3k9@ingest.vigil.email`
 
 - `status`: Operational state derived from lifecycle events
   - `"created"`: Watcher exists but not yet activated (no monitoring)
@@ -1191,51 +1607,54 @@ type NotificationChannel = {
 **Policy Fields:**
 
 - `allowed_senders`: Email address allowlist
+
   - Exact match only (no wildcards, no domain-level matching)
   - Case-insensitive comparison
   - Empty array = accept from anyone (not recommended for production)
   - Emails from non-allowed senders:
     - Logged as INFO (not ERROR)
-    - EMAIL_RECEIVED event still emitted
+    - MESSAGE_RECEIVED event still emitted
     - But no thread creation or LLM extraction
   - Example: `["alice@company.com", "billing@vendor.org"]`
 
 - `silence_threshold_hours`: Inactivity window for silence detection
+
   - Default: 72 (3 days)
   - Range: 1 to 720 (1 hour to 30 days)
   - Applies only to threads without explicit deadlines
-  - Timer resets on any thread activity (EMAIL_RECEIVED with matching thread_id)
+  - Timer resets on any thread activity (MESSAGE_RECEIVED with matching thread_id)
   - If thread has both deadline and silence threshold, earliest boundary triggers alert
 
 - `deadline_warning_hours`: Pre-deadline warning threshold
+
   - Default: 24 (1 day)
   - Must be > deadline_critical_hours
   - Alert fires once on state transition: ok → warning
-  - Used to compute urgency_state in REMINDER_EVALUATED events
+  - Used to compute urgency_level in REMINDER_GENERATED events
 
 - `deadline_critical_hours`: Pre-deadline critical threshold
+
   - Default: 2
   - Must be > 0
   - Alert fires once on state transition: warning → critical
   - Separate alert fires on critical → overdue (when deadline passes)
 
 - `notification_channels`: Alert delivery destinations
+
   - At least one enabled channel required for watcher activation
   - Multiple channels supported (redundancy and escalation)
   - Each channel has:
     - `type`: Delivery mechanism
       - `"email"`: SMTP delivery to email address
-      - `"sms"`: SMS via Twilio/similar (future)
       - `"webhook"`: HTTP POST to URL with JSON payload
     - `destination`: Address/URL for delivery
       - Email: RFC 5322 valid email address
-      - SMS: E.164 format phone number (future)
       - Webhook: HTTPS URL (HTTP allowed for dev only)
     - `urgency_filter`: Minimum urgency to deliver
       - `"all"`: ok, warning, critical, overdue
       - `"warning"`: warning, critical, overdue (not ok)
       - `"critical"`: critical, overdue only
-      - Used for escalation: email for warnings, SMS for critical
+      - Used for escalation: email for warnings, webhook for critical
     - `enabled`: Allows disabling without removing from array
   - Delivery failure handling:
     - Retry 3 times with exponential backoff (1s, 5s, 25s)
@@ -1243,17 +1662,20 @@ type NotificationChannel = {
     - System continues (doesn't block on notification delivery)
 
 - `reporting_cadence`: Summary report frequency
+
   - `"daily"`: Every 24 hours at specified time
   - `"weekly"`: Every 7 days at specified day/time
   - `"on_demand"`: Only when user explicitly requests
   - Used by scheduler to emit REPORT_GENERATED events
 
 - `reporting_recipients`: Email addresses for reports
+
   - Separate from notification_channels (different content and urgency)
   - Can overlap with allowed_senders
   - Reports emphasize reassurance (what's resolved/stable) before items requiring attention
 
 - `reporting_time` (optional): ISO 8601 time for daily/weekly reports
+
   - Format: "HH:MM:SSZ" (UTC timezone)
   - Example: "09:00:00Z" = 9 AM UTC
   - If omitted, defaults to "09:00:00Z"
@@ -1262,9 +1684,10 @@ type NotificationChannel = {
   - Required if cadence is "weekly"
   - Example: "monday" = weekly report every Monday at reporting_time
 
-#### Watcher Lifecycle:
+#### Watcher Lifecycle
 
 **1. Creation (WATCHER_CREATED event):**
+
 ```typescript
 {
   type: "WATCHER_CREATED",
@@ -1276,6 +1699,7 @@ type NotificationChannel = {
   timestamp: 1703001600000
 }
 ```
+
 - User submits POST /api/watchers with name and initial policy
 - Backend generates watcher_id and ingest_token
 - Backend validates policy (allowed_senders, thresholds, channels)
@@ -1284,6 +1708,7 @@ type NotificationChannel = {
 - Ingestion email address is immediately active but won't create threads
 
 **2. Activation (WATCHER_ACTIVATED event):**
+
 ```typescript
 {
   type: "WATCHER_ACTIVATED",
@@ -1291,6 +1716,7 @@ type NotificationChannel = {
   timestamp: 1703002000000
 }
 ```
+
 - User submits POST /api/watchers/:id/activate
 - Backend validates:
   - Watcher exists and status is "created" or "paused"
@@ -1301,6 +1727,7 @@ type NotificationChannel = {
 - Monitoring begins: emails can create threads, alerts can fire
 
 **3. Pause (WATCHER_PAUSED event):**
+
 ```typescript
 {
   type: "WATCHER_PAUSED",
@@ -1310,17 +1737,19 @@ type NotificationChannel = {
   timestamp: 1703088000000
 }
 ```
+
 - User submits POST /api/watchers/:id/pause with optional reason
 - Backend emits WATCHER_PAUSED event
 - Status = "paused"
 - Effects:
   - Emails still accepted at ingestion address (logged)
-  - EMAIL_RECEIVED events still emitted (audit trail)
+  - MESSAGE_RECEIVED events still emitted (audit trail)
   - But no THREAD_OPENED, no LLM extraction, no alerts
   - Existing open threads remain open but don't evaluate urgency
 - Use case: Temporary absence, system maintenance, testing
 
 **4. Resume (WATCHER_RESUMED event):**
+
 ```typescript
 {
   type: "WATCHER_RESUMED",
@@ -1329,6 +1758,7 @@ type NotificationChannel = {
   timestamp: 1703174400000
 }
 ```
+
 - User submits POST /api/watchers/:id/resume
 - Backend emits WATCHER_RESUMED event
 - Status = "active"
@@ -1338,6 +1768,7 @@ type NotificationChannel = {
   - Alerts resume firing
 
 **5. Policy Update (POLICY_UPDATED event):**
+
 ```typescript
 {
   type: "POLICY_UPDATED",
@@ -1355,6 +1786,7 @@ type NotificationChannel = {
   timestamp: 1703260800000
 }
 ```
+
 - User submits PATCH /api/watchers/:id/policy
 - Backend validates new policy (same rules as activation)
 - Backend emits POLICY_UPDATED event with complete new policy
@@ -1363,138 +1795,381 @@ type NotificationChannel = {
   - New notification channels used for next alert
   - Historical events unchanged (policy is forward-only)
 
-#### Email Routing:
+#### Email Routing
 
 Each watcher has a unique ingestion email address:
 
 ```
-<sanitized-name>-<ingest_token>@ingest.deva.email
+<sanitized-name>-<ingest_token>@ingest.vigil.email
 ```
 
 **Address Construction:**
+
 1. Take watcher name: "Personal Finance"
 2. Sanitize: lowercase, replace spaces with hyphens: "personal-finance"
 3. Append hyphen and ingest_token: "personal-finance-a7f3k9"
-4. Append domain: "personal-finance-a7f3k9@ingest.deva.email"
+4. Append domain: "personal-finance-a7f3k9@ingest.vigil.email"
 
 **Examples:**
+
 ```
-name: "Personal Finance"  → personal-finance-a7f3k9@ingest.deva.email
-name: "Legal Matters"     → legal-matters-b2j8m1@ingest.deva.email
-name: "Client Billing"    → client-billing-x4p9j2@ingest.deva.email
-name: "Vendor Contracts"  → vendor-contracts-k5n7p9@ingest.deva.email
+name: "Personal Finance"  → personal-finance-a7f3k9@ingest.vigil.email
+name: "Legal Matters"     → legal-matters-b2j8m1@ingest.vigil.email
+name: "Client Billing"    → client-billing-x4p9j2@ingest.vigil.email
+name: "Vendor Contracts"  → vendor-contracts-k5n7p9@ingest.vigil.email
 ```
 
 **Routing Rules:**
+
 - SMTP adapter extracts recipient address from SMTP envelope
 - Parses address to extract ingest_token
 - Forwards raw email to backend POST /api/ingestion/email with token
 - Backend looks up watcher_id by ingest_token
-- Backend emits EMAIL_RECEIVED event with watcher_id
+- Backend emits MESSAGE_RECEIVED event with watcher_id
 - **Email content, subject, sender, or headers are NEVER examined for routing**
 - Invalid tokens (not found) are rejected at SMTP layer (400 response)
 
 **Security:**
+
 - Ingest tokens are cryptographically random (8-12 chars, base36)
 - Collision probability is negligible (36^8 = 2.8 trillion combinations)
 - Tokens are never logged in plaintext (hash for lookups)
 - Changing a watcher's name does NOT change its token
 - Token rotation is not currently supported (would require new address)
 
-
 ### 8.2 Threads
 
-**Threads represent obligations, not conversations.**
+**Threads represent tracked communication contexts, not obligations.**
 
-#### Definition:
-A thread exists **if and only if a due boundary exists**:
-- Explicitly stated deadline
-- Implicitly windowed deadline (e.g., "soon", "this week")
-- Silence-sensitive obligation (requires timely response)
+#### Critical Distinction
 
-#### Thread Properties:
+**Threads track:**
+
+- Messages (chronological message history)
+- Observed deadlines (hard and soft signals from extraction)
+- Activity timestamps (for silence detection)
+- Closure signals
+
+**Threads DO NOT represent:**
+
+- ❌ Obligations (threads track contexts, reminders prompt attention)
+- ❌ Tasks (Vigil doesn't assign work)
+- ❌ Commitments (threads observe signals, don't assert intent)
+
+#### Definition
+
+A thread is created when extraction records indicate potential attention requirements:
+
+- Hard deadline observed (explicit temporal constraint)
+- Soft deadline signal observed AND policy enables soft deadline tracking
+- Multiple messages form conversation requiring continuity tracking
+
+#### Thread Properties
+
 ```typescript
-type Thread = {
+type ThreadState = {
   thread_id: string;
   watcher_id: string;
   opened_at: number;
   last_activity_at: number;
-  deadline_timestamp: number | null;
   status: "open" | "closed";
   closed_at: number | null;
-  email_ids: readonly string[];
+
+  // Observed deadlines (from extraction records)
+  hard_deadline_utc: number | null;
+  hard_deadline_event_id: string | null;
+  hard_deadline_text: string | null;
+
+  soft_deadline_signal: {
+    signal_text: string;
+    estimated_horizon_hours: number;
+    observed_at: number;
+  } | null;
+  soft_deadline_signal_event_id: string | null;
+
+  // Message tracking
+  message_ids: readonly string[];
+
+  // Closure tracking
+  closure_signal_observed: boolean;
+  closure_event_id: string | null;
 };
 ```
 
-#### Thread Lifecycle:
+#### Thread Lifecycle
 
-**Opening:**
-- Thread opens when EMAIL_RECEIVED + evidence of obligation
-- Evidence: DEADLINE_EXTRACTED or RISK_EXTRACTED with urgency
+**Opening (Conditional):**
 
-**Activity:**
-- Each subsequent email in thread updates last_activity_at
-- Used for silence detection
+- Thread opens when extraction record + policy indicate tracking warranted
+- HARD_DEADLINE_OBSERVED → thread opens (binding deadline exists)
+- SOFT_DEADLINE_SIGNAL_OBSERVED + policy.enable_soft_deadline_tracking → thread opens
+- URGENCY_SIGNAL_OBSERVED alone does NOT open thread (advisory only)
 
-**Closure:**
-- CLOSURE_EXTRACTED (explicit closure language)
-- User manual closure
-- **Closure is terminal** - thread can NEVER reopen
+**Activity Tracking:**
 
-**New Obligations:**
-- Subsequent emails may create **new threads** if new obligations
-- They never resurrect closed threads
+- THREAD_ACTIVITY_OBSERVED events update last_activity_at
+- Used for silence detection (derived evaluation)
 
+**Closure (Terminal):**
+
+- CLOSURE_SIGNAL_OBSERVED triggers closure evaluation
+- User manual closure (explicit command)
+- **Once closed, thread NEVER reopens** (immutable invariant)
+
+**State Transitions:**
+
+```
+[No Thread] → HARD_DEADLINE_OBSERVED → [Thread: Open]
+[Thread: Open] → CLOSURE_SIGNAL_OBSERVED → [Thread: Closed]
+[Thread: Open] → User Close Command → [Thread: Closed]
+[Thread: Closed] → (terminal state, no further transitions)
+```
 
 ### 8.3 Reminders and Urgency
 
-Reminder state is **derived, not stored**.
+**Reminders are derived artifacts—attention prompts, not obligations.**
 
-#### Urgency Levels:
-- **ok** - No action needed
-- **warning** - Deadline within 24 hours or silence > 72 hours
-- **critical** - Deadline within 2 hours
-- **overdue** - Deadline passed
+#### Critical Distinction
 
-#### State Transition Alerts:
-```
-ok → warning → ALERT_QUEUED(warning)
-warning → critical → ALERT_QUEUED(critical)
-critical → overdue → ALERT_QUEUED(overdue)
-```
+**Observed Facts (Events):**
 
-Alerts fire **exactly once per transition**, never on steady state.
+- MESSAGE_RECEIVED (email arrived)
+- HARD_DEADLINE_OBSERVED (explicit deadline in text)
+- SOFT_DEADLINE_SIGNAL_OBSERVED (fuzzy temporal language)
+- THREAD_ACTIVITY_OBSERVED (activity timestamp)
+- SILENCE_THRESHOLD_EXCEEDED (activity gap exceeded policy)
 
+**Derived Artifacts (Computed):**
 
-### 8.4 Obligations and Due Boundaries
+- Reminders (attention prompts based on evaluation)
+- Urgency levels (time-to-deadline assessment)
+- Reminder eligibility (policy + events → should prompt?)
 
-#### Types of Due Boundaries:
+#### Reminder Structure
 
-**Explicit Deadline:**
-```
-"Please respond by December 31, 2025 at 5pm"
-→ deadline_timestamp: 1735689600000
-```
-
-**Implicit Deadline:**
-```
-"Let me know by end of week"
-→ deadline_timestamp: inferred from current date
-```
-
-**Silence-Sensitive:**
-```
-"This is urgent, please confirm ASAP"
-→ No explicit deadline, but requires prompt response
-→ Uses silence threshold (default 72 hours)
+```typescript
+type Reminder = {
+  reminder_id: string;
+  thread_id: string;
+  watcher_id: string;
+  type:
+    | "deadline_approaching"
+    | "deadline_overdue"
+    | "soft_deadline_elapsed"
+    | "silence_exceeded";
+  urgency: "low" | "medium" | "high" | "critical";
+  message: string;
+  causal_event_id: string; // References thread event that triggered reminder
+  binding: boolean; // true = hard deadline, false = advisory
+  generated_at: number;
+};
 ```
 
-**No Obligation:**
+#### Urgency Levels
+
+**For Hard Deadlines (binding):**
+
+- **critical** - Deadline within deadline_critical_hours (default: 2h) OR overdue
+- **high** - Deadline within deadline_warning_hours (default: 24h)
+- **medium** - Deadline exists but not yet approaching
+- **low** - (not used for hard deadlines)
+
+**For Soft Deadlines (non-binding, if enabled):**
+
+- **low** - Estimated horizon elapsed, advisory prompt
+
+**For Silence (non-binding):**
+
+- **medium** - Silence threshold exceeded
+- **low** - Approaching silence threshold (if pre-silence warnings enabled)
+
+#### Reminder Generation Rules
+
+**Reminders fire when:**
+
+1. State transition occurs (not on steady state)
+2. Thread is open (closed threads generate no reminders)
+3. Watcher is active (paused watchers generate no reminders)
+4. Policy enables reminder type
+
+**State Transitions That Generate Reminders:**
+
 ```
-"FYI: Invoice attached for your records"
-→ No thread created
+Hard Deadline:
+  [hours_until > warning_hours] → [hours_until < warning_hours] → REMINDER (medium urgency)
+  [hours_until < warning_hours] → [hours_until < critical_hours] → REMINDER (high urgency)
+  [hours_until < critical_hours] → [hours_until < 0] → REMINDER (critical urgency)
+
+Soft Deadline (if enabled):
+  [hours_since_signal < horizon] → [hours_since_signal > horizon] → REMINDER (low urgency, advisory)
+
+Silence:
+  [hours_since_activity < threshold] → [hours_since_activity > threshold] → REMINDER (medium urgency, advisory)
 ```
 
+**Reminders DO NOT fire when:**
+
+- Thread is closed
+- Watcher is paused
+- Same state persists (prevents spam)
+- Policy disables reminder type
+- Throttle period not elapsed (anti-spam)
+
+#### Reminder Lifecycle
+
+```
+Thread Events + Policy → Evaluation → REMINDER_GENERATED event
+REMINDER_GENERATED → Notification Worker → Delivery Attempt
+Delivery Success → REMINDER_DELIVERED event
+Delivery Failure → REMINDER_DELIVERY_FAILED event
+```
+
+### 8.4 Signal Types and Binding Semantics
+
+#### Hard Deadlines (Binding Constraints)
+
+**Definition:**  
+Explicit temporal language with absolute or unambiguous timestamps.
+
+**Examples:**
+
+```
+"Please respond by December 31, 2025 at 5pm EST"
+"Due Friday March 15th end of business day"
+"Reply by 3pm today"
+```
+
+**Properties:**
+
+- `binding: true` - Represents explicit constraint
+- Resolved to absolute UTC timestamp
+- High confidence extraction required
+- Creates high/critical urgency reminders
+- Tracked in thread state as `hard_deadline_utc`
+
+**Event:**
+
+```typescript
+{
+  type: "HARD_DEADLINE_OBSERVED",
+  deadline_utc: 1735689600000,
+  deadline_text: "December 31, 2025 at 5pm EST",
+  source_span: "Please respond by December 31, 2025 at 5pm EST",
+  binding: true,
+  confidence: "high"
+}
+```
+
+#### Soft Deadline Signals (Non-Binding Risk Indicators)
+
+**Definition:**  
+Fuzzy temporal language without absolute timestamps. Advisory only.
+
+**Examples:**
+
+```
+"Please reply soon"
+"At your earliest convenience"
+"When you get a chance"
+"By end of week"
+```
+
+**Properties:**
+
+- `binding: false` - Advisory signal, not hard constraint
+- Estimated horizon (heuristic, not absolute)
+- Medium/low confidence acceptable
+- Creates low urgency reminders (if enabled by policy)
+- Tracked in thread state as `soft_deadline_signal`
+
+**Event:**
+
+```typescript
+{
+  type: "SOFT_DEADLINE_SIGNAL_OBSERVED",
+  signal_text: "soon",
+  source_span: "Please reply soon",
+  estimated_horizon_hours: 48,
+  binding: false,
+  confidence: "medium"
+}
+```
+
+**Policy Control:**
+
+```typescript
+{
+  enable_soft_deadline_tracking: boolean,  // Default: false
+  soft_deadline_reminder_enabled: boolean  // Default: false
+}
+```
+
+#### Urgency Signals (Priority Indicators, No Timeline)
+
+**Definition:**  
+Language indicating priority or importance without temporal constraints.
+
+**Examples:**
+
+```
+"This is urgent"
+"High priority"
+"Time-sensitive matter"
+"ASAP"
+```
+
+**Properties:**
+
+- No deadline (hard or soft)
+- Advisory context for other signals
+- Does NOT independently create threads
+- May influence reminder message tone
+- Logged but doesn't drive thread lifecycle
+
+**Event:**
+
+```typescript
+{
+  type: "URGENCY_SIGNAL_OBSERVED",
+  urgency_level: "high",
+  indicators: ["urgent", "time-sensitive"],
+  source_span: "This is urgent and time-sensitive"
+}
+```
+
+#### Silence Thresholds (Derived, Not Observed)
+
+**Definition:**  
+Time elapsed since last THREAD_ACTIVITY_OBSERVED event.
+
+**Properties:**
+
+- Computed by runtime (not extracted from text)
+- Applies to threads with or without deadlines
+- Configurable threshold (default: 72 hours)
+- Creates medium urgency reminder
+- `binding: false` - Attention prompt, not obligation
+
+**Derived Event:**
+
+```typescript
+{
+  type: "SILENCE_THRESHOLD_EXCEEDED",
+  thread_id: "t1",
+  hours_since_activity: 73.2,
+  threshold_hours: 72,
+  last_activity_event_id: "evt_abc123"
+}
+```
+
+#### Binding Semantics Summary
+
+| Signal Type       | Binding | Creates Thread | Creates Reminder  | Urgency       |
+| ----------------- | ------- | -------------- | ----------------- | ------------- |
+| Hard Deadline     | Yes     | Always         | Yes               | High/Critical |
+| Soft Deadline     | No      | If enabled     | If enabled        | Low           |
+| Urgency Signal    | No      | No             | No (context only) | N/A           |
+| Silence Threshold | No      | No             | Yes               | Medium        |
 
 ## 9. Event Model
 
@@ -1503,17 +2178,43 @@ Events are the **complete authoritative record** of system state.
 ### 9.1 Event Structure
 
 All events share base structure:
+
 ```typescript
 type BaseEvent = {
-  readonly event_id: string;      // UUID
-  readonly timestamp: number;     // Unix ms
-  readonly watcher_id?: string;   // Optional (not all events belong to watcher)
+  readonly event_id: string; // UUID
+  readonly timestamp: number; // Unix ms
+  readonly watcher_id?: string; // Optional (not all events belong to watcher)
 };
 ```
 
 ### 9.2 Event Categories
 
-#### Control Plane Events:
+#### Baseline Observation Events (Always Emitted)
+
+- `MESSAGE_RECEIVED` - Email delivered and parsed (immutable fact)
+- `THREAD_ACTIVITY_OBSERVED` - Activity timestamp recorded (silence tracking baseline)
+
+#### Extraction Record Events (LLM-Derived, Conditional)
+
+- `HARD_DEADLINE_OBSERVED` - Explicit deadline with absolute timestamp (binding)
+- `SOFT_DEADLINE_SIGNAL_OBSERVED` - Fuzzy temporal language detected (non-binding)
+- `URGENCY_SIGNAL_OBSERVED` - Priority indicators found (advisory)
+- `CLOSURE_SIGNAL_OBSERVED` - Resolution language detected
+
+#### Thread Lifecycle Events (Runtime-Derived)
+
+- `THREAD_OPENED` - Thread created based on extraction records + policy
+- `THREAD_CLOSED` - Thread terminated (user action or closure signal)
+
+#### Derived Events (Time-Based Evaluation)
+
+- `SILENCE_THRESHOLD_EXCEEDED` - No activity for configured duration
+- `REMINDER_GENERATED` - Attention prompt based on policy + thread events
+- `REMINDER_DELIVERED` - Reminder sent to notification channel
+- `REMINDER_DELIVERY_FAILED` - Reminder delivery unsuccessful
+
+#### Control Plane Events
+
 - `ACCOUNT_CREATED` - New account
 - `USER_CREATED` - New user in account
 - `WATCHER_CREATED` - New watcher
@@ -1522,32 +2223,13 @@ type BaseEvent = {
 - `WATCHER_RESUMED` - Watcher resumed
 - `POLICY_UPDATED` - Watcher policy changed
 
-#### Email Ingress Events:
-- `EMAIL_RECEIVED` - Email delivered and parsed
+#### Time Trigger Events
 
-#### LLM Extraction Events (Frozen Facts):
-- `EMAIL_ROUTED` - Email classified to thread (optional)
-- `DEADLINE_EXTRACTED` - Deadline found in email
-- `RISK_EXTRACTED` - Silence-sensitive language found
-- `CLOSURE_EXTRACTED` - Explicit closure detected
+- `TIME_TICK` - Scheduled evaluation trigger
 
-#### Thread Lifecycle Events:
-- `THREAD_OPENED` - New obligation thread created
-- `THREAD_UPDATED` - Thread deadline updated
-- `THREAD_ACTIVITY_SEEN` - New email in thread
-- `THREAD_CLOSED` - Thread obligation resolved
+#### Reporting Events
 
-#### Time & Reminder Events:
-- `TIME_TICK` - Time-based evaluation trigger
-- `REMINDER_EVALUATED` - Thread urgency computed
-
-#### Notification Events:
-- `ALERT_QUEUED` - Alert scheduled for delivery
-- `ALERT_SENT` - Alert successfully delivered
-- `ALERT_FAILED` - Alert delivery failed
-
-#### Reporting Events:
-- `REPORT_GENERATED` - Periodic report created
+- `REPORT_GENERATED` - Periodic summary created
 - `REPORT_SENT` - Report delivered
 
 ### 9.3 Forbidden Events
@@ -1559,63 +2241,87 @@ These events **must never exist** as they violate architectural invariants:
 - ❌ `AUTO_ESCALATED` (no autonomous action)
 - ❌ `INBOX_SCANNED` (no inbox access)
 - ❌ `LLM_RETRIED` (LLM calls not retried during replay)
+- ❌ `OBLIGATION_INFERRED` (system observes signals, doesn't assert obligations)
+- ❌ `INTENT_INTERPRETED` (system extracts facts, doesn't interpret intent)
+- ❌ `DEADLINE_ASSUMED` (deadlines must be explicit in extraction records)
+- ❌ `REMINDER_OBLIGATION` (reminders are prompts, not obligations)
 
 ### 9.4 Event Schema
 
 See [backend/src/events/types.ts](../backend/src/events/types.ts) for complete TypeScript definitions.
-
 
 ## 10. Cross-Cutting Guarantees
 
 These guarantees apply **across all subsystems**:
 
 ### 10.1 Deterministic Replay
+
 - Same events always produce identical state
 - Replay requires zero external calls
 - No randomness in business logic
-- LLM outputs are frozen in events, not recomputed
+- LLM outputs frozen in extraction record events, not recomputed
 
 ### 10.2 Explainability
+
 - All decisions traceable to specific events
-- All alerts link to state transition that triggered them
-- All extracted facts include verbatim evidence
-- Event log is the complete audit trail
+- All reminders reference causal thread event (traceability)
+- All extracted signals include source_span (verbatim text)
+- Event log is complete audit trail
 
 ### 10.3 Graceful Degradation
+
 - LLM unavailability degrades capability, not correctness
+- Baseline events (MESSAGE_RECEIVED, THREAD_ACTIVITY_OBSERVED) always emitted
 - SMTP adapter failure is visible, not silent
-- Notification delivery failure is recorded
-- System continues functioning with reduced fidelity
+- Reminder delivery failure recorded, system continues
 
 ### 10.4 Immutability
+
 - Events never modified
 - Events never deleted (except compliance requirements)
 - Corrections made by emitting new events
 - Event store is append-only
 
-### 10.5 Thread Closure
-- **Closed threads never reopen**
-- New emails create new threads if new obligations
-- This is a hard architectural constraint
+### 10.5 Thread Closure Finality
 
-### 10.6 Alert Firing
-- **Alerts fire exactly once per transition**
+- **Closed threads never reopen** (hard architectural constraint)
+- New messages create new threads if warranted by extraction
+- Closure is terminal state
+
+### 10.6 Reminder Firing Discipline
+
+- **Reminders fire only on state transitions** (prevents spam)
 - Never fire on steady state
-- Previous urgency tracked in REMINDER_EVALUATED events
-- Prevents alert fatigue
+- Previous state tracked in REMINDER_GENERATED events
+- Throttle mechanism prevents excessive reminders
 
-### 10.7 Email Sending
-- **Fully event-driven**
-- Watchers never send emails directly
-- All outbound email is caused by events
-- Delivery outcomes are recorded as events
+### 10.7 Email Sending Event-Driven
+
+- **Fully event-driven** (no direct sending from runtime)
+- All outbound email caused by REMINDER_GENERATED events
+- Delivery outcomes recorded as events (REMINDER_DELIVERED / REMINDER_DELIVERY_FAILED)
 
 ### 10.8 State Authority
+
 - **Event store is sole source of truth**
-- Databases may cache projections
-- Projections are disposable
+- Databases may cache projections (disposable)
+- Projections are rebuildable from events
 - When in doubt, replay
 
+### 10.9 One-Way Data Flow
+
+- Email → MESSAGE_RECEIVED → LLM Extraction → Extraction Record Events → Thread Events → Reminders
+- No circular dependencies
+- No feedback loops
+- Each stage reads previous stage output, never writes backward
+
+### 10.10 Separation of Observation and Interpretation
+
+- Baseline events record facts (message arrived, activity observed)
+- Extraction records capture signals (deadline language, urgency indicators)
+- Thread events aggregate context (messages + deadlines + activity)
+- Reminders are derived prompts (policy + thread state → attention needed?)
+- Clear boundaries prevent conflation of "what was said" vs "what it means"
 
 ## 11. Implementation Constraints
 
@@ -1624,12 +2330,14 @@ These constraints **must be enforced** in all implementations:
 ### 11.1 Backend Control Plane
 
 **MUST:**
+
 - ✅ Emit events synchronously before returning responses
 - ✅ Validate all commands before event emission
 - ✅ Enforce access control on all APIs
 - ✅ Call LLM service only at ingestion, never during replay
 
 **MUST NOT:**
+
 - ❌ Store authoritative state outside event store
 - ❌ Run background reasoning loops
 - ❌ Retry LLM calls during replay
@@ -1638,12 +2346,14 @@ These constraints **must be enforced** in all implementations:
 ### 11.2 Watcher Runtime
 
 **MUST:**
+
 - ✅ Load all events for watcher
 - ✅ Replay events deterministically
 - ✅ Exit immediately after emitting events
 - ✅ Be idempotent (same events → same output)
 
 **MUST NOT:**
+
 - ❌ Persist internal state
 - ❌ Wait or loop indefinitely
 - ❌ Call external services during replay
@@ -1652,12 +2362,14 @@ These constraints **must be enforced** in all implementations:
 ### 11.3 LLM Service
 
 **MUST:**
+
 - ✅ Return structured JSON with evidence
 - ✅ Include extractor version in output
 - ✅ Timeout within configured limit
 - ✅ Return errors explicitly
 
 **MUST NOT:**
+
 - ❌ Emit events
 - ❌ Store long-lived state
 - ❌ Chain prompts or call tools
@@ -1667,11 +2379,13 @@ These constraints **must be enforced** in all implementations:
 ### 11.4 SMTP Adapter
 
 **MUST:**
+
 - ✅ Forward all received email to backend
 - ✅ Extract watcher address correctly
 - ✅ Log errors visibly
 
 **MUST NOT:**
+
 - ❌ Store email content
 - ❌ Apply business logic
 - ❌ Emit events
@@ -1680,86 +2394,144 @@ These constraints **must be enforced** in all implementations:
 ### 11.5 Frontend
 
 **MUST:**
+
 - ✅ Display projections from backend API
 - ✅ Submit all actions via backend API
 - ✅ Show evidence for extracted facts
 
 **MUST NOT:**
+
 - ❌ Contain business logic
 - ❌ Access database directly
 - ❌ Emit events
 
-
 ## 12. Canonical System Rule
 
-**If a system behavior cannot be reconstructed by replaying immutable events without invoking external services, that behavior does not belong in DEVA.**
+**If a system behavior cannot be reconstructed by replaying immutable events without invoking external services, that behavior does not belong in Vigil.**
 
 This is the ultimate test of architectural correctness.
 
 ### 12.1 Valid Behaviors
 
 ✅ Determining if thread should be closed  
-→ Replay events, check for CLOSURE_EXTRACTED or user close action
+→ Replay events, check for CLOSURE_SIGNAL_OBSERVED or user close command
 
-✅ Computing urgency state  
-→ Replay events, apply time-based rules to thread state
+✅ Computing reminder eligibility  
+→ Replay events, apply policy rules to thread state (hard deadline + time → reminder?)
 
-✅ Deciding to send alert  
-→ Replay events, detect state transition from ok → warning
+✅ Deciding to generate reminder  
+→ Replay events, detect state transition (approaching deadline)
 
 ✅ Displaying thread timeline  
-→ Replay events, project email sequence
+→ Replay MESSAGE_RECEIVED events, project message sequence
+
+✅ Computing silence duration  
+→ Replay THREAD_ACTIVITY_OBSERVED events, compute time delta
+
+✅ Validating extraction record  
+→ Replay MESSAGE_RECEIVED event, verify source_span exists in body_text
 
 ### 12.2 Invalid Behaviors
 
 ❌ Automatically escalating based on "confidence score"  
-→ Confidence is not in events
+→ Confidence is metadata, not decision input
 
 ❌ Adjusting deadlines based on "learned patterns"  
 → Learning implies state outside events
 
 ❌ Re-running LLM extraction during replay  
-→ LLM outputs must be frozen in events
+→ Extraction records frozen in events
 
 ❌ Inferring thread relationships from content  
-→ Routing is address-based, not content-based
+→ Thread membership must be explicit in events
 
+❌ Asserting obligation exists  
+→ System observes deadline signals, doesn't assert obligations
+
+❌ Interpreting user intent  
+→ System extracts explicit language, doesn't infer meaning
+
+### 12.3 Traceability Test
+
+For any displayed reminder or alert:
+
+1. Identify the REMINDER_GENERATED event
+2. Trace to causal_event_id (thread event that triggered it)
+3. Trace to MESSAGE_RECEIVED or extraction record event
+4. Verify source_span exists in original message body_text
+5. Verify policy rules applied correctly
+
+**If any step fails, the reminder is invalid.**
 
 ## 13. Summary
 
-DEVA is a deterministic, event-sourced vigilance system built on four subsystems:
+Vigil is a deterministic, event-sourced vigilance system built on four subsystems:
 
-1. **Ingestion** - Captures reality as immutable events
-2. **Runtime** - Evaluates events and emits new events
-3. **Intelligence** - Extracts bounded facts from text
-4. **Interfaces** - Delivers notifications and allows inspection
+1. **Ingestion** - Captures reality as immutable baseline events
+2. **Runtime** - Evaluates events and emits derived events
+3. **Intelligence** - Extracts structured signals from text (subordinate)
+4. **Interfaces** - Delivers reminders and allows inspection
 
-All behavior is explainable through event replay. LLMs are subordinate fact extractors, not decision-makers. Threads represent obligations with terminal closures. Alerts fire exactly once per transition. Humans remain in control at all times.
+### Key Architectural Principles
+
+**One-Way Data Flow:**
+
+```
+Email → MESSAGE_RECEIVED → LLM Extraction → Extraction Records → Thread Events → Reminders
+```
+
+**Event Hierarchy:**
+
+- **Baseline Events**: MESSAGE_RECEIVED, THREAD_ACTIVITY_OBSERVED (always emitted)
+- **Extraction Records**: HARD_DEADLINE_OBSERVED, SOFT_DEADLINE_SIGNAL_OBSERVED, etc. (LLM-derived)
+- **Thread Events**: THREAD_OPENED, THREAD_CLOSED (runtime-derived)
+- **Derived Events**: REMINDER_GENERATED, SILENCE_THRESHOLD_EXCEEDED (evaluation-derived)
+
+**Clear Separations:**
+
+- **Observation vs Interpretation**: Events capture signals, reminders provide prompts
+- **Binding vs Advisory**: Hard deadlines are constraints, soft signals are indicators
+- **Fact vs Artifact**: Messages are facts, reminders are derived artifacts
+
+**Core Guarantees:**
+
+- All behavior explainable through event replay
+- LLMs extract signals, never assert obligations
+- Threads track context, reminders prompt attention
+- Closure is terminal, reminders fire once per transition
+- Humans retain full control
+
+**What Vigil Is:**
+A non-acting vigilance system that observes email signals, tracks temporal context, and generates attention prompts based on configurable policies.
+
+**What Vigil Is Not:**
+An agent, a task manager, an obligation tracker, an intent interpreter, or an autonomous decision-maker.
 
 **If it's not in an event, it didn't happen.**
-
 
 ## Appendices
 
 ### A. Technology Stack Summary
 
-| Component | Technology | Notes |
-|-----------|-----------|-------|
-| Backend | TypeScript + Bun | Event-sourced control plane |
-| LLM Service | Python + vLLM | Fact extraction only |
-| SMTP Adapter | Node.js or Python | Minimal transport layer |
-| Frontend | React/Next.js (TBD) | Read-heavy dashboard |
-| Event Store | PostgreSQL | Append-only JSONB |
-| Scheduler | Cloud or cron | Time trigger injection |
+| Component    | Technology          | Notes                       |
+| ------------ | ------------------- | --------------------------- |
+| Backend      | TypeScript + Bun    | Event-sourced control plane |
+| LLM Service  | Python + vLLM       | Fact extraction only        |
+| SMTP Adapter | Node.js or Python   | Minimal transport layer     |
+| Frontend     | React/Next.js (TBD) | Read-heavy dashboard        |
+| Event Store  | PostgreSQL          | Append-only JSONB           |
+| Scheduler    | Cloud or cron       | Time trigger injection      |
 
 ### B. Deployment Patterns
 
 **Development:**
+
 - All services on localhost
 - In-memory or local PostgreSQL
 - Small LLM model
 
 **Production:**
+
 - Backend: Multiple instances behind load balancer
 - LLM Service: GPU instance on private network
 - SMTP Adapter: Single instance with mail routing
@@ -1777,6 +2549,7 @@ All behavior is explainable through event replay. LLMs are subordinate fact extr
 ### D. Monitoring and Observability
 
 **Key Metrics:**
+
 - Events per second
 - Watcher runtime execution time
 - LLM service latency and availability
@@ -1784,6 +2557,7 @@ All behavior is explainable through event replay. LLMs are subordinate fact extr
 - Thread state distribution
 
 **Logging:**
+
 - All events logged structured
 - LLM calls logged with input/output
 - Error conditions logged explicitly
@@ -1792,20 +2566,22 @@ All behavior is explainable through event replay. LLMs are subordinate fact extr
 ### E. Testing Strategy
 
 **Unit Tests:**
+
 - Event replay determinism
 - Thread urgency calculation
 - Event validation
 
 **Integration Tests:**
+
 - Email ingestion → event emission
 - LLM service calls → event creation
 - Alert queueing → notification delivery
 
 **Event Replay Tests:**
+
 - Golden event logs → expected state
 - No external service calls during replay
 - Idempotence verification
-
 
 **Document Version:** 1.0.0  
 **Last Updated:** December 24, 2025  

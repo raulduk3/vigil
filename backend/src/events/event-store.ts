@@ -6,30 +6,30 @@
  * Corrections are made by emitting new events.
  */
 
-import type { DevaEvent } from "./types";
+import type { VigilEvent } from "./types";
 
 export interface EventStore {
   /**
    * Append a new event to the store.
    * Events are immutable once written.
    */
-  append(event: DevaEvent): Promise<void>;
+  append(event: VigilEvent): Promise<void>;
 
   /**
    * Retrieve all events for a specific watcher.
    * Returns events in chronological order.
    */
-  getEventsForWatcher(watcherId: string): Promise<readonly DevaEvent[]>;
+  getEventsForWatcher(watcherId: string): Promise<readonly VigilEvent[]>;
 
   /**
    * Retrieve all events for a specific account.
    */
-  getEventsForAccount(accountId: string): Promise<readonly DevaEvent[]>;
+  getEventsForAccount(accountId: string): Promise<readonly VigilEvent[]>;
 
   /**
    * Retrieve events by IDs.
    */
-  getEventsByIds(eventIds: readonly string[]): Promise<readonly DevaEvent[]>;
+  getEventsByIds(eventIds: readonly string[]): Promise<readonly VigilEvent[]>;
 
   /**
    * Retrieve events in a time range.
@@ -37,13 +37,13 @@ export interface EventStore {
   getEventsSince(
     watcherId: string,
     sinceTimestamp: number
-  ): Promise<readonly DevaEvent[]>;
+  ): Promise<readonly VigilEvent[]>;
 
   /**
    * Get all events (for full replay).
    * Use with caution - may return large datasets.
    */
-  getAllEvents(): Promise<readonly DevaEvent[]>;
+  getAllEvents(): Promise<readonly VigilEvent[]>;
 }
 
 /**
@@ -51,9 +51,9 @@ export interface EventStore {
  * NOT suitable for production.
  */
 export class InMemoryEventStore implements EventStore {
-  private readonly events: DevaEvent[] = [];
+  private readonly events: VigilEvent[] = [];
 
-  async append(event: DevaEvent): Promise<void> {
+  async append(event: VigilEvent): Promise<void> {
     // Verify event_id uniqueness
     if (this.events.some((e) => e.event_id === event.event_id)) {
       throw new Error(`Event ID ${event.event_id} already exists`);
@@ -61,11 +61,11 @@ export class InMemoryEventStore implements EventStore {
     this.events.push(event);
   }
 
-  async getEventsForWatcher(watcherId: string): Promise<readonly DevaEvent[]> {
+  async getEventsForWatcher(watcherId: string): Promise<readonly VigilEvent[]> {
     return this.events.filter((e) => e.watcher_id === watcherId);
   }
 
-  async getEventsForAccount(accountId: string): Promise<readonly DevaEvent[]> {
+  async getEventsForAccount(accountId: string): Promise<readonly VigilEvent[]> {
     return this.events.filter((e) => {
       if (e.type === "ACCOUNT_CREATED" || e.type === "USER_CREATED") {
         return e.account_id === accountId;
@@ -79,7 +79,7 @@ export class InMemoryEventStore implements EventStore {
 
   async getEventsByIds(
     eventIds: readonly string[]
-  ): Promise<readonly DevaEvent[]> {
+  ): Promise<readonly VigilEvent[]> {
     const idSet = new Set(eventIds);
     return this.events.filter((e) => idSet.has(e.event_id));
   }
@@ -87,13 +87,13 @@ export class InMemoryEventStore implements EventStore {
   async getEventsSince(
     watcherId: string,
     sinceTimestamp: number
-  ): Promise<readonly DevaEvent[]> {
+  ): Promise<readonly VigilEvent[]> {
     return this.events.filter(
       (e) => e.watcher_id === watcherId && e.timestamp >= sinceTimestamp
     );
   }
 
-  async getAllEvents(): Promise<readonly DevaEvent[]> {
+  async getAllEvents(): Promise<readonly VigilEvent[]> {
     return [...this.events];
   }
 
