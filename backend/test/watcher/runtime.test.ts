@@ -5,11 +5,8 @@
 import { describe, test, expect } from "bun:test";
 import { 
   replayEvents, 
-  evaluateThreadUrgency,
-  detectUrgencyTransition,
+  evaluateThreadUrgency, 
   urgencyPriority,
-  generateReminderData,
-  determineReminderType,
 } from "@/watcher/runtime";
 import type { VigilEvent } from "@/events/types";
 import type { ThreadState, UrgencyLevel } from "@/watcher/runtime";
@@ -231,21 +228,27 @@ describe("evaluateThreadUrgency", () => {
 
   test("should return warning when deadline is within 24 hours", () => {
     const now = Date.now();
+    const deadline = now + 12 * 60 * 60 * 1000; // 12 hours from now
     const thread: ThreadState = {
       thread_id: "t1",
       watcher_id: "w1",
       opened_at: now - 10000,
       last_activity_at: now - 5000,
-      deadline_timestamp: now + 12 * 60 * 60 * 1000, // 12 hours from now
-      deadline_type: "hard",
       status: "open",
       closed_at: null,
       message_ids: ["e1"],
       last_urgency_state: "ok",
       last_alert_urgency: null,
+      trigger_type: "hard_deadline",
+      participants: [],
+      normalized_subject: "test",
+      original_sender: "sender",
+      original_sent_at: now,
+      hard_deadline_event_id: "evt1",
+      soft_deadline_event_id: null,
     };
 
-    const result = evaluateThreadUrgency(thread, now);
+    const result = evaluateThreadUrgency(thread, now, deadline);
 
     expect(result.urgency_state).toBe("warning");
     expect(result.hours_until_deadline).toBeGreaterThan(0);
@@ -253,42 +256,54 @@ describe("evaluateThreadUrgency", () => {
 
   test("should return critical when deadline is within 2 hours", () => {
     const now = Date.now();
+    const deadline = now + 1 * 60 * 60 * 1000; // 1 hour from now
     const thread: ThreadState = {
       thread_id: "t1",
       watcher_id: "w1",
       opened_at: now - 10000,
       last_activity_at: now - 5000,
-      deadline_timestamp: now + 1 * 60 * 60 * 1000, // 1 hour from now
-      deadline_type: "hard",
       status: "open",
       closed_at: null,
       message_ids: ["e1"],
       last_urgency_state: "ok",
       last_alert_urgency: null,
+      trigger_type: "hard_deadline",
+      participants: [],
+      normalized_subject: "test",
+      original_sender: "sender",
+      original_sent_at: now,
+      hard_deadline_event_id: "evt1",
+      soft_deadline_event_id: null,
     };
 
-    const result = evaluateThreadUrgency(thread, now);
+    const result = evaluateThreadUrgency(thread, now, deadline);
 
     expect(result.urgency_state).toBe("critical");
   });
 
   test("should return overdue when deadline has passed", () => {
     const now = Date.now();
+    const deadline = now - 1000; // 1 second ago
     const thread: ThreadState = {
       thread_id: "t1",
       watcher_id: "w1",
       opened_at: now - 100000,
       last_activity_at: now - 50000,
-      deadline_timestamp: now - 1000, // 1 second ago
-      deadline_type: "hard",
       status: "open",
       closed_at: null,
       message_ids: ["e1"],
       last_urgency_state: "ok",
       last_alert_urgency: null,
+      trigger_type: "hard_deadline",
+      participants: [],
+      normalized_subject: "test",
+      original_sender: "sender",
+      original_sent_at: now,
+      hard_deadline_event_id: "evt1",
+      soft_deadline_event_id: null,
     };
 
-    const result = evaluateThreadUrgency(thread, now);
+    const result = evaluateThreadUrgency(thread, now, deadline);
 
     expect(result.urgency_state).toBe("overdue");
     expect(result.hours_until_deadline).toBeLessThan(0);
@@ -301,16 +316,21 @@ describe("evaluateThreadUrgency", () => {
       watcher_id: "w1",
       opened_at: now - 10000,
       last_activity_at: now - 5000,
-      deadline_timestamp: null,
-      deadline_type: null,
       status: "open",
       closed_at: null,
       message_ids: ["e1"],
       last_urgency_state: "ok",
       last_alert_urgency: null,
+      trigger_type: "urgency_signal",
+      participants: [],
+      normalized_subject: "test",
+      original_sender: "sender",
+      original_sent_at: now,
+      hard_deadline_event_id: null,
+      soft_deadline_event_id: null,
     };
 
-    const result = evaluateThreadUrgency(thread, now);
+    const result = evaluateThreadUrgency(thread, now, null);
 
     expect(result.urgency_state).toBe("ok");
     expect(result.hours_until_deadline).toBeNull();
@@ -326,135 +346,6 @@ describe("urgencyPriority", () => {
   });
 });
 
-describe("detectUrgencyTransition", () => {
-  const baseThread: ThreadState = {
-    thread_id: "t1",
-    watcher_id: "w1",
-    opened_at: Date.now(),
-    last_activity_at: Date.now(),
-    deadline_timestamp: Date.now() + 100000,
-    deadline_type: "hard",
-    status: "open",
-    closed_at: null,
-    message_ids: ["e1"],
-    last_urgency_state: "ok",
-    last_alert_urgency: null,
-  };
 
-  test("should return null when urgency unchanged", () => {
-    const result = detectUrgencyTransition(baseThread, "ok");
-    expect(result).toBeNull();
-  });
 
-  test("should detect escalation from ok to warning", () => {
-    const result = detectUrgencyTransition(baseThread, "warning");
-    
-    expect(result).not.toBeNull();
-    expect(result?.is_escalation).toBe(true);
-    expect(result?.requires_alert).toBe(true);
-    expect(result?.previous_urgency).toBe("ok");
-    expect(result?.current_urgency).toBe("warning");
-  });
 
-  test("should detect de-escalation and not require alert", () => {
-    const warningThread = { ...baseThread, last_urgency_state: "warning" as UrgencyLevel };
-    const result = detectUrgencyTransition(warningThread, "ok");
-    
-    expect(result).not.toBeNull();
-    expect(result?.is_escalation).toBe(false);
-    expect(result?.requires_alert).toBe(false);
-  });
-
-  test("should not require alert if already alerted at this level", () => {
-    const alertedThread = { 
-      ...baseThread, 
-      last_urgency_state: "ok" as UrgencyLevel,
-      last_alert_urgency: "warning" as UrgencyLevel,
-    };
-    const result = detectUrgencyTransition(alertedThread, "warning");
-    
-    expect(result).not.toBeNull();
-    expect(result?.is_escalation).toBe(true);
-    expect(result?.requires_alert).toBe(false); // Already alerted at warning
-  });
-
-  test("should require alert when escalating past last alert level", () => {
-    const alertedThread = { 
-      ...baseThread, 
-      last_urgency_state: "warning" as UrgencyLevel,
-      last_alert_urgency: "warning" as UrgencyLevel,
-    };
-    const result = detectUrgencyTransition(alertedThread, "critical");
-    
-    expect(result).not.toBeNull();
-    expect(result?.is_escalation).toBe(true);
-    expect(result?.requires_alert).toBe(true); // Critical > warning
-  });
-});
-
-describe("generateReminderData", () => {
-  test("should generate hard_deadline reminder for hard deadline thread", () => {
-    const thread: ThreadState = {
-      thread_id: "t1",
-      watcher_id: "w1",
-      opened_at: Date.now(),
-      last_activity_at: Date.now(),
-      deadline_timestamp: Date.now() + 100000,
-      deadline_type: "hard",
-      status: "open",
-      closed_at: null,
-      message_ids: ["e1"],
-      last_urgency_state: "ok",
-      last_alert_urgency: null,
-    };
-
-    const result = generateReminderData(thread, "warning", "causal_123");
-
-    expect(result.reminder_type).toBe("hard_deadline");
-    expect(result.binding).toBe(true);
-    expect(result.causal_event_id).toBe("causal_123");
-    expect(result.urgency_level).toBe("warning");
-  });
-
-  test("should generate soft_deadline reminder for soft deadline thread", () => {
-    const thread: ThreadState = {
-      thread_id: "t1",
-      watcher_id: "w1",
-      opened_at: Date.now(),
-      last_activity_at: Date.now(),
-      deadline_timestamp: Date.now() + 100000,
-      deadline_type: "soft",
-      status: "open",
-      closed_at: null,
-      message_ids: ["e1"],
-      last_urgency_state: "ok",
-      last_alert_urgency: null,
-    };
-
-    const result = generateReminderData(thread, "warning", "causal_456");
-
-    expect(result.reminder_type).toBe("soft_deadline");
-    expect(result.binding).toBe(false);
-  });
-
-  test("should generate silence reminder for thread without deadline", () => {
-    const thread: ThreadState = {
-      thread_id: "t1",
-      watcher_id: "w1",
-      opened_at: Date.now(),
-      last_activity_at: Date.now(),
-      deadline_timestamp: null,
-      deadline_type: null,
-      status: "open",
-      closed_at: null,
-      message_ids: ["e1"],
-      last_urgency_state: "ok",
-      last_alert_urgency: null,
-    };
-
-    const result = generateReminderData(thread, "warning", "causal_789");
-
-    expect(result.reminder_type).toBe("silence");
-    expect(result.binding).toBe(false);
-  });
-});

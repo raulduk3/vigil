@@ -2,7 +2,27 @@
 
 **Python/vLLM Extraction Service**
 
-LLM-powered fact extraction service for Vigil. This service is **strictly subordinate** to the backend control plane and operates in a bounded, non-autonomous role.
+LLM-powered fact extraction service for Vigil. This service provides **automated extraction** that creates reminders directly—users correct the ~10% of cases where the LLM is wrong. Every extraction must be grounded in verifiable source text.
+
+## Critical Design Constraints
+
+### Automated Extraction with User Correction
+
+- Extractions are **automated**—they create reminders immediately
+- Every extraction MUST include a `source_span` (verbatim quote from email)
+- Extractions without valid source spans are **DISCARDED** by the backend
+- Users correct the ~10% of cases where LLM is wrong (edit, merge, dismiss, reassign)
+- The system functions correctly even if this service is offline
+
+### Grounded Extraction Requirement
+
+```
+Email Text → Regex identifies candidates → LLM interprets context → source_span validation → Accept/Discard
+```
+
+- The `source_span` field MUST be a verbatim substring of the input email
+- If LLM hallucinates text that doesn't exist, the extraction is discarded
+- This prevents invented deadlines or phantom obligations
 
 ## SDD Traceability
 
@@ -77,6 +97,16 @@ Backend Ingestion Pipeline:
 - ❌ Store state or history
 - ❌ Communicate with frontend
 - ❌ Call external APIs
+- ❌ Override user corrections
+- ❌ Resolve conflicts (surfaces them for user)
+
+### One Email, Multiple Extractions
+
+A single email may generate multiple extraction results:
+- "Please send the report by Friday" → Hard deadline extraction
+- "Also, can you schedule a call?" → Urgency signal extraction
+
+Each becomes an independent draft reminder for user review.
 
 ---
 
@@ -164,33 +194,33 @@ class DeadlineResponse(BaseModel):
 
 ## Purpose
 
-Extracts structured facts from email text via language model inference:
+Extracts structured **candidate facts** from email text via language model inference. All extractions are advisory and require user confirmation.
 
 ### Extraction Types (Three-Tier Model)
 
 **Tier 1: Hard Deadlines (Binding)**
 - Explicit dates/times with commitment language
 - Examples: "by Friday 5pm", "deadline December 31st", "must respond by EOD"
-- Creates `HARD_DEADLINE_OBSERVED` events
-- Always triggers thread creation
+- Creates draft `HARD_DEADLINE_OBSERVED` events
+- Requires `source_span` validation before acceptance
 
 **Tier 2: Soft Deadline Signals (Advisory)**
 - Fuzzy temporal language without explicit dates
 - Examples: "next week", "end of month", "soon", "in a few days"
-- Creates `SOFT_DEADLINE_SIGNAL_OBSERVED` events
-- Thread ALWAYS created (policy controls reminder generation via `enable_soft_deadline_reminders`)
+- Creates draft `SOFT_DEADLINE_SIGNAL_OBSERVED` events
+- User decides whether to create reminder
 
 **Tier 3: Urgency Signals (Loosest)**
 - Questions, requests, obligations without dates
 - Examples: "can you provide", "I need", "ASAP", "please respond"
-- Creates `URGENCY_SIGNAL_OBSERVED` events
-- Thread ALWAYS created (policy controls reminder generation via `enable_urgency_signal_reminders`)
+- Creates draft `URGENCY_SIGNAL_OBSERVED` events
+- User decides whether to create reminder
 
 **Closure Detection**
 - Explicit confirmation that obligation is complete
 - Examples: "this is done", "no longer needed", "completed"
-- Creates `CLOSURE_SIGNAL_OBSERVED` events
-- Triggers thread closure evaluation
+- Creates draft `CLOSURE_SIGNAL_OBSERVED` events
+- User confirms before thread closure
 
 ## Router LLM Model
 
@@ -198,10 +228,10 @@ The LLM service operates as a **router LLM** that runs on every inbound email:
 
 - **Universal Invocation:** Called for every email received by an active watcher (after sender validation)
 - **Single-Pass Extraction:** Performs all extraction types in one pass (deadline, soft signal, urgency, closure)
-- **Thread Creation Driver:** Extraction events drive thread creation - threads are created when ANY signal is detected
-- **Audit Trail:** ALL extraction events are emitted and persisted, even when threads already exist
+- **Advisory Output:** All extractions are candidates for user review, never auto-committed
+- **Audit Trail:** ALL extraction events are emitted and persisted, even when users dismiss them
 
-**Key Clarification:** This service determines what the system observes, but never decides what happens next. Extraction events are facts about what text contains.
+**Key Constraint:** This service determines what the system **suggests**, but users decide what happens next. Extraction events are hypotheses about what text contains—users confirm or reject them.
 
 ## Architecture
 
@@ -338,17 +368,39 @@ MAX_NUM_SEQS=256
 The LLM service:
 - ✅ Performs exactly **ONE task per request**
 - ✅ Returns **structured JSON + verbatim source_span evidence**
-- ✅ Validates `source_span` exists in input text
+- ✅ **source_span MUST exist in input text** — or extraction is discarded
 - ✅ Includes `confidence` level (high/medium/low)
 - ✅ Includes `extractor_version` for reproducibility
+- ✅ Can extract **multiple concerns from one email**
 - ❌ Does **NOT chain prompts**
 - ❌ Does **NOT call tools or external APIs**
 - ❌ Does **NOT retry autonomously**
 - ❌ Does **NOT emit events** (only backend emits events)
 - ❌ Does **NOT store state or history**
 - ❌ Does **NOT make decisions** about what happens next
+- ❌ Does **NOT auto-commit** — users confirm all reminders
 
-**If LLM service is unavailable, Vigil continues to function safely with reduced informational fidelity.**
+**If LLM service is unavailable, Vigil continues to function with regex-only extraction.**
+
+### Source Span Validation (Critical)
+
+```python
+# Backend validation pseudo-code
+def validate_extraction(email_text: str, extraction: dict) -> bool:
+    source_span = extraction.get("source_span", "")
+    if not source_span:
+        return False  # DISCARD: no grounding
+    
+    if source_span.lower() not in email_text.lower():
+        return False  # DISCARD: hallucinated text
+    
+    return True  # ACCEPT: grounded extraction
+```
+
+Extractions that fail validation are silently discarded. This prevents:
+- Hallucinated deadlines
+- Invented obligations
+- Phantom urgency signals
 
 ## SDD References
 

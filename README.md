@@ -1,6 +1,163 @@
 # Vigil
 
-**Deterministic, Event-Sourced Vigilance System for Time-Sensitive Email Oversight**
+**Email Response Monitoring & Time-Sensitive Communication Oversight**
+
+---
+
+## What is Vigil?
+
+Vigil is a **delegated oversight system** that monitors time-sensitive email communication on your behalf. Instead of scanning your inbox, Vigil watches a dedicated email address where you forward important messages. It automatically detects deadlines, tracks response times, and surfaces advisory reminders—while giving you **complete control** to correct, edit, merge, or dismiss anything it extracts.
+
+### The Core Value Proposition
+
+**Know how quickly emails are sent, received, and responded to.**
+
+Vigil monitors communication patterns and surfaces insights about:
+- ⏱️ **Response times** — How long until replies arrive
+- 📅 **Deadline tracking** — Explicit dates extracted from email text
+- 🔇 **Silence detection** — When conversations go quiet too long
+- ✅ **Closure confirmation** — When obligations are explicitly completed
+
+### The Problem Vigil Solves
+
+Email is where obligations live. Invoices arrive with due dates. Clients ask questions expecting responses. Legal notices carry deadlines. Yet email clients are designed for reading and replying, not for tracking what's been promised, when it's due, and whether anyone followed up.
+
+**Quiet failures** happen when:
+- A deadline passes unnoticed in a crowded inbox
+- No one responds to an important request, and no one notices the silence
+- An obligation is acknowledged but never fulfilled
+
+Vigil provides **confidence through observation**—the assurance that important communication is being watched, and that silence is not going unnoticed.
+
+### How Vigil Works
+
+1. **You forward emails** to a unique Vigil address (e.g., `finance-a7f3k9@ingest.email.vigil.run`)
+2. **Vigil automatically extracts facts** from the email: deadlines, urgency signals, closure confirmations
+3. **Reminders are created automatically** — The system actively monitors them
+4. **Vigil tracks silence** and elapsed time against your configured thresholds
+5. **Vigil alerts you** when urgency changes—when a deadline approaches, when silence stretches too long
+6. **You can correct mistakes** — Edit, merge, dismiss, or reassign when the LLM gets it wrong (~10% of cases)
+7. **You take action** based on the advisory notification (Vigil never acts for you)
+
+### What Makes Vigil Different
+
+- ✅ **Automated extraction with correction capability** — LLM creates reminders automatically; you fix the ~10% it gets wrong
+- ✅ **Full audit trail** — Every extraction, correction, and override is traceable
+- ✅ **One email, multiple concerns** — A single email can generate multiple independent reminders
+- ✅ **Flexible thread association** — Messages can be associated with multiple threads; associations are editable
+- ✅ **Portable reminders** — Semantic obligations can be moved between threads
+- ✅ **Conflict detection** — Duplicate reminders and conflicting deadlines are flagged for review
+- ✅ **Manual overrides persist** — Your corrections are never overwritten by automation
+- ✅ **Grounded extraction** — Every LLM output must cite a verbatim source span or it's discarded
+
+### What Vigil Does NOT Do
+
+Vigil is **intentionally constrained**:
+- ❌ Does NOT access your inbox or scan your email
+- ❌ Does NOT send replies or automate any email actions
+- ❌ Does NOT resolve conflicts automatically—it flags them for review
+- ❌ Does NOT connect to financial accounts or track payments
+- ❌ Does NOT override your manual corrections
+- ❌ Does NOT hide its reasoning—every decision is traceable to source text
+
+**Humans retain full responsibility and can correct any automated decision.**
+
+---
+
+## Core Design Principles
+
+### 1. Automated Extraction with Correction Capability
+
+The LLM **automatically extracts reminders** from email text—and ~90% of the time it's correct. When it makes mistakes:
+- Users can **edit** any extracted reminder (deadline, description, urgency)
+- Users can **merge** duplicate or related reminders
+- Users can **dismiss** incorrect extractions
+- Users can **reassign** reminders to different threads
+- Users can **create** manual reminders not detected by the system
+
+Every extraction and every correction is captured in the event log, making the system's reasoning fully traceable.
+
+### 2. Full Traceability for Corrections
+
+When users correct the system, those corrections:
+- Are captured as events in the audit log
+- **Always override** automated decisions and persist permanently
+- Can be reasoned about by replaying the event log
+- Provide feedback signal for understanding extraction accuracy
+
+Manual user actions **always take precedence** over automation.
+
+### 3. One Email, Multiple Concerns
+
+A single email may contain multiple independent obligations:
+- "Please send the report by Friday and schedule a call for next week"
+- Each concern becomes a separate reminder candidate
+- Users control whether to keep, merge, or dismiss each one
+
+### 4. Flexible Message-Thread Association
+
+Messages affect thread state (activity timestamps, participant lists, etc.), so moving them is complex. Vigil uses a **copy and deactivate** model:
+
+- Messages can be **associated** with multiple threads
+- When a message is "removed" from a thread, it's **deactivated** (hidden), not deleted
+- Deactivated messages don't affect thread matching or activity calculations
+- The original association is preserved in the event log for traceability
+- Thread matching only considers **active** message associations
+
+### 5. Conflict Detection, Not Resolution
+
+When the system detects ambiguity, it **surfaces the conflict** rather than resolving it:
+- Duplicate reminders across threads → Flagged for user review
+- Conflicting deadlines in the same thread → Highlighted, not merged
+- Overlapping obligations → Displayed together for comparison
+
+**Design for visibility and control of ambiguity, not automatic resolution.**
+
+### 6. Grounded Extraction via Regex + LLM
+
+All LLM outputs must be grounded in verifiable text:
+1. **Regex extractor** identifies candidate spans (dates, keywords, patterns)
+2. **LLM** interprets context and extracts structured facts
+3. **Validation** ensures every extraction cites a `source_span` that exists in the original text
+4. **Ungrounded outputs are discarded** — no hallucinated deadlines
+
+---
+
+## Response Time Monitoring
+
+A key capability of Vigil is tracking **communication velocity**:
+
+### What Vigil Tracks
+
+| Metric | Description |
+|--------|-------------|
+| **Time to First Response** | How long until someone replies to an email |
+| **Silence Duration** | How long since the last activity in a thread |
+| **Deadline Proximity** | How close a stated deadline is |
+| **Activity Patterns** | When emails are sent, received, and replied to |
+
+### How It Works
+
+```
+Email A sent (10:00 AM)
+    ↓
+Email B received (2:00 PM) → 4 hours elapsed
+    ↓
+Silence begins...
+    ↓
+48 hours later → WARNING: Silence threshold exceeded
+    ↓
+72 hours later → CRITICAL: No response
+```
+
+### Use Cases
+
+- **Client Management**: Know if clients are responding promptly
+- **Vendor Tracking**: Ensure suppliers meet response expectations
+- **Legal Compliance**: Document response times for regulatory requirements
+- **Team Accountability**: Track internal communication patterns
+
+---
 
 ## SDD Traceability
 
@@ -8,42 +165,98 @@ This document provides a high-level overview of the Vigil system. The authoritat
 
 | Section | SDD Requirements |
 |---------|------------------|
-| Core Principles | [SDD 1.2 System Boundaries](docs/SDD.md#12-system-boundaries) |
-| Foundational Architecture | [SDD 1.4 Core Primitives](docs/SDD.md#14-core-system-primitives), CONS-1 through CONS-8 |
-| Architectural Invariants | FR-16, FR-20, CONS-1, CONS-2 |
-| Watchers | [SDD 1.4 Watcher](docs/SDD.md#watcher), FR-1 through FR-4 |
-| Watcher Runtime | MR-WatcherRuntime-1 through MR-WatcherRuntime-6 |
-| Email Ingestion | FR-5, MR-BackendIngestion-1 through MR-BackendIngestion-4, IR-8, IR-9 |
-| LLM Extraction | FR-6, FR-6b, FR-6c, FR-7, MR-LLMService-1 through MR-LLMService-5 |
-| Notifications | FR-11, FR-12, MR-NotificationWorker-1 through MR-NotificationWorker-3 |
-| Reports | FR-15, MR-Scheduler-2 |
+| Core Design Principles | FR-16, FR-20, CONS-1, CONS-2, CONS-7, CONS-8 |
+| Grounded Extraction | MR-LLMService-3 (Source Span Validation) |
+| User Control | FR-9 (Manual Closure), User Override Events |
+| Response Time Monitoring | FR-10, MR-WatcherRuntime-3, MR-WatcherRuntime-4 |
+| Conflict Detection | Advisory extraction, duplicate flagging |
+| Reminder Lifecycle | FR-6, FR-6b, FR-6c, FR-7, FR-8 |
+| Event Sourcing | CONS-1 through CONS-8 |
+| Security | SEC-1 through SEC-8 |
 
 For complete requirement specifications, acceptance criteria, and unit test requirements, see the [SDD](docs/SDD.md).
 
 ---
 
-Vigil is a deterministic, event-sourced vigilance system that provides **delegated oversight** over explicitly routed email streams. The system exists to reduce the risk of quiet failure in time-sensitive email communication by observing elapsed time, silence, and stated or implied deadlines, and by surfacing advisory notifications when attention may be warranted.
-
-## Core Principles
-
-Vigil is intentionally constrained in scope:
-- **Does NOT** access inboxes, automate replies, infer intent, assign tasks, or act autonomously
-- **Does NOT** connect to financial accounts, track balances, or reconcile transactions
-- **Never** becomes a decision-maker
-- **Humans** retain full responsibility and control at all times
-
-The system favors **determinism over intelligence**, **transparency over automation**, and **restraint over completeness**. Its core promise is not to manage email, but to provide confidence: confidence that important communication is being observed, that silence is not going unnoticed, and that when nothing happens, it is because nothing needs to happen—not because something was missed.
-
-**Domain Scope:** Vigil tracks time commitments expressed in communication, not money. Bills and payment notices can be monitored, but only as communications with deadlines—Vigil extracts due dates and measures silence, nothing more. This same capability applies to legal deadlines, client requests, or any obligation expressed in language.
-
 ## Foundational Architecture
 
-**Events are the sole source of truth.** Every fact that can influence system behavior is captured once as an immutable, append-only event. No authoritative state is stored in mutable database tables, caches, or long-lived memory. All operational state—threads, due boundaries, reminder status, closures, and notification eligibility—is always derived by replaying events in order.
+**Events are the sole source of truth.** Every fact that can influence system behavior is captured once as an immutable, append-only event. No authoritative state is stored in mutable database tables, caches, or long-lived memory. All operational state—threads, reminders, closures, and notification eligibility—is always derived by replaying events in order.
 
 This guarantees:
 - **Determinism**: Same events always produce same state
-- **Auditability**: Complete history of all decisions
-- **Explainability**: Any alert or decision can be reconstructed offline by replaying the event log without invoking external systems or artificial intelligence
+- **Auditability**: Complete history of all decisions and user corrections
+- **Explainability**: Any alert or decision can be reconstructed offline by replaying the event log
+- **User Control**: Manual overrides are events that persist and take precedence
+
+### Reminder Lifecycle
+
+```
+Email Arrives
+    ↓
+Regex Extraction (find candidate spans)
+    ↓
+LLM Interpretation (extract structured facts)
+    ↓
+Source Span Validation (must match original text)
+    ↓
+REMINDERS CREATED AUTOMATICALLY
+    ↓
+System Monitors for Urgency Changes
+    ↓
+If LLM was wrong (~10% of cases):
+    ├── Edit → Correct the reminder details
+    ├── Merge → Combine with another reminder
+    ├── Dismiss → Remove from monitoring (audit preserved)
+    └── Reassign → Move to different thread
+    ↓
+Urgency Evaluation → Alerts on State Transitions
+```
+
+### Reminders as Portable Semantic Obligations
+
+**Reminders are independent of threads.** They represent semantic obligations (deadlines, requests, tasks) that can be:
+
+- **Created** from LLM extraction or manually by users
+- **Moved** between threads without affecting the original thread's message history
+- **Monitored** for urgency regardless of which thread they're attached to
+- **Deactivated** from a thread while remaining in the audit log
+
+This separation allows:
+- A single email to generate multiple reminders for different threads
+- Reminders to be reassigned when the LLM associates them with the wrong conversation
+- Thread activity tracking to remain accurate even when reminders are moved
+
+### Message-Thread Associations
+
+Messages have **implications** on thread state (activity timestamps, participant lists, silence calculations). The association model:
+
+```
+Message M is associated with Thread T
+    ↓
+Association is ACTIVE by default
+    ↓
+If user removes M from T:
+    └── Association becomes INACTIVE (hidden)
+    └── M no longer affects T's calculations
+    └── Original association preserved in event log
+    ↓
+If user adds M to new Thread T2:
+    └── New ACTIVE association created
+    └── M now affects T2's calculations
+```
+
+This "soft association" model allows:
+- Messages to be logically reorganized without losing history
+- Thread matching to only consider active associations
+- Full traceability of all association changes
+
+### Key Invariants
+
+1. **Automated with Correction**: LLM creates reminders automatically; users fix mistakes
+2. **Source Span Required**: Every extraction must cite verbatim text from the email
+3. **User Overrides Persist**: Manual corrections are never overwritten by automation
+4. **Reminders are Portable**: Can be moved between threads without data loss
+5. **Associations are Soft**: Messages can be deactivated from threads, not deleted
 
 ## Repository Structure
 
@@ -51,28 +264,40 @@ This repository is organized as a **monorepo** where each top-level directory is
 
 ```
 Vigil/
-├── backend/              # Backend Control Plane (TypeScript/Bun)
+├── backend/              # Backend Control Plane (TypeScript/Bun) - ACTIVE
 │   ├── src/
-│   │   ├── events/      # Event type definitions and store
-│   │   ├── watcher/     # Watcher runtime executor
-│   │   ├── backend/     # API and coordination layer
-│   │   └── store/       # Event storage implementations
-│   ├── test/            # Unit tests (centralized)
+│   │   ├── api/         # HTTP handlers (Hono framework)
+│   │   ├── auth/        # JWT + OAuth (Google/GitHub) + password reset
+│   │   ├── billing/     # Stripe integration (4 tiers: free/starter/pro/enterprise)
+│   │   ├── db/          # PostgreSQL client and event store
+│   │   ├── events/      # Event type definitions (45+ types), store, validation, traceability
+│   │   ├── ingestion/   # Email pipeline orchestration
+│   │   ├── llm/         # LLM extraction interface (with regex fallback)
+│   │   ├── logging/     # Structured per-entity logging
+│   │   ├── scheduler/   # TIME_TICK generation (15-min intervals)
+│   │   ├── security/    # PII sanitizer, rate limiter, webhook signing
+│   │   ├── watcher/     # Runtime, urgency evaluation, thread detection, alert queue
+│   │   └── worker/      # Notification worker with retry
+│   ├── test/            # Unit tests (watcher/, events/, api/, billing/, etc.)
 │   ├── scripts/         # Release and utility scripts
 │   ├── .env.example     # Environment configuration template
 │   └── package.json     # Backend dependencies
 │
-├── llm-service/         # LLM Extraction Service (Python/vLLM)
+├── frontend/            # Web UI (Next.js 14) - ACTIVE
+│   ├── src/
+│   │   ├── app/         # App Router pages (auth, dashboard, watchers, account, learn)
+│   │   ├── components/  # UI components (auth, events, layout, system)
+│   │   └── lib/         # API client, auth context, Stripe provider
+│   ├── .env.example     # Frontend configuration
+│   └── package.json     # Frontend dependencies
+│
+├── llm-service/         # LLM Extraction Service (Python/vLLM) - PLANNED
 │   ├── .env.example     # LLM service configuration
 │   └── README.md
 │
-├── smtp-adapter/        # Email Ingress Adapter (Lightweight SMTP)
+├── smtp-adapter/        # Email Ingress Adapter (Lightweight SMTP) - PLANNED
 │   ├── .env.example     # SMTP adapter configuration
-│   └── README.md
-│
-├── frontend/            # Web UI (React/Next.js TBD)
-│   ├── .env.example     # Frontend configuration
-│   └── README.md
+│   └── README.md        # (HTTP ingestion endpoint active in backend)
 │
 └── README.md            # This file
 ```
@@ -87,19 +312,264 @@ All services communicate over HTTP/network:
 
 Each service has its own `.env.example` file defining connection endpoints.
 
+## End-to-End System Flow
+
+This section describes the complete lifecycle of an email through the Vigil system—from arrival to alert delivery.
+
+### Phase 1: Email Ingestion
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  External Email Flow                                                │
+│                                                                     │
+│  1. User forwards email → finance-a7f3k9@ingest.email.vigil.run     │
+│  2. MX lookup routes to SMTP Adapter                                │
+│  3. SMTP Adapter extracts ingest_token, forwards to Backend         │
+│  4. Backend emits MESSAGE_RECEIVED event (immutable fact)           │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Key Guarantees:**
+- Every email creates exactly one MESSAGE_RECEIVED event
+- Email body is processed but NOT stored after extraction
+- Routing determined solely by recipient address (never content)
+
+### Phase 2: Fact Extraction
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Grounded Extraction Pipeline                                       │
+│                                                                     │
+│  1. Backend validates sender (allowlist check)                      │
+│  2. Regex extractor identifies candidate text spans                 │
+│  3. LLM interprets context and extracts structured facts            │
+│  4. Each extraction MUST include source_span (verbatim quote)       │
+│  5. Backend validates source_span exists in original email          │
+│  6. Ungrounded extractions are DISCARDED                            │
+│  7. Valid extractions become DRAFT reminders for user review        │
+│  8. Email body discarded (only metadata retained)                   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Extraction Events (All Advisory):**
+- `HARD_DEADLINE_OBSERVED` — Explicit date/time with commitment language
+- `SOFT_DEADLINE_SIGNAL_OBSERVED` — Fuzzy temporal language
+- `URGENCY_SIGNAL_OBSERVED` — Questions, requests without dates
+- `CLOSURE_SIGNAL_OBSERVED` — Resolution or completion language
+
+**Critical Constraint:** Every extraction event includes a `source_span` field that must be a verbatim substring of the original email. If the LLM hallucinates text that doesn't exist, the extraction is discarded.
+
+**One Email, Multiple Extractions:** A single email may generate multiple extraction events. For example:
+- "Please send the report by Friday" → HARD_DEADLINE_OBSERVED
+- "Also, can you schedule a call?" → URGENCY_SIGNAL_OBSERVED
+
+Each becomes an independent draft reminder for user review.
+
+### Phase 3: Thread & Reminder Management
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  User-Controlled Thread & Reminder System                           │
+│                                                                     │
+│  1. Runtime loads ALL events for watcher from Event Store           │
+│  2. Replay events to reconstruct current state:                     │
+│     • Watcher status (active/paused)                                │
+│     • All open/closed threads                                       │
+│     • Draft and confirmed reminders                                 │
+│     • User overrides and corrections                                │
+│  3. Process new extractions:                                        │
+│     • Match message to existing thread (via headers/subject)        │
+│     • OR create new thread if no match                              │
+│     • Create DRAFT reminders from extraction events                 │
+│     • Flag potential conflicts (duplicates, deadline mismatches)    │
+│  4. User reviews and takes action on drafts                         │
+│  5. Emit events for user actions (persists overrides)               │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Thread Assignment:**
+- System suggests thread matches based on headers/subject
+- User can **override** thread assignment at any time
+- Same email can be linked to **multiple threads** if relevant
+- Thread membership is **editable**, not locked
+
+**Reminder States:**
+- `draft` — Extracted but awaiting user confirmation
+- `confirmed` — User approved, actively monitored
+- `dismissed` — User rejected, excluded from alerts (audit preserved)
+- `merged` — Combined with another reminder
+
+**Conflict Detection:**
+- Duplicate reminders → Flagged for merge/dismiss decision
+- Conflicting deadlines → Highlighted for user resolution
+- Same task in multiple threads → Surfaced, not auto-resolved
+
+### Phase 4: Urgency Evaluation
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Time-Based Evaluation                                              │
+│                                                                     │
+│  1. Scheduler emits TIME_TICK events (every 15 minutes)             │
+│  2. Runtime recalculates urgency for each open thread:              │
+│     • hours_until_deadline (from extraction events)                 │
+│     • hours_since_activity (silence detection)                      │
+│  3. Urgency levels:                                                 │
+│     • OK — No pressure                                              │
+│     • WARNING — Approaching deadline or silence threshold           │
+│     • CRITICAL — Deadline imminent                                  │
+│     • OVERDUE — Deadline passed                                     │
+│  4. If urgency STATE CHANGES → emit REMINDER_GENERATED              │
+│  5. If reminder urgency ≥ warning → emit ALERT_QUEUED               │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Key Principle:** Alerts fire ONLY on state transitions (ok → warning, warning → critical), never on steady state. This prevents alert fatigue.
+
+### Phase 5: Alert Delivery
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Notification Worker                                                │
+│                                                                     │
+│  1. Poll Event Store for ALERT_QUEUED events                        │
+│  2. Filter channels by urgency_filter (all/warning/critical)        │
+│  3. Attempt delivery:                                               │
+│     • Email → SMTP relay                                            │
+│     • Webhook → HTTP POST to configured URL                         │
+│  4. Retry on failure (3 attempts, exponential backoff)              │
+│  5. Emit ALERT_SENT or ALERT_FAILED event                           │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+**Notification Content:**
+```
+Subject: [Vigil Alert] Finance - Thread Warning
+
+Watcher: Finance
+Thread: t_abc123
+Status: WARNING
+Deadline: December 30, 2025 5:00 PM
+Last Activity: 48 hours ago
+
+This is an attention prompt. Review thread and take action if needed.
+
+View thread: https://vigil.run/threads/t_abc123
+```
+
+### Phase 6: Reporting
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Scheduled Reports                                                  │
+│                                                                     │
+│  1. Scheduler checks reporting_cadence (daily/weekly/on_demand)     │
+│  2. Generate summary of watcher state:                              │
+│     • Reassurance first: resolved threads, stable threads           │
+│     • Then attention items: warning/critical/overdue                │
+│  3. Emit REPORT_GENERATED event                                     │
+│  4. Notification Worker delivers to reporting_recipients            │
+│  5. Emit REPORT_SENT event                                          │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Complete Data Flow Diagram
+
+```
+┌──────────┐   forward   ┌──────────────┐   HTTP POST   ┌─────────────┐
+│  Email   │ ──────────▶ │ SMTP Adapter │ ────────────▶ │   Backend   │
+│  Sender  │             │  (port 25)   │               │Control Plane│
+└──────────┘             └──────────────┘               └──────┬──────┘
+                                                               │
+                         ┌──────────────┐                      │
+                         │ LLM Service  │ ◀────────────────────┤ HTTP
+                         │ (extraction) │ ─────────────────────┤
+                         └──────────────┘   structured facts   │
+                                                               │
+                                                               ▼
+                                                        ┌─────────────┐
+                                                        │ Event Store │
+                                                        │ (PostgreSQL)│
+                                                        └──────┬──────┘
+                                                               │
+              ┌────────────────────────────────────────────────┤
+              │                                                │
+              ▼                                                ▼
+       ┌─────────────┐                                  ┌─────────────┐
+       │  Scheduler  │                                  │ Notification│
+       │ (TIME_TICK) │                                  │   Worker    │
+       └─────────────┘                                  └──────┬──────┘
+              │                                                │
+              │                                                ▼
+              │                                          ┌─────────────┐
+              │                                          │   Alerts    │
+              │                                          │ (email/hook)│
+              │                                          └─────────────┘
+              │
+              ▼
+       ┌─────────────┐
+       │  Frontend   │ ◀──── User views state, closes threads
+       │ (Dashboard) │
+       └─────────────┘
+```
+
 ## Architectural Invariants
 
 These invariants are **non-negotiable** and define the system's foundational guarantees:
 
-### 1. Event-Sourced Architecture
+### 1. LLM Output is Advisory, Never Authoritative
+
+- All LLM extractions are **candidates**, not facts
+- Every extraction must include a `source_span` (verbatim quote from email)
+- Extractions without valid source spans are **discarded**
+- Extracted reminders start as **drafts** requiring user confirmation
+- Users can edit, merge, dismiss, or reassign any extraction
+- **Manual user actions always override automation and persist**
+
+### 2. Grounded Extraction via Regex + LLM
+
+- Regex patterns identify candidate text spans first
+- LLM interprets context to extract structured facts
+- Every LLM output must reference a matching regex span
+- Ungrounded outputs (hallucinated text) are discarded
+- This ensures extractions are traceable to original email text
+
+### 3. User Control Over Reminders
+
+- Reminders can be: edited, merged, dismissed, reassigned
+- Dismissed reminders are excluded from alerts but preserved in audit trail
+- User corrections emit events that persist permanently
+- System never overwrites user decisions
+
+### 4. One Email, Multiple Concerns
+
+- A single email may contain multiple independent obligations
+- Each concern becomes a separate draft reminder
+- Users decide which to keep, merge, or dismiss
+- No automatic deduplication—conflicts are surfaced
+
+### 5. Emails Can Belong to Multiple Threads
+
+- Thread assignment is **editable** by the user
+- Same email can be linked to multiple threads
+- System suggests matches; user controls final assignment
+
+### 6. Conflict Detection, Not Resolution
+
+- Duplicate reminders → Flagged for user review
+- Conflicting deadlines → Highlighted, not auto-merged
+- Same task in multiple threads → Surfaced, not auto-resolved
+- **Design for visibility and control of ambiguity**
+
+### 7. Event-Sourced Architecture
 
 - All authoritative state is derived from immutable events
 - Events are append-only and never modified or deleted
-- Corrections are made by emitting new events
+- Corrections are made by emitting new events (user overrides)
 - Replay of events must be deterministic and side-effect free
 - If a future decision depends on data, that data MUST exist in an event
 
-### 2. No Long-Lived Mutable State
+### 8. No Long-Lived Mutable State
 
 - Do NOT store authoritative thread, reminder, or watcher state in a database
 - Do NOT rely on in-memory state across runs
@@ -108,7 +578,7 @@ These invariants are **non-negotiable** and define the system's foundational gua
   - Disposable projections
 - Projections must be rebuildable from events at any time
 
-### 3. No Agent Behavior
+### 9. No Agent Behavior
 
 - No background reasoning loops
 - No retry-until-success logic
@@ -116,42 +586,37 @@ These invariants are **non-negotiable** and define the system's foundational gua
 - No LLM calls during replay
 - No LLM deciding what happens next
 
-### 4. LLM as Fact Extraction Appliance Only
+### 10. LLM as Extraction Appliance Only
 
 - LLMs may ONLY extract structured facts from email text
-- LLM outputs are frozen into immutable events
+- LLM outputs are frozen into immutable extraction events
 - LLMs NEVER:
   - Schedule work
-  - Emit events
+  - Emit events directly
   - Influence control flow
   - Retry autonomously
+  - Auto-commit reminders
 - The system must function correctly if the LLM is offline
 
-### 5. Thread Model (Tracked Conversations)
+### 11. Thread Model (Tracked Conversations)
 
-- **Threads represent tracked conversations**, not just obligations
-- The router LLM runs on every inbound email and determines thread creation based on what it detects
-- Thread creation is driven by extraction, NOT by explicit user intent
-- **Threads do NOT own deadlines**—deadlines belong to Reminders derived from threads
-- Threads are monitored for silence (no new messages) and inactivity (no updates)
-- **Core tracking feature:** When communications were sent, responded to, fulfilled, and when obligations were due
-- Threads cannot be merged or reassigned to different watchers
+- **Threads represent tracked conversations**
+- Thread creation is driven by extraction detection
+- **Threads do NOT own deadlines**—deadlines belong to Reminders
+- Threads are monitored for silence (no new messages) and response times
+- **Core tracking feature:** When communications were sent, responded to, and when obligations were due
 - Threads may be closed:
-  - a) Automatically when an email contains explicit, evidence-backed closure language
-  - b) Manually by a user through the dashboard
+  - a) By user-confirmed closure signal from email
+  - b) Manually by user through the dashboard
 - **Closure is terminal**: Once closed, a thread can **NEVER** reopen
-- Closed threads are preserved for tracking and audit, but excluded from reports by default
-- Subsequent emails may create new threads if they introduce new signals, but they never resurrect closed ones
 
-### 6. Message Model (Non-Persistence)
+### 12. Message Model (Non-Persistence)
 
 - **Messages are NOT persisted as first-class entities**
 - The system does NOT store full email body content after ingestion
 - Only metadata is retained: from, subject, headers, received_at, original_date
 - Email bodies are parsed, sent to LLM for extraction, then discarded
-- If a watcher misses an email, the sender must resend and clearly label it as forwarded/resent
-- This constraint preserves state machine integrity and minimizes PII storage
-- All metadata is tracked for user traceability and transparency
+- This constraint minimizes PII storage and preserves privacy
 
 ### 7. Reminder Model (Urgency)
 
@@ -293,14 +758,14 @@ type NotificationChannel = {
 Each watcher has a unique ingestion email address constructed from its name and token:
 
 ```
-<name>-<token>@ingest.vigil.email
+<name>-<token>@ingest.email.vigil.run
 ```
 
 **Examples:**
 ```
-finance-a7f3k9@ingest.vigil.email
-legal-b2j8m1@ingest.vigil.email
-client-billing-x4p9j2@ingest.vigil.email
+finance-a7f3k9@ingest.email.vigil.run
+legal-b2j8m1@ingest.email.vigil.run
+client-billing-x4p9j2@ingest.email.vigil.run
 ```
 
 **Routing Rules:**
@@ -471,26 +936,31 @@ See [System Design Document - Section 7.3](docs/SYSTEM_DESIGN.md#73-state-recons
 
 ## System Components
 
-### 1. Backend Control Plane (TypeScript/Bun)
+### 1. Backend Control Plane (TypeScript/Bun) — ACTIVE
 
-**Location:** `backend/` (independent Git repository)
+**Location:** `backend/`
 
-The authoritative decision-making component.
+The authoritative decision-making component. **Fully implemented** with event-sourced architecture.
 
-**Responsibilities:**
-- Expose HTTPS API for frontend
-- Create and validate events
-- Persist events to immutable event store (append-only)
+**Core Responsibilities:**
+- Expose HTTP API for frontend (Hono framework)
+- Create and validate 45+ event types
+- Persist events to PostgreSQL append-only store
 - Invoke watcher runtime on triggers
-- Rebuild state via event replay
-- Coordinate scheduled evaluations
-- Dispatch notifications
-- Call LLM service for fact extraction
+- Rebuild state via deterministic event replay
+- Coordinate scheduled evaluations (TIME_TICK)
+- Dispatch notifications with retry logic
+
+**Additional Implemented Modules:**
+- **Authentication**: JWT access/refresh tokens (15 min / 7 days), Google/GitHub OAuth with PKCE, password reset
+- **Billing**: Stripe integration with 4 subscription tiers (free, starter, pro, enterprise), weekly usage tracking
+- **Security**: PII/secret sanitization, rate limiting, HMAC webhook signing
+- **Logging**: Structured per-entity logging with correlation IDs
 
 **Architecture:**
-- Stateless HTTP API
+- Stateless HTTP API (Hono)
 - Event-sourced state management
-- Network-routed communication with LLM service and SMTP adapter
+- PostgreSQL event store with projections
 
 **Configuration:** See `backend/.env.example`
 
@@ -499,7 +969,7 @@ The authoritative decision-making component.
 cd backend
 bun install
 bun test              # Run all tests
-bun run dev           # Development mode
+bun run dev           # Development mode with hot reload
 bun run check         # All checks (typecheck, lint, format, test)
 ```
 
@@ -564,25 +1034,27 @@ Lightweight, non-authoritative email ingress layer.
 - Node.js/TypeScript or Python
 - SMTP library (minimal)
 
-### 4. Frontend (Web UI)
+### 4. Frontend (Web UI) — ACTIVE
 
-**Location:** `frontend/` (independent Git repository)
+**Location:** `frontend/`
 
-Read-heavy inspection and control interface.
+Read-heavy inspection and control interface. **Fully implemented** with Next.js 14.
 
-**Responsibilities:**
-- Display thread status, due boundaries, urgency
-- Display alerts and notification history
-- Show extracted signals and timelines
-- Allow manual thread closure
-- Configure watcher policies and notification preferences
-- Pause/resume watchers
+**Implemented Features:**
+- **Authentication**: Login, register, password reset, Google/GitHub OAuth
+- **Dashboard**: Watcher overview with status and activity
+- **Watcher Management**: Create, edit, pause/resume, delete watchers
+- **Thread Viewing**: Thread details with message history and urgency
+- **Account Settings**: Profile, security (OAuth links), billing/subscription
+- **Billing**: Stripe checkout, subscription management, usage display
+- **Documentation**: Learn pages covering architecture, security, alerts
 
 **Architecture:**
-- Communicates with backend via REST API
-- Optional: WebSocket for real-time updates
-- Displays projections (not authoritative state)
-- All mutations flow through backend event creation
+- Next.js 14 App Router
+- TypeScript with Tailwind CSS
+- Singleton API client with auto token refresh
+- React Context for auth state
+- Stripe Elements integration
 
 **Constraints:**
 - **No business logic** in frontend
@@ -591,85 +1063,132 @@ Read-heavy inspection and control interface.
 
 **Configuration:** See `frontend/.env.example`
 
-**Tech Stack:**
-- React/Next.js or similar (TBD)
-- TypeScript
-- REST API client
+**Development:**
+```bash
+cd frontend
+npm install
+npm run dev           # Development server (http://localhost:3000)
+npm run build         # Production build
+npm run typecheck     # TypeScript checking
+```
 
 ## Getting Started
 
 ### Prerequisites
 
-- **Backend**: Bun runtime
-- **LLM Service**: Python 3.11+, GPU (recommended), vLLM
-- **SMTP Adapter**: Node.js or Python
-- **Frontend**: Node.js/Bun
+- **Backend**: Bun runtime, PostgreSQL
+- **Frontend**: Node.js (npm)
+- **LLM Service** (Planned): Python 3.11+, GPU (recommended), vLLM
+- **SMTP Adapter** (Planned): Node.js or Python
 
-### Initial Setup
+### Quick Start (Development)
 
-Each component is an independent repository. Set up each one:
+```bash
+# 1. Backend
+cd backend
+cp .env.example .env
+# Configure: JWT_SECRET, JWT_REFRESH_SECRET, PostgreSQL connection
+# Optional: Stripe keys, OAuth credentials
+bun install
+bun run dev           # Starts on http://localhost:3001
 
-#### 1. Backend
+# 2. Frontend
+cd frontend
+cp .env.example .env
+# Configure: NEXT_PUBLIC_API_URL=http://localhost:3001
+npm install
+npm run dev           # Starts on http://localhost:3000
+```
+
+### Full Setup (with optional services)
+
+#### 1. Backend (Required)
 
 ```bash
 cd backend
 cp .env.example .env
-# Edit .env with your configuration
+# Required: JWT_SECRET, JWT_REFRESH_SECRET (generate with: openssl rand -base64 32)
+# Required: PostgreSQL connection (DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD)
+# Optional: STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET
+# Optional: GOOGLE_OAUTH_CLIENT_ID, GITHUB_OAUTH_CLIENT_ID
 bun install
 bun test
 bun run dev
 ```
 
-#### 2. LLM Service
-
-```bash
-cd llm-service
-cp .env.example .env
-# Edit .env with model configuration
-# Follow llm-service/README.md for Python setup
-```
-
-#### 3. SMTP Adapter
-
-```bash
-cd smtp-adapter
-cp .env.example .env
-# Edit .env with backend URL
-# Follow smtp-adapter/README.md for setup
-```
-
-#### 4. Frontend
+#### 2. Frontend (Required)
 
 ```bash
 cd frontend
 cp .env.example .env
-# Edit .env with backend API URL
-# Follow frontend/README.md for setup
+# Required: NEXT_PUBLIC_API_URL (default: http://localhost:3001)
+# Optional: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+# Optional: NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED, NEXT_PUBLIC_GITHUB_OAUTH_ENABLED
+npm install
+npm run dev
+```
+
+#### 3. LLM Service (Planned)
+
+```bash
+cd llm-service
+cp .env.example .env
+# Follow llm-service/README.md for Python setup
+```
+
+#### 4. SMTP Adapter (Planned)
+
+```bash
+cd smtp-adapter
+cp .env.example .env
+# Note: HTTP ingestion endpoint is active in backend at POST /ingest/:token
+# Follow smtp-adapter/README.md for SMTP setup when available
 ```
 
 ### Network Configuration
 
-Services communicate over HTTP. Example development setup:
+Services communicate over HTTP. Development setup:
 
-| Service | Address | Purpose ||
-| Backend | `http://localhost:3000` | Main API |
-| LLM Service | `http://localhost:8000` | Fact extraction |
-| SMTP Adapter | `smtp://localhost:2525` | Email ingestion |
-| Frontend | `http://localhost:5173` | Web UI |
+| Service | Address | Purpose | Status |
+|---------|---------|---------|--------|
+| Backend | `http://localhost:3001` | Main API | ✅ Active |
+| Frontend | `http://localhost:3000` | Web UI | ✅ Active |
+| LLM Service | `http://localhost:8000` | Fact extraction | ⏳ Planned |
+| SMTP Adapter | `smtp://localhost:2525` | Email ingestion | ⏳ Planned |
 
 For production or distributed deployment, update `.env` files accordingly.
 
 ## Documentation
 
-For complete implementation details, see the **[System Design Document](docs/SYSTEM_DESIGN.md)**.
+The Vigil system is comprehensively documented across multiple specification levels.
+
+### Specification Hierarchy
+
+```
+SDD.md (Authoritative Source of Truth)
+├── Feature Requirements (FR-1 to FR-20) — What the system does
+├── Infrastructure Requirements (IR-1 to IR-24) — Non-functional requirements  
+├── Module Requirements (MR-*) — Component-level specifications
+├── Security Requirements (SEC-1 to SEC-8) — Auth, PII, encryption
+├── Data Consistency (CONS-1 to CONS-8) — Ordering, replay, idempotence
+├── Design Constraints (DC-1 to DC-11) — Authoritative clarifications
+└── Unit Test Requirements — Per-feature test specifications
+
+SYSTEM_DESIGN.md (Implementation Guide)
+├── Four-Subsystem Architecture
+├── Component Responsibilities  
+├── Network Communication
+└── Engineering Constraints
+```
 
 ### Key Documents
-- **[System Design Document](docs/SYSTEM_DESIGN.md)** - Complete implementation-grade specification
-- **[Documentation Index](docs/README.md)** - Full documentation catalog
-- **[Backend README](backend/README.md)** - Backend control plane details
-- **[LLM Service README](llm-service/README.md)** - Fact extraction service details
-- **[SMTP Adapter README](smtp-adapter/README.md)** - Email ingress details
-- **[Frontend README](frontend/README.md)** - Dashboard interface details
+- **[Software Design Document (SDD)](docs/SDD.md)** — Authoritative production-grade specification
+- **[System Design Document](docs/SYSTEM_DESIGN.md)** — Complete implementation-grade specification
+- **[Documentation Index](docs/README.md)** — Full documentation catalog
+- **[Backend README](backend/README.md)** — Backend control plane (~60% of implementation)
+- **[LLM Service README](llm-service/README.md)** — Fact extraction service (~10%)
+- **[SMTP Adapter README](smtp-adapter/README.md)** — Email ingress (~5%)
+- **[Frontend README](frontend/README.md)** — Dashboard interface (~15%)
 
 ## Event Model
 

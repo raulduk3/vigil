@@ -4,6 +4,26 @@
 
 Non-authoritative SMTP adapter that receives emails and forwards them to the backend control plane. This component is a **transparent transport layer** with zero business logic.
 
+## Role in Extraction Pipeline
+
+The SMTP adapter is the entry point for emails, but has no role in extraction or reminder management:
+
+```
+Email arrives via SMTP
+        ↓
+SMTP Adapter (this component) - transport only
+        ↓
+Backend receives raw email
+        ↓
+Backend orchestrates extraction (regex + LLM)
+        ↓
+Reminders created automatically (active immediately)
+        ↓
+Users correct mistakes (~10% error rate expected)
+```
+
+The SMTP adapter never sees extraction results, reminders, or user corrections. It simply forwards the raw email and returns success/failure.
+
 ## SDD Traceability
 
 The [Software Design Document (SDD)](../docs/SDD.md) is the **authoritative source of truth** for all system requirements. This SMTP adapter implements the following requirements:
@@ -164,8 +184,8 @@ Receives emails via SMTP and forwards them to the backend for processing. The SM
 ## Responsibilities
 
 1. **Listen** for SMTP connections on configured port (default: 2525)
-2. **Accept** email delivery to `*@ingest.vigil.email` addresses
-3. **Extract** watcher address from recipient (`<name>-<token>@ingest.vigil.email`)
+2. **Accept** email delivery to `*@ingest.email.vigil.run` addresses
+3. **Extract** watcher address from recipient (`<name>-<token>@ingest.email.vigil.run`)
 4. **Validate** ingest_token format (basic syntax check)
 5. **Forward** raw email bytes to backend ingestion endpoint via HTTP POST
 6. **Report** delivery status back to sending MTA
@@ -182,11 +202,11 @@ Receives emails via SMTP and forwards them to the backend for processing. The SM
 ```
 External Email Sender
     ↓
-MX Record: ingest.vigil.email → SMTP Adapter(s)
+MX Record: ingest.email.vigil.run → SMTP Adapter(s)
     ↓
 SMTP Adapter (Port 25/587/2525)
     ↓
-Extract recipient: finance-a7f3k9@ingest.vigil.email
+Extract recipient: finance-a7f3k9@ingest.email.vigil.run
     ↓
 Parse ingest_token: a7f3k9
     ↓
@@ -228,7 +248,7 @@ CONNECTION_TIMEOUT_SEC=60
 ```
 
 **Example Production Setup:**
-- MX record: `ingest.vigil.email → smtp-01.vigil.email, smtp-02.vigil.email`
+- MX record: `ingest.email.vigil.run → smtp-01.email.vigil.run, smtp-02.email.vigil.run`
 - SMTP Adapter listens on: `0.0.0.0:25` (standard SMTP)
 - Forwards to: `http://backend-internal:3000/api/ingestion/email`
 - TLS: STARTTLS on port 25, implicit TLS on port 465
@@ -243,8 +263,8 @@ Authorization: Bearer {BACKEND_API_KEY}
 
 {
   "ingest_token": "a7f3k9",
-  "recipient_address": "finance-a7f3k9@ingest.vigil.email",
-  "raw_email": "From: alice@example.com\r\nTo: finance-a7f3k9@ingest.vigil.email\r\n..."
+  "recipient_address": "finance-a7f3k9@ingest.email.vigil.run",
+  "raw_email": "From: alice@example.com\r\nTo: finance-a7f3k9@ingest.email.vigil.run\r\n..."
 }
 ```
 
@@ -340,7 +360,7 @@ docker run -p 2525:2525 vigil-smtp-adapter
 ```
 
 ### Production Checklist
-- [ ] MX records configured for `ingest.vigil.email`
+- [ ] MX records configured for `ingest.email.vigil.run`
 - [ ] TLS certificates installed
 - [ ] SPF/DKIM/DMARC configured for outbound (error notifications)
 - [ ] Rate limiting configured

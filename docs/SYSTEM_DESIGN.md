@@ -17,8 +17,10 @@ The [Software Design Document (SDD)](SDD.md) is the **authoritative source of tr
 | API Endpoints | FR-2, FR-3, FR-4, FR-5, FR-6, FR-6b, FR-6c, FR-9, FR-15 |
 | LLM Integration | FR-7, FR-7a, FR-8, FR-10, FR-11, FR-12, FR-13 |
 | Notification System | FR-14, MR-NotificationWorker-1 through MR-NotificationWorker-3 |
+| Authentication & Authorization | SEC-1, SEC-2, SEC-3 (JWT, OAuth, rate limiting) |
+| Billing & Subscription | (New module - Stripe integration with tiered plans) |
+| Security | SEC-1 through SEC-8 (PII sanitization, webhook signing) |
 | Infrastructure | IR-1 through IR-24 |
-| Security | SEC-1 through SEC-8 |
 
 See [SDD Section 5: Implementation Coverage Table](SDD.md#implementation-coverage-table) for complete mapping of requirements to implementations.
 
@@ -170,7 +172,7 @@ The SMTP server is a transport-layer adapter that accepts inbound email and forw
 #### Routing Model
 
 - Email routing is determined **solely by recipient address**
-- Format: `<name>-<token>@ingest.vigil.email`
+- Format: `<name>-<token>@ingest.email.vigil.run`
 - Content is never examined for routing decisions
 - This ensures explicit user intent and prevents misclassification
 
@@ -216,13 +218,48 @@ The backend ingestion endpoint is the **authoritative boundary** where email bec
 **Messages are NOT persisted as first-class entities.** The system does NOT store full email body content after ingestion.
 
 - **Metadata Only Retained:** `from`, `subject`, `headers` (threading-related), `received_at`, `original_date`, `message_id`
+- **Body Excerpt:** A short excerpt (max 500 chars) is stored for context, but with **mandatory PII and secret sanitization**
 - **Processing Pipeline:**
   1. Email body parsed for metadata extraction
   2. Body text sent to LLM service for fact extraction
-  3. Body text discarded after extraction records are created
+  3. Short excerpt sanitized (PII/secrets redacted) before storage
+  4. Full body text discarded after extraction records are created
 - **Recovery:** If a watcher misses an email (watcher paused, sender not in allowlist), the sender must resend and clearly label it as forwarded/resent
 - **Rationale:** Minimizes PII storage, preserves state machine integrity, simplifies compliance
 - **Data Traceability:** All pipeline metadata is preserved for user transparency—`received_at`, `from`, `original_date`, threading headers
+
+#### PII and Secret Sanitization (SEC-5 Enhanced)
+
+**All stored email content undergoes mandatory sanitization.** The `pii-sanitizer` module detects and redacts sensitive data before any storage.
+
+**PII Types Detected and Redacted:**
+- Social Security Numbers (SSN)
+- Credit Card Numbers (all major formats)
+- Phone Numbers (US and international)
+- Email Addresses (local part redacted, domain preserved)
+- IP Addresses
+- Street Addresses
+- Dates of Birth (when labeled)
+- Passport Numbers
+- Driver's License Numbers
+- Bank Account Numbers
+- Routing Numbers
+
+**Secret Types Detected and Redacted:**
+- AWS Access Keys and Secret Keys
+- GitHub Personal Access Tokens
+- Stripe API Keys
+- Generic API Keys and Secrets
+- JWT and Bearer Tokens
+- Private Keys (PEM format)
+- Passwords (when labeled)
+- Database Connection Strings
+
+**Sanitization Guarantees:**
+- Redaction uses descriptive placeholders (e.g., `[SSN_REDACTED]`, `[CARD_REDACTED]`)
+- Original sensitive data is **never** stored
+- Redaction metadata tracked in events (`pii_detected`, `pii_types_redacted`, `secrets_redacted`)
+- Conservative matching: prefers false positives over missed sensitive data
 
 #### Event Emission Sequence (Deterministic Pipeline)
 
@@ -242,13 +279,17 @@ The backend ingestion endpoint is the **authoritative boundary** where email bec
   event_id: "uuid",
   timestamp: number,
   watcher_id: "w1",
-  message_id: "msg_abc123",        // Unique message identifier
+  message_id: "msg_abc123",           // Unique message identifier
   from: "sender@example.com",
   subject: "...",
-  body_text: "...",
+  body_text_extract: "...",           // PII/secret-sanitized excerpt (max 500 chars)
+  raw_body_stored: false,             // ALWAYS false - we never store full body
+  pii_detected: boolean,              // Whether PII was found and redacted
+  pii_types_redacted: [...],          // Types of PII redacted (ssn, credit_card, etc.)
+  secrets_redacted: [...],            // Types of secrets redacted (api_key, etc.)
   received_at: number,
   headers: { ... },
-  sender_allowed: boolean           // Result of allowlist check
+  sender_allowed: boolean             // Result of allowlist check
 }
 
 // Event 2: Activity observed (temporal baseline for silence tracking)
@@ -1145,70 +1186,82 @@ Alerts Sent: {count}
 - **No domain state mutation**
 - Delivery failure is acceptable and recorded
 
-### 7.2 Frontend (Dashboard and Inspection UI)
+### 7.2 Frontend (Dashboard and Inspection UI) — ACTIVE
 
-**Location:** `frontend/` (independent repository)
+**Location:** `frontend/`
+
+**Status:** Fully implemented with Next.js 14
 
 Read-heavy inspection and control interface.
 
-#### Responsibilities
+#### Implemented Pages
 
-**Display (Read-Heavy):**
+**Authentication:**
+- `/auth/login` - Email/password login with OAuth options
+- `/auth/register` - Account registration
+- `/auth/forgot-password` - Password reset request
+- `/auth/reset-password` - Password reset confirmation
+- `/auth/callback` - OAuth callback handler
 
-- Current threads with status, urgency, deadlines
-- Alert history and delivery status
-- Extracted signals (deadlines, risks, closures) with evidence quotes
-- Email timeline per thread
-- Watcher configuration and policies
+**Dashboard & Watchers:**
+- `/dashboard` - Main dashboard with watcher overview
+- `/watchers/new` - Create new watcher
+- `/watchers/[id]` - Watcher detail with threads
+- `/watchers/[id]/threads/[threadId]` - Thread detail view
 
-**User Actions:**
+**Account Management:**
+- `/account` - Profile settings
+- `/account/security` - OAuth links, password change
+- `/account/billing` - Subscription, usage, Stripe checkout
 
-- Manual thread closure
-- Watcher pause/resume
-- Policy updates (silence threshold, notification channels)
-- On-demand report generation
+**Documentation:**
+- `/learn/*` - Architecture, security, alerts, watchers, email ingestion documentation
 
 #### Architecture
 
-- Communicates with backend via REST API
-- Optional: WebSocket for real-time updates
-- Displays **projections** (derived state), not authoritative events
-- All mutations flow through backend APIs → event creation
+- **Framework:** Next.js 14 App Router
+- **Styling:** Tailwind CSS with custom design system
+- **API Client:** Singleton with auto token refresh (src/lib/api/client.ts)
+- **Auth State:** React Context (src/lib/auth/context.tsx)
+- **Billing:** Stripe Elements integration (src/lib/stripe/provider.tsx)
 
-#### Example API Calls
+#### Key Components
 
 ```typescript
-// Get thread projections
-GET /api/watchers/w1/threads
-Response: {
-  threads: [
-    {
-      thread_id: "t1",
-      status: "open",
-      urgency_state: "warning",
-      deadline: 1703721600000,
-      last_activity: 1703635200000,
-      emails: [...]
-    }
-  ]
+// API Client singleton pattern
+class APIClient {
+  private accessToken: string | null;
+  private refreshToken: string | null;
+
+  async request<T>(path: string, options?: RequestOptions): Promise<T> {
+    // Automatic 401 handling with token refresh
+  }
+
+  // Domain methods
+  auth: { login, register, logout, getMe, changePassword };
+  watchers: { list, create, get, update, delete, activate, pause, resume };
+  threads: { list, get, close };
+  events: { list };
+  billing: { getSubscription, getUsage, createCheckout, createPortal };
 }
 
-// Close thread
-POST /api/threads/t1/close
-Body: { reason: "manually_resolved" }
-Backend emits: THREAD_CLOSED event
+// Auth context with protected routes
+const RequireAuth = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return <Loading />;
+  if (!user) return redirect('/auth/login');
+  return children;
+};
 ```
 
 #### Design Principles
 
 **Reassurance-First:**
-
 - Reports emphasize what is resolved or stable
 - Then show what appears on track
 - Finally show what may require attention (last, not first)
 
 **Transparency:**
-
 - Every displayed status links to specific events
 - Every alert shows the state transition that triggered it
 - Every extracted signal shows verbatim evidence from email
@@ -1220,16 +1273,24 @@ Backend emits: THREAD_CLOSED event
 - ❌ **No event emission** (only via backend API)
 - ✅ All state derived from backend API responses
 
-#### Tech Stack (TBD)
+#### Tech Stack
 
-- React/Next.js or similar
+- Next.js 14 (App Router)
+- React 18
 - TypeScript
-- REST API client
-- Optional: WebSocket for real-time
+- Tailwind CSS
+- Stripe React (billing)
+- Zustand (available, not yet used)
 
 #### Configuration
 
-See `frontend/.env.example`
+See `frontend/.env.example`:
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_...
+NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED=true
+NEXT_PUBLIC_GITHUB_OAUTH_ENABLED=true
+```
 
 ### 7.3 State Reconstruction and Query Strategy
 
@@ -1441,7 +1502,7 @@ async function rebuildProjection(watcherId: string) {
 
 Here's what happens when a user logs in and views a watcher:
 
-1. **User navigates to:** `https://Vigil.example.com/watchers/w1`
+1. **User navigates to:** `https://vigil.run/watchers/w1`
 
 2. **Frontend calls:** `GET /api/watchers/w1/threads`
 
@@ -1502,6 +1563,362 @@ _If frontend displays a status, and you replay events, you MUST get the same sta
 - 🔄 Projections may lag slightly (typically < 1 second)
 - 💾 Duplicate storage (events + projections)
 - 🔧 Requires projection maintenance logic
+
+### 7.4 Authentication & Authorization — ACTIVE
+
+**Location:** `backend/src/auth/`
+
+Complete authentication system with JWT tokens and OAuth.
+
+#### JWT Token System
+
+```typescript
+// Token configuration
+type TokenConfig = {
+  accessTokenExpiry: '15m';      // Short-lived for security
+  refreshTokenExpiry: '7d';      // Long-lived for convenience
+  algorithm: 'HS256';
+  secrets: {
+    access: JWT_SECRET;           // From environment
+    refresh: JWT_REFRESH_SECRET;  // Separate secret for refresh
+  };
+};
+
+// Token payload
+type TokenPayload = {
+  user_id: string;
+  account_id: string;
+  email: string;
+  iat: number;
+  exp: number;
+};
+```
+
+#### Authentication Flow
+
+1. **Login/Register:** User provides email/password → backend validates → issues access + refresh tokens
+2. **API Requests:** Client includes `Authorization: Bearer <access_token>` header
+3. **Token Refresh:** When access token expires, client uses refresh token to get new pair
+4. **Logout:** Client discards tokens (stateless, no server-side invalidation)
+
+#### OAuth Integration (PKCE Flow)
+
+```typescript
+// Supported providers
+type OAuthProvider = 'google' | 'github';
+
+// OAuth flow
+1. GET /api/auth/oauth/:provider → Redirect to provider with PKCE
+2. Provider callback → GET /api/auth/callback/:provider
+3. Exchange code for provider token
+4. Create/link user account
+5. Issue JWT tokens
+
+// OAuth state storage (temporary)
+type OAuthState = {
+  state: string;          // PKCE state parameter
+  code_verifier: string;  // PKCE code verifier
+  redirect_uri: string;   // Post-auth redirect
+  expires_at: number;     // State expiration
+};
+```
+
+#### Password Reset
+
+```typescript
+// Password reset flow
+1. POST /api/auth/password-reset/request { email }
+   → Generate token, send reset email
+2. GET /api/auth/password-reset/verify?token=xxx
+   → Validate token exists and not expired
+3. POST /api/auth/password-reset/confirm { token, new_password }
+   → Update password, invalidate token
+
+// Token storage
+type PasswordResetToken = {
+  token: string;           // Secure random token
+  user_id: string;
+  expires_at: number;      // 1 hour expiry
+  used: boolean;
+};
+```
+
+#### API Endpoints
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/api/auth/register` | POST | No | Create account |
+| `/api/auth/login` | POST | No | Authenticate |
+| `/api/auth/refresh` | POST | No | Refresh tokens |
+| `/api/auth/me` | GET | Yes | Current user info |
+| `/api/auth/change-password` | PATCH | Yes | Update password |
+| `/api/auth/oauth/:provider` | GET | No | Start OAuth flow |
+| `/api/auth/callback/:provider` | GET | No | OAuth callback |
+| `/api/auth/oauth/links` | GET | Yes | List OAuth links |
+| `/api/auth/oauth/:provider` | DELETE | Yes | Unlink OAuth |
+| `/api/auth/password-reset/request` | POST | No | Request reset |
+| `/api/auth/password-reset/verify` | GET | No | Verify token |
+| `/api/auth/password-reset/confirm` | POST | No | Confirm reset |
+
+#### Rate Limiting
+
+```typescript
+// Per-endpoint rate limits
+const RATE_LIMITS = {
+  'auth/login': { requests: 5, window: '1m' },
+  'auth/register': { requests: 3, window: '1m' },
+  'auth/password-reset': { requests: 3, window: '1m' },
+  'ingest/:token': { requests: 100, window: '1m' },
+  'default': { requests: 1000, window: '1m' },  // Per account
+};
+```
+
+### 7.5 Billing & Subscription — ACTIVE
+
+**Location:** `backend/src/billing/`
+
+Stripe-based subscription system with tiered plans and usage tracking.
+
+#### Subscription Plans
+
+```typescript
+type SubscriptionPlan = 'free' | 'starter' | 'pro' | 'enterprise';
+
+const PLAN_LIMITS = {
+  free: {
+    emails_per_week: 50,
+    max_watchers: 2,
+    features: ['basic_extraction', 'email_alerts'],
+    support: 'community',
+  },
+  starter: {
+    emails_per_week: 200,
+    max_watchers: 5,
+    features: ['basic_extraction', 'email_alerts', 'webhooks'],
+    support: 'email',
+    price_monthly: 1500,  // $15.00
+  },
+  pro: {
+    emails_per_week: 1000,
+    max_watchers: 20,
+    features: ['advanced_extraction', 'email_alerts', 'webhooks', 'sms_alerts', 'reports'],
+    support: 'priority',
+    price_monthly: 4900,  // $49.00
+  },
+  enterprise: {
+    emails_per_week: Infinity,
+    max_watchers: Infinity,
+    features: ['all'],
+    support: 'dedicated',
+    price_monthly: 'custom',
+  },
+};
+```
+
+#### Usage Tracking
+
+```typescript
+// Weekly usage periods
+type UsagePeriod = {
+  account_id: string;
+  period_start: number;   // Monday 00:00 UTC
+  period_end: number;     // Sunday 23:59 UTC
+  emails_received: number;
+  watcher_count: number;
+};
+
+// Usage enforcement
+function checkUsageLimit(account: Account): UsageResult {
+  const period = getCurrentPeriod(account.id);
+  const limits = PLAN_LIMITS[account.plan];
+
+  if (period.emails_received >= limits.emails_per_week) {
+    return { allowed: false, reason: 'email_limit_reached' };
+  }
+  return { allowed: true, remaining: limits.emails_per_week - period.emails_received };
+}
+```
+
+#### Stripe Integration
+
+```typescript
+// Stripe webhook events handled
+type StripeWebhookEvent =
+  | 'checkout.session.completed'    // New subscription
+  | 'customer.subscription.updated' // Plan change
+  | 'customer.subscription.deleted' // Cancellation
+  | 'invoice.paid'                  // Successful payment
+  | 'invoice.payment_failed';       // Failed payment
+
+// Subscription flow
+1. POST /api/billing/checkout { plan }
+   → Create Stripe Checkout Session → Return URL
+2. User completes payment on Stripe
+3. Webhook: checkout.session.completed
+   → Update account plan, create subscription record
+4. POST /api/billing/portal
+   → Create Stripe Customer Portal Session → Return URL
+```
+
+#### API Endpoints
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/api/billing/subscription` | GET | Yes | Current subscription |
+| `/api/billing/usage` | GET | Yes | Current period usage |
+| `/api/billing/plans` | GET | Yes | Available plans |
+| `/api/billing/checkout` | POST | Yes | Create checkout session |
+| `/api/billing/portal` | POST | Yes | Create customer portal |
+| `/api/billing/config` | GET | Yes | Stripe public key |
+| `/api/webhooks/stripe` | POST | No | Stripe webhooks (signature verified) |
+
+#### Database Schema
+
+```sql
+-- Subscriptions (Stripe integration)
+CREATE TABLE subscriptions (
+  account_id VARCHAR PRIMARY KEY,
+  stripe_customer_id VARCHAR UNIQUE,
+  stripe_subscription_id VARCHAR UNIQUE,
+  plan VARCHAR NOT NULL DEFAULT 'free',
+  status VARCHAR NOT NULL DEFAULT 'active',
+  current_period_start BIGINT,
+  current_period_end BIGINT,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Usage tracking (weekly periods)
+CREATE TABLE usage (
+  id SERIAL PRIMARY KEY,
+  account_id VARCHAR NOT NULL,
+  period_start BIGINT NOT NULL,
+  period_end BIGINT NOT NULL,
+  emails_received INTEGER DEFAULT 0,
+  watcher_count INTEGER DEFAULT 0,
+  UNIQUE(account_id, period_start)
+);
+```
+
+### 7.6 Security — ACTIVE
+
+**Location:** `backend/src/security/`
+
+Security utilities for input validation, PII protection, and webhook integrity.
+
+#### PII Sanitization
+
+```typescript
+// PII types detected and redacted
+type PIIType =
+  | 'ssn'
+  | 'credit_card'
+  | 'phone_number'
+  | 'email_address'
+  | 'ip_address'
+  | 'street_address'
+  | 'date_of_birth'
+  | 'passport'
+  | 'drivers_license'
+  | 'bank_account'
+  | 'routing_number';
+
+// Secret types detected and redacted
+type SecretType =
+  | 'api_key'
+  | 'jwt_token'
+  | 'bearer_token'
+  | 'private_key'
+  | 'password'
+  | 'aws_key'
+  | 'github_token'
+  | 'stripe_key'
+  | 'generic_secret';
+
+// Sanitization result
+type SanitizationResult = {
+  sanitized_text: string;      // Text with PII replaced by [REDACTED]
+  pii_detected: boolean;
+  pii_types_redacted: PIIType[];
+  secrets_redacted: SecretType[];
+};
+```
+
+#### Webhook Signing
+
+```typescript
+// HMAC-SHA256 webhook signatures
+function signWebhookPayload(payload: object, secret: string): string {
+  const timestamp = Date.now();
+  const body = JSON.stringify(payload);
+  const signature = hmacSha256(`${timestamp}.${body}`, secret);
+  return `t=${timestamp},v1=${signature}`;
+}
+
+// Verification
+function verifyWebhookSignature(
+  signature: string,
+  body: string,
+  secret: string,
+  tolerance: number = 300000  // 5 minutes
+): boolean {
+  const { timestamp, hash } = parseSignature(signature);
+  if (Date.now() - timestamp > tolerance) return false;
+  const expected = hmacSha256(`${timestamp}.${body}`, secret);
+  return timingSafeEqual(hash, expected);
+}
+```
+
+#### Input Validation
+
+```typescript
+// Email validation (RFC 5322)
+function isValidEmail(email: string): boolean;
+
+// URL validation (RFC 3986, https required in production)
+function isValidWebhookUrl(url: string): boolean;
+
+// Policy validation
+function validatePolicy(policy: WatcherPolicy): ValidationResult {
+  return {
+    valid: boolean,
+    errors: [
+      { field: 'deadline_warning_hours', message: 'Must be greater than deadline_critical_hours' },
+      // ...
+    ]
+  };
+}
+```
+
+#### Rate Limiting
+
+```typescript
+// Token bucket algorithm
+class RateLimiter {
+  constructor(
+    private maxTokens: number,
+    private refillRate: number,  // tokens per second
+  ) {}
+
+  async consume(key: string, tokens: number = 1): Promise<RateLimitResult> {
+    // Returns { allowed: boolean, remaining: number, resetAt: number }
+  }
+}
+
+// Usage in middleware
+async function rateLimitMiddleware(c: Context, next: Next) {
+  const key = getAccountId(c) || getIPAddress(c);
+  const result = await limiter.consume(key);
+
+  if (!result.allowed) {
+    c.header('X-RateLimit-Remaining', '0');
+    c.header('X-RateLimit-Reset', result.resetAt.toString());
+    return c.json({ error: 'rate_limit_exceeded' }, 429);
+  }
+
+  await next();
+}
+```
 
 ## 8. Core Domain Concepts
 
@@ -1593,7 +2010,7 @@ type NotificationChannel = {
   - Displayed in dashboards, emails, and reports
   - Used in ingestion email address (sanitized: lowercase, hyphens only)
   - Validation: 1-100 characters, alphanumeric + spaces/hyphens
-  - Example: "Personal Finance" → `personal-finance-a7f3k9@ingest.vigil.email`
+  - Example: "Personal Finance" → `personal-finance-a7f3k9@ingest.email.vigil.run`
 
 - `status`: Operational state derived from lifecycle events
   - `"created"`: Watcher exists but not yet activated (no monitoring)
@@ -1800,7 +2217,7 @@ type NotificationChannel = {
 Each watcher has a unique ingestion email address:
 
 ```
-<sanitized-name>-<ingest_token>@ingest.vigil.email
+<sanitized-name>-<ingest_token>@ingest.email.vigil.run
 ```
 
 **Address Construction:**
@@ -1808,15 +2225,15 @@ Each watcher has a unique ingestion email address:
 1. Take watcher name: "Personal Finance"
 2. Sanitize: lowercase, replace spaces with hyphens: "personal-finance"
 3. Append hyphen and ingest_token: "personal-finance-a7f3k9"
-4. Append domain: "personal-finance-a7f3k9@ingest.vigil.email"
+4. Append domain: "personal-finance-a7f3k9@ingest.email.vigil.run"
 
 **Examples:**
 
 ```
-name: "Personal Finance"  → personal-finance-a7f3k9@ingest.vigil.email
-name: "Legal Matters"     → legal-matters-b2j8m1@ingest.vigil.email
-name: "Client Billing"    → client-billing-x4p9j2@ingest.vigil.email
-name: "Vendor Contracts"  → vendor-contracts-k5n7p9@ingest.vigil.email
+name: "Personal Finance"  → personal-finance-a7f3k9@ingest.email.vigil.run
+name: "Legal Matters"     → legal-matters-b2j8m1@ingest.email.vigil.run
+name: "Client Billing"    → client-billing-x4p9j2@ingest.email.vigil.run
+name: "Vendor Contracts"  → vendor-contracts-k5n7p9@ingest.email.vigil.run
 ```
 
 **Routing Rules:**

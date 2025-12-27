@@ -1,7 +1,7 @@
 # Vigil Software Design Document (SDD)
 
-**Document Version:** 1.1.0  
-**Date:** December 25, 2025  
+**Document Version:** 1.2.0
+**Date:** December 26, 2025
 **Status:** Production-Grade Specification
 
 ## Document Structure
@@ -33,7 +33,7 @@ This SDD provides complete, test-derivable specifications for the Vigil system o
 7. **Data Consistency Requirements (CONS-1 through CONS-8)** - Event ordering, replay guarantees, causal integrity, per-watcher idempotence
 8. **Assumptions (ASSUM-1 through ASSUM-8)** - System preconditions and mitigations
 9. **Document Revision History**
-10. **Event Type Catalog** - Complete reference for all 20+ event types organized by tier
+10. **Event Type Catalog** - Complete reference for all 45+ event types organized by tier
 11. **Glossary** - Definitions for 30+ domain terms
 
 **Key Architectural Principles:**
@@ -85,30 +85,138 @@ The Vigil system is built from these foundational objects:
 
 #### Watcher
 
-**Definition:** Isolated monitoring scope with unique ingestion address and policy configuration.
+**Definition:** Isolated monitoring scope with unique ingestion address and policy configuration. The watcher is the **primary operational unit** in Vigil—a bounded area of responsibility such as personal finance, legal correspondence, client billing, or any domain where time-sensitive email communication requires oversight.
 
-**Key Properties:**
+**Identity Properties (Immutable):**
 
-- `watcher_id` (UUID) - Unique identifier
-- `watcher_name` (string) - Human-readable label
-- `ingestion_address` (string) - Email address for forwarding: `<name>-<token>@ingest.vigil.email`
+- `watcher_id` (UUID) - Unique identifier, assigned at creation, never changes
+- `account_id` (UUID) - Parent account identifier (multi-tenant isolation)
+- `ingest_token` (string) - Unique cryptographic token for email routing (8-12 character base36, e.g., `a7f3k9`)
+- `ingestion_address` (string) - Email address for forwarding: `<sanitized-name>-<ingest_token>@ingest.email.vigil.run`
+- `created_at` (Unix ms) - When watcher was created
+- `created_by` (string) - User ID of creator
+
+**Configuration Properties (Mutable via events):**
+
+- `name` (string) - Human-readable label (1-100 characters)
+  - Used in email subjects, dashboard display, and reports
+  - Can be updated by users via POLICY_UPDATED event
+  - Sanitized for email address construction (lowercase, hyphens for spaces)
 - `status` (enum: created, active, paused, deleted) - Current operational state
 - `policy` (WatcherPolicy object) - Configuration including allowlists, thresholds, notification channels
 - `deleted_at` (Unix ms | null) - When watcher was deleted (null if not deleted)
 
-**Lifecycle:** Created → Activated → [Paused ↔ Resumed] → Active → [Deleted]
+**Status Definitions:**
 
-**Deletion Behavior:** Watchers are deletable entities. Deleting a watcher:
+- `created` - Watcher exists but not yet activated; ingestion address assigned but not actively monitoring
+- `active` - Monitoring enabled; emails create threads, urgency is evaluated, alerts fire on transitions
+- `paused` - Monitoring suspended; emails are received (MESSAGE_RECEIVED emitted) but no new threads created, no LLM extraction, no alerts
+- `deleted` - Permanently deactivated; no further processing, ingestion address becomes inactive
+
+**Lifecycle State Transitions:**
+
+```
+                    ┌─────────────────────────────────┐
+                    │                                 │
+                    ▼                                 │
+    ┌─────────┐   activate   ┌─────────┐   pause   ┌─────────┐
+    │ created │ ──────────▶ │ active  │ ─────────▶ │ paused  │
+    └─────────┘              └─────────┘            └─────────┘
+                                │  ▲                    │
+                                │  │ resume             │
+                                │  └────────────────────┘
+                                │
+                                │ delete
+                                ▼
+                            ┌─────────┐
+                            │ deleted │ (terminal)
+                            └─────────┘
+```
+
+**Lifecycle Events:**
+
+| Transition | Event | Key Fields |
+|------------|-------|------------|
+| Create | WATCHER_CREATED | watcher_id, account_id, name, ingest_token, created_by, created_at |
+| Activate | WATCHER_ACTIVATED | watcher_id |
+| Pause | WATCHER_PAUSED | watcher_id, paused_by, reason (optional) |
+| Resume | WATCHER_RESUMED | watcher_id, resumed_by |
+| Delete | WATCHER_DELETED | watcher_id, deleted_at |
+| Update Policy | POLICY_UPDATED | watcher_id, policy, updated_by |
+
+**Email Routing:**
+
+Each watcher has a unique ingestion email address constructed deterministically:
+
+```
+<sanitized-name>-<ingest_token>@ingest.email.vigil.run
+```
+
+Examples:
+- `finance-a7f3k9@ingest.email.vigil.run`
+- `legal-b2j8m1@ingest.email.vigil.run`
+- `client-billing-x4p9j2@ingest.email.vigil.run`
+
+Routing rules:
+- Routing determined **solely by recipient address** (ingest_token lookup)
+- Email content, subject, or sender is **never** examined for routing decisions
+- Invalid tokens rejected at SMTP layer with 550 error
+- This ensures explicit user intent and prevents misclassification
+
+**Watcher Ownership:**
+
+Each watcher owns and isolates:
+- Its own event stream (watcher_id on every event)
+- All threads created from its ingestion address
+- All reminders and alerts for those threads
+- Its policy configuration history
+- Its notification and reporting settings
+
+**Isolation Guarantees:**
+
+- Watchers **never** share threads with other watchers
+- Watchers **never** access other watchers' events
+- Watchers do **not** inherit configuration from account defaults
+- Events from one watcher **cannot** affect another watcher's state
+
+**Pause Behavior:**
+
+When a watcher is paused:
+- Emails to ingestion address still create MESSAGE_RECEIVED events (observation continues)
+- LLM extraction is **skipped** (no extraction events emitted)
+- No new threads are opened
+- Existing open threads remain but urgency evaluation halts
+- No alerts fire (even for existing threads approaching deadlines)
+- Reports are not generated
+
+**Resume Behavior:**
+
+When a watcher is resumed:
+- Status transitions to `active`
+- All open threads immediately re-evaluate urgency
+- New emails can create threads again
+- LLM extraction resumes for new emails
+- Missed emails during pause period are **not** retroactively processed (sender must resend)
+
+**Deletion Behavior:**
+
+When a watcher is deleted:
 - Emits WATCHER_DELETED event with `deleted_at` timestamp
-- Sets watcher status to `deleted`
-- Stops all monitoring, alerting, and reporting for this watcher
-- Preserves all historical thread and extraction data (immutable audit trail)
-- Ingestion address becomes inactive (emails rejected or bounced)
-- Deleted watchers are excluded from scheduler TIME_TICK generation
+- Status transitions to `deleted` (terminal state)
+- Stops all monitoring, alerting, and reporting
+- Ingestion address becomes inactive (emails rejected/bounced)
+- Excluded from scheduler TIME_TICK generation
+- **Cannot be reactivated** (users must create new watcher)
 
-**Data Preservation:** Deletion removes the oversight role without mutating historical data. All events, threads, reminders, and alerts associated with the watcher remain in the event store for audit purposes.
+**Data Preservation on Deletion:**
 
-**Relationship:** Each watcher owns zero or more Threads. Watchers are isolated - events from one watcher never affect another.
+Deletion removes the oversight role without mutating historical data:
+- All events remain in event store (immutable audit trail)
+- All threads, extraction records, reminders remain queryable
+- All alert history preserved
+- **No cascade delete** of any data
+
+**Relationship:** Each watcher belongs to exactly one Account. Each watcher owns zero or more Threads. Watchers are completely isolated—events from one watcher never affect another.
 
 #### Event
 
@@ -376,16 +484,59 @@ Each thread maintains `participants` set:
 #### Object Relationship Diagram
 
 ```
-Account
-  ├── Watcher (1:N)
-  ├── Policy (1:1)
-  │     └── NotificationChannels (1:N)
-  ├── Events (1:N) [append-only, immutable]
-  └── Threads (1:N) [derived from events]
-        ├── Messages (N:N) [via message_ids]
-        ├── Reminders (1:N) [derived artifacts]
-        └── Alerts (1:N) [via reminders]
+Account (Multi-Tenant Container)
+  │
+  ├── Users (1:N)
+  │     └── user_id, email, role (owner | member)
+  │
+  └── Watchers (1:N)
+        │
+        ├── Identity: watcher_id, ingest_token, ingestion_address
+        ├── Status: created → active ⇄ paused → deleted
+        │
+        ├── Policy (1:1, mutable via POLICY_UPDATED)
+        │     ├── allowed_senders[]
+        │     ├── Timing thresholds (silence, warning, critical)
+        │     ├── NotificationChannels (1:N)
+        │     │     └── type, destination, urgency_filter, enabled
+        │     └── Reporting config (cadence, time, recipients)
+        │
+        ├── Events (1:N) [append-only, immutable]
+        │     ├── Baseline: MESSAGE_RECEIVED
+        │     ├── Extraction: HARD_DEADLINE_OBSERVED, SOFT_DEADLINE_SIGNAL_OBSERVED,
+        │     │               URGENCY_SIGNAL_OBSERVED, CLOSURE_SIGNAL_OBSERVED
+        │     ├── Lifecycle: WATCHER_*, THREAD_*, POLICY_UPDATED
+        │     └── Derived: REMINDER_GENERATED, ALERT_QUEUED, ALERT_SENT/FAILED
+        │
+        └── Threads (1:N) [derived from events during replay]
+              │
+              ├── Identity: thread_id, trigger_type, original_sender
+              ├── State: status (open | closed), opened_at, closed_at
+              ├── Activity: message_ids[], last_activity_at, participants[]
+              │
+              ├── Extraction Event References (for deadline resolution)
+              │     ├── hard_deadline_event_id → HARD_DEADLINE_OBSERVED
+              │     └── soft_deadline_event_id → SOFT_DEADLINE_SIGNAL_OBSERVED
+              │
+              └── Reminders (1:N) [derived artifacts, not stored]
+                    │
+                    ├── deadline_type, deadline_utc (from extraction events)
+                    ├── urgency_level (ok | warning | critical | overdue)
+                    ├── causal_event_id (traceability)
+                    │
+                    └── Alerts (1:N)
+                          └── alert_id, channels[], sent_at | failed_at
 ```
+
+**Key Relationships:**
+
+- **Account → Watcher:** One account owns many watchers (multi-tenant isolation)
+- **Watcher → Thread:** One watcher owns many threads (no sharing across watchers)
+- **Watcher → Event:** One watcher owns its event stream (append-only, immutable)
+- **Thread → Message:** Many-to-many via message_ids array (messages are event references)
+- **Thread → Reminder:** One-to-many, but reminders are derived (not stored entities)
+- **Reminder → Alert:** One-to-one per notification channel
+- **All entities trace back to Events:** The event log is the single source of truth
 
 ### 1.5 System Integrations
 
@@ -1352,7 +1503,7 @@ Users shall create isolated watchers with unique ingestion addresses and configu
 - User submits watcher name (1-100 characters, alphanumeric with spaces/hyphens)
 - System generates unique `watcher_id` (UUID format)
 - System generates unique `ingest_token` (8-12 character base36 string)
-- System constructs ingestion address: `<sanitized-name>-<ingest_token>@ingest.vigil.email`
+- System constructs ingestion address: `<sanitized-name>-<ingest_token>@ingest.email.vigil.run`
 - System emits `WATCHER_CREATED` event with all fields populated
 - Watcher status initializes to `created`
 - Ingestion address becomes immediately active
@@ -1361,7 +1512,7 @@ Users shall create isolated watchers with unique ingestion addresses and configu
 
 - UUID generation: Verify `watcher_id` is valid UUID v4 format
 - Token uniqueness: Generate 1000 watchers → verify all `ingest_token` values unique
-- Ingestion address: Verify format `<name>-<token>@ingest.vigil.email` valid RFC 5321
+- Ingestion address: Verify format `<name>-<token>@ingest.email.vigil.run` valid RFC 5321
 - Name sanitization: Create watcher with name "My Watcher!" → verify ingestion address sanitized to "my-watcher-<token>@..."
 - Default values: New watcher created with `status = "created"` and empty channels array
 - Field validation: Reject `watcher_id = null`, `ingest_token = ""`, missing required fields
@@ -3615,7 +3766,7 @@ This table maps every requirement to its implementation, test, and infrastructur
 | SEC-2 | Password Storage | **Not Implemented** | **Not Tested** | **Not Implemented** |
 | SEC-3 | Ingest Token Entropy | [backend/src/events/types.ts](../backend/src/events/types.ts) (ingest_token field) | **Not Tested** | Partial - Type defined |
 | SEC-4 | SQL Injection Prevention | **Not Implemented** | **Not Tested** | **Not Implemented** |
-| SEC-5 | Email Content PII Protection | **Not Implemented** | **Not Tested** | **Not Implemented** |
+| SEC-5 | Email Content PII Protection | [backend/src/security/pii-sanitizer.ts](../backend/src/security/pii-sanitizer.ts) | [backend/test/security/pii-sanitizer.test.ts](../backend/test/security/pii-sanitizer.test.ts) | Implemented |
 | SEC-6 | HTTPS Certificate Validation | **Not Implemented** | **Not Tested** | **Not Implemented** |
 | SEC-7 | Rate Limiting Per Watcher | **Not Implemented** | **Not Tested** | **Not Implemented** |
 | SEC-8 | Access Token Scope | **Not Implemented** | **Not Tested** | **Not Implemented** |
@@ -3712,15 +3863,50 @@ All database queries shall use parameterized statements, never string concatenat
 ### SEC-5: Email Content PII Protection
 
 **Description:**  
-Email body content shall never appear in logs, metrics, or error messages.
+Email body content shall be sanitized before any storage. Full email bodies are NEVER stored. Only a short excerpt (max 500 chars) is retained, and it MUST have all PII and secrets redacted.
+
+**PII Types Detected and Redacted:**
+- Social Security Numbers (SSN) - Patterns: `123-45-6789`, `123 45 6789`, `123456789`
+- Credit Card Numbers - All major formats (Visa, MasterCard, Amex, Discover)
+- Phone Numbers - US and international formats
+- Email Addresses - Local part redacted, domain preserved for context
+- IP Addresses - IPv4 format
+- Street Addresses - US format with common suffixes (Street, Ave, etc.)
+- Dates of Birth - When labeled (DOB:, Date of Birth:, etc.)
+- Government IDs - Passport, Driver's License when labeled
+- Bank Information - Account numbers, routing numbers, IBANs when labeled
+
+**Secret Types Detected and Redacted:**
+- AWS Keys - Access Key IDs (AKIA...) and Secret Access Keys
+- GitHub Tokens - Personal Access Tokens (ghp_..., gho_..., etc.)
+- Stripe Keys - Test and live keys (sk_test_..., pk_live_..., etc.)
+- API Keys - Generic labeled API keys and secrets
+- JWT/Bearer Tokens - Full JWT format tokens
+- Private Keys - RSA, OPENSSH, EC, DSA in PEM format
+- Passwords - When labeled (password:, pwd=, etc.)
+- Connection Strings - MongoDB, PostgreSQL, MySQL, Redis URIs with credentials
 
 **Verification:**
 
-- Send test email with sensitive content: "SSN: 123-45-6789"
-- Grep all log files for "SSN", "123-45-6789"
-- Confirm no matches
-- Trigger parsing error with malformed email
-- Confirm error log includes "parsing failed" but not email body
+- Send test email with sensitive content: "SSN: 123-45-6789, Card: 4111-1111-1111-1111"
+- Verify MESSAGE_RECEIVED event `body_text_extract` contains `[SSN_REDACTED]` and `[CARD_REDACTED]`
+- Verify `pii_detected` field is `true`
+- Verify `pii_types_redacted` contains `["ssn", "credit_card"]`
+- Grep all log files for original sensitive values - confirm no matches
+- Trigger parsing error with malformed email - confirm error log includes "parsing failed" but not email body
+- Verify `raw_body_stored` is always `false`
+
+**Unit Test Requirements:**
+- Test 1: SSN in various formats → verify `[SSN_REDACTED]` in output
+- Test 2: Credit card numbers → verify `[CARD_REDACTED]` in output
+- Test 3: Phone numbers → verify `[PHONE_REDACTED]` in output
+- Test 4: Email addresses → verify local part redacted, domain preserved
+- Test 5: AWS keys → verify `[AWS_KEY_REDACTED]` in output
+- Test 6: GitHub tokens → verify `[GITHUB_TOKEN_REDACTED]` in output
+- Test 7: Stripe keys → verify `[STRIPE_KEY_REDACTED]` in output
+- Test 8: JWT tokens → verify `[JWT_REDACTED]` in output
+- Test 9: Private keys → verify `[PRIVATE_KEY_REDACTED]` in output
+- Test 10: Mixed content → verify all sensitive items redacted, non-sensitive preserved
 
 ### SEC-6: HTTPS Certificate Validation
 
@@ -3993,6 +4179,7 @@ Enforce 1MB limit at SMTP adapter. Truncate body if exceeds limit. Log truncatio
 | ------- | ---------- | ---------------- | ---------------------------- |
 | 1.0.0   | 2025-12-24 | System Architect | Initial production-grade SDD |
 | 1.1.0   | 2025-12-25 | System Architect | Added Section 1.9 Authoritative Design Constraints (DC-1 through DC-11). Clarified Thread-Deadline separation (deadlines belong to Reminders). Updated Thread, Message, Reminder primitives. Added router LLM thread creation behavior. Clarified extraction events always emitted for audit. Added Message non-persistence constraint. Added Watcher deletion capability (WATCHER_DELETED event). Updated closed thread behavior for reports. Clarified per-watcher idempotence strategy. Added IR-24 Component Health Centralization. Updated MR-WatcherRuntime-2 ThreadState fields. Added deadline_type to REMINDER_GENERATED event. Updated Glossary with new terms. |
+| 1.2.0   | 2025-12-26 | Documentation Sync | Expanded Event Type Catalog to 45+ events. Added Account & User events (ACCOUNT_CREATED, USER_CREATED, WATCHER_UPDATED). Added LLM Routing events (MESSAGE_ROUTED, ROUTE_EXTRACTION_COMPLETE, EXTRACTION_COMPLETE). Added Thread Update event (THREAD_UPDATED). Added Message-Thread Association events (MESSAGE_THREAD_ASSOCIATED, MESSAGE_THREAD_DEACTIVATED, MESSAGE_THREAD_REACTIVATED). Added Reminder Lifecycle events (REMINDER_EVALUATED, REMINDER_CREATED, REMINDER_MANUAL_CREATED, REMINDER_EDITED, REMINDER_DISMISSED, REMINDER_MERGED, REMINDER_REASSIGNED). Updated Event Hierarchy Diagram. Synchronized documentation with current backend implementation. |
 
 ## 10. Event Type Catalog
 
@@ -4295,15 +4482,302 @@ Events for time triggers and reporting.
 
 - `event_id`, `timestamp`, `report_id`, `recipient`, `sent_at`
 
-### 10.7 Event Hierarchy Diagram
+### 10.7 Account & User Events
+
+Events for multi-tenant account and user management.
+
+#### ACCOUNT_CREATED
+
+**Purpose:** Record creation of a new account (billing/tenant boundary).
+
+**Fields:**
+
+- `event_id` (string, UUID)
+- `timestamp` (number, Unix ms)
+- `account_id` (string, UUID)
+- `owner_email` (string)
+
+#### USER_CREATED
+
+**Purpose:** Record creation of a user within an account.
+
+**Fields:**
+
+- `event_id` (string, UUID)
+- `timestamp` (number, Unix ms)
+- `account_id` (string, UUID)
+- `user_id` (string, UUID)
+- `email` (string)
+- `role` (enum: owner, member)
+
+#### WATCHER_UPDATED
+
+**Purpose:** Record name or metadata update to watcher.
+
+**Fields:**
+
+- `event_id` (string, UUID)
+- `timestamp` (number, Unix ms)
+- `watcher_id` (string, UUID)
+- `updated_by` (string, user_id)
+- `name` (string | null) - New name if changed
+
+### 10.8 LLM Routing Events
+
+Events tracking LLM extraction workflow.
+
+#### MESSAGE_ROUTED
+
+**Purpose:** Record routing decision for message to thread.
+
+**Fields:**
+
+- `event_id` (string, UUID)
+- `timestamp` (number, Unix ms)
+- `watcher_id` (string, UUID)
+- `message_id` (string)
+- `routed_to_thread_id` (string | null) - null if new thread will be created
+- `evidence` (string) - Verbatim text excerpt supporting routing
+- `confidence` (enum: high, medium, low)
+
+#### ROUTE_EXTRACTION_COMPLETE
+
+**Purpose:** Record what extraction types were performed on a message.
+
+**Fields:**
+
+- `event_id` (string, UUID)
+- `timestamp` (number, Unix ms)
+- `watcher_id` (string, UUID)
+- `message_id` (string)
+- `extract_deadline` (boolean)
+- `extract_soft_deadline` (boolean)
+- `extract_urgency` (boolean)
+- `extract_closure` (boolean)
+- `routing_reasoning` (string)
+
+#### EXTRACTION_COMPLETE
+
+**Purpose:** Summary event marking completion of all extraction for a message.
+
+**Fields:**
+
+- `event_id` (string, UUID)
+- `timestamp` (number, Unix ms)
+- `watcher_id` (string, UUID)
+- `message_id` (string)
+- `thread_id` (string | null) - Present if thread was created
+- `hard_deadline_found` (boolean)
+- `soft_deadline_found` (boolean)
+- `urgency_signal_found` (boolean)
+- `closure_signal_found` (boolean)
+- `signals_count` (number)
+
+### 10.9 Thread Update Events
+
+#### THREAD_UPDATED
+
+**Purpose:** Record activity in existing thread.
+
+**Fields:**
+
+- `event_id` (string, UUID)
+- `timestamp` (number, Unix ms)
+- `watcher_id` (string, UUID)
+- `thread_id` (string, UUID)
+- `message_id` (string) - New message in thread
+- `deadline_timestamp` (number | null) - Updated deadline if changed
+
+### 10.10 Message-Thread Association Events
+
+Events for soft association model between messages and threads.
+
+#### MESSAGE_THREAD_ASSOCIATED
+
+**Purpose:** Record association of message with thread (active by default).
+
+**Fields:**
+
+- `event_id` (string, UUID)
+- `timestamp` (number, Unix ms)
+- `watcher_id` (string, UUID)
+- `message_id` (string)
+- `thread_id` (string, UUID)
+- `association_status` (enum: active) - Always "active" on creation
+- `associated_by` (string) - "system" or user_id
+- `associated_at` (number, Unix ms)
+
+#### MESSAGE_THREAD_DEACTIVATED
+
+**Purpose:** Soft delete of message-thread association (audit trail preserved).
+
+**Fields:**
+
+- `event_id` (string, UUID)
+- `timestamp` (number, Unix ms)
+- `watcher_id` (string, UUID)
+- `message_id` (string)
+- `thread_id` (string, UUID)
+- `deactivated_by` (string, user_id)
+- `deactivated_at` (number, Unix ms)
+- `reason` (string | null)
+
+#### MESSAGE_THREAD_REACTIVATED
+
+**Purpose:** Reverse a previous deactivation.
+
+**Fields:**
+
+- `event_id` (string, UUID)
+- `timestamp` (number, Unix ms)
+- `watcher_id` (string, UUID)
+- `message_id` (string)
+- `thread_id` (string, UUID)
+- `reactivated_by` (string, user_id)
+- `reactivated_at` (number, Unix ms)
+
+### 10.11 Reminder Lifecycle Events
+
+Events for user correction of LLM extractions (~10% error rate).
+
+#### REMINDER_EVALUATED
+
+**Purpose:** Record periodic urgency evaluation of a thread.
+
+**Fields:**
+
+- `event_id` (string, UUID)
+- `timestamp` (number, Unix ms)
+- `watcher_id` (string, UUID)
+- `thread_id` (string, UUID)
+- `evaluation_timestamp` (number, Unix ms)
+- `urgency_state` (enum: ok, warning, critical, overdue)
+- `hours_until_deadline` (number | null)
+- `hours_since_activity` (number)
+
+#### REMINDER_CREATED
+
+**Purpose:** Record automatic creation of reminder from LLM extraction.
+
+**Fields:**
+
+- `event_id` (string, UUID)
+- `timestamp` (number, Unix ms)
+- `watcher_id` (string, UUID)
+- `reminder_id` (string, UUID)
+- `thread_id` (string, UUID) - Initial thread association
+- `extraction_event_id` (string, UUID) - Source extraction event
+- `reminder_type` (enum: hard_deadline, soft_deadline, urgency_signal)
+- `deadline_utc` (number | null) - Resolved deadline timestamp
+- `source_span` (string) - Verbatim text from email
+- `confidence` (enum: high, medium, low)
+- `status` (enum: active) - Always "active" on creation
+- `created_at` (number, Unix ms)
+
+#### REMINDER_MANUAL_CREATED
+
+**Purpose:** Record user-created reminder (no extraction source).
+
+**Fields:**
+
+- `event_id` (string, UUID)
+- `timestamp` (number, Unix ms)
+- `watcher_id` (string, UUID)
+- `reminder_id` (string, UUID)
+- `thread_id` (string, UUID)
+- `created_by` (string, user_id)
+- `reminder_type` (enum: hard_deadline, soft_deadline, custom)
+- `deadline_utc` (number | null)
+- `description` (string)
+- `status` (enum: active)
+- `created_at` (number, Unix ms)
+
+#### REMINDER_EDITED
+
+**Purpose:** Record user correction of LLM extraction mistake.
+
+**Fields:**
+
+- `event_id` (string, UUID)
+- `timestamp` (number, Unix ms)
+- `watcher_id` (string, UUID)
+- `reminder_id` (string, UUID)
+- `edited_by` (string, user_id)
+- `changes` (object)
+  - `deadline_utc` (number | null) - If changed
+  - `description` (string) - If changed
+  - `reminder_type` (enum) - If changed
+- `edited_at` (number, Unix ms)
+
+#### REMINDER_DISMISSED
+
+**Purpose:** Record user rejection of incorrect extraction.
+
+**Fields:**
+
+- `event_id` (string, UUID)
+- `timestamp` (number, Unix ms)
+- `watcher_id` (string, UUID)
+- `reminder_id` (string, UUID)
+- `dismissed_by` (string, user_id)
+- `reason` (string | null)
+- `dismissed_at` (number, Unix ms)
+
+#### REMINDER_MERGED
+
+**Purpose:** Record merge of duplicate reminders.
+
+**Fields:**
+
+- `event_id` (string, UUID)
+- `timestamp` (number, Unix ms)
+- `watcher_id` (string, UUID)
+- `source_reminder_id` (string, UUID) - Becomes inactive
+- `target_reminder_id` (string, UUID) - Remains active
+- `merged_by` (string, user_id)
+- `merged_at` (number, Unix ms)
+
+#### REMINDER_REASSIGNED
+
+**Purpose:** Record reassignment of reminder to different thread (portable semantic obligation).
+
+**Fields:**
+
+- `event_id` (string, UUID)
+- `timestamp` (number, Unix ms)
+- `watcher_id` (string, UUID)
+- `reminder_id` (string, UUID)
+- `from_thread_id` (string, UUID)
+- `to_thread_id` (string, UUID)
+- `reassigned_by` (string, user_id)
+- `reassigned_at` (number, Unix ms)
+
+### 10.12 Event Hierarchy Diagram
 
 ```
+Account & User (Multi-Tenant)
+├── ACCOUNT_CREATED
+└── USER_CREATED
+
+Administrative (Watcher Configuration)
+├── WATCHER_CREATED
+├── WATCHER_ACTIVATED
+├── WATCHER_PAUSED
+├── WATCHER_RESUMED
+├── WATCHER_UPDATED
+├── WATCHER_DELETED
+└── POLICY_UPDATED
+
 Baseline Observation (Always Emitted)
 ├── MESSAGE_RECEIVED
 └── THREAD_ACTIVITY_OBSERVED
     │
     ↓
-Extraction Records (LLM-Generated)
+LLM Routing & Extraction
+├── MESSAGE_ROUTED
+├── ROUTE_EXTRACTION_COMPLETE
+├── EXTRACTION_COMPLETE
+│
 ├── HARD_DEADLINE_OBSERVED (binding=true)
 ├── SOFT_DEADLINE_SIGNAL_OBSERVED (binding=false)
 ├── URGENCY_SIGNAL_OBSERVED
@@ -4312,15 +4786,37 @@ Extraction Records (LLM-Generated)
     ↓
 Thread Lifecycle (Runtime-Generated)
 ├── THREAD_OPENED
+├── THREAD_UPDATED
 └── THREAD_CLOSED
     │
     ↓
-Derived Artifacts (Runtime-Computed)
+Message-Thread Associations
+├── MESSAGE_THREAD_ASSOCIATED
+├── MESSAGE_THREAD_DEACTIVATED
+└── MESSAGE_THREAD_REACTIVATED
+    │
+    ↓
+Reminder Lifecycle
+├── REMINDER_EVALUATED
+├── REMINDER_CREATED
+├── REMINDER_MANUAL_CREATED
+├── REMINDER_EDITED
+├── REMINDER_DISMISSED
+├── REMINDER_MERGED
+├── REMINDER_REASSIGNED
+└── REMINDER_GENERATED (urgency transition)
+    │
+    ↓
+Derived Artifacts (Notifications)
 ├── SILENCE_THRESHOLD_EXCEEDED
-├── REMINDER_GENERATED
 ├── ALERT_QUEUED
 ├── ALERT_SENT
 └── ALERT_FAILED
+
+System Events (Scheduling & Reporting)
+├── TIME_TICK
+├── REPORT_GENERATED
+└── REPORT_SENT
 ```
 
 ## 11. Glossary
@@ -4355,7 +4851,7 @@ Derived Artifacts (Runtime-Computed)
 
 **Idempotence (Per-Watcher):** Guarantee that replaying the same event sequence produces identical state and does not emit duplicate alerts. Enforced at watcher level for simplicity.
 
-**Ingestion Address:** Unique email address for each watcher, formatted `<name>-<token>@ingest.vigil.email`.
+**Ingestion Address:** Unique email address for each watcher, formatted `<name>-<token>@ingest.email.vigil.run`.
 
 **LLM:** Large Language Model, used for fact extraction from email text (never interpretation or decision-making).
 

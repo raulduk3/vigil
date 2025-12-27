@@ -1,0 +1,101 @@
+\documentclass[10pt]{article}
+\usepackage[top=0.55in, bottom=0.6in, left=0.65in, right=0.65in]{geometry}
+\usepackage{amsmath,amsfonts,graphicx,hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\setlength{\parskip}{6pt}
+\setlength{\parindent}{0pt}
+\pagenumbering{gobble}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  frame=single,
+  backgroundcolor=\color{gray!5}
+}
+
+\begin{document}
+
+{\bfseries\large Vigil: Deterministic Email Vigilance System}
+
+\textbf{Abstract.}
+Vigil is a deterministic, event-sourced vigilance system for time-sensitive email oversight. It provides delegated monitoring of explicitly forwarded email streams, extracting structured facts (deadlines, urgency signals, closure confirmations) and surfacing advisory notifications when silence, deadlines, or delays may require attention. Vigil does *not* access inboxes, automate replies, or manage tasks. Built on an immutable event store, all system behavior is auditable via replay: the same events always produce the same state. The system tracks response times, detects prolonged silence, and alerts on state transitions—preventing quiet failure while preserving human control, responsibility, and the ability to correct any automated extraction.
+
+\textbf{Market Context.}
+The global email management software market was approximately **\$4.59 billion in 2024** and is projected to grow to **\$5.08 billion in 2025** and roughly **\$7.5 billion by 2029** with a sustained CAGR near 10 % as organizations seek efficient outbound and inbound communication controls and compliance tooling. Email usage remains pervasive and increasing in enterprise workflows, with professionals spending multiple hours per week managing email and frequent checking disrupting attention and productivity. Vigil targets a previously underserved slice of this landscape: **oversight and assurance** rather than inbox throughput, filtering, or automation.
+
+\textbf{Problem and Motivation.}
+Email is where obligations live. Invoices arrive with due dates. Clients ask questions expecting responses. Legal and regulatory notices carry deadlines. Yet email clients are designed for reading and replying, not for tracking what has been promised, when it is due, and whether anyone followed up. Quiet failures occur when deadlines pass unnoticed, when no one responds to important requests, or when obligations are acknowledged but never fulfilled. Email overload increases stress and job strain, and interruptions from communication volume degrade workflow efficiency. Vigil provides **confidence through observation**—the assurance that important communication is being watched and that silence is not going unnoticed.
+
+\textbf{Scope and Non-Goals.}
+Vigil is intentionally constrained. It does not replace inboxes, CRMs, calendars, or task systems. It does not infer intent, assign work, or act autonomously. It does not access inboxes or scan email. Its sole function is to observe explicitly forwarded emails, extract time-relevant facts, track elapsed time and silence, and surface advisory notifications when human attention may be warranted.
+
+\textbf{Core Abstraction: Watchers.}
+The primary configuration unit is a \emph{watcher}. A watcher is an isolated monitoring scope with a unique ingestion email address (e.g., \texttt{finance-a7f3k9@ingest.email.vigil.run}) and policy configuration. Each watcher owns its own threads, reminders, alerts, and notification behavior. A single account may host multiple watchers, each representing a distinct area of responsibility such as personal finance, legal correspondence, or client billing. Watchers enable delegated oversight without accessing inboxes—users explicitly forward relevant emails to the watcher's address.
+
+\textbf{Four-Subsystem Architecture.}
+Vigil is organized around four conceptual subsystems that define responsibility boundaries:
+\begin{itemize}
+\item \textbf{Ingestion and Immutable Event Capture:} Observes external reality (email) and converts it into immutable internal facts. Performs no inference or decision-making.
+\item \textbf{Event-Sourced Runtime:} Evaluates events, reconstructs state via replay, and determines whether new events should be emitted. Stateless execution triggered by events.
+\item \textbf{Bounded Semantic Intelligence:} Provides structured fact extraction from email text using LLMs. Outputs are frozen into events; LLMs never plan, decide, or influence control flow.
+\item \textbf{Notification and Inspection Interfaces:} Handles outward-facing effects (alerts, reports) and human interaction (dashboard, API).
+\end{itemize}
+All subsystems communicate via immutable events or network-routed HTTP.
+
+\textbf{Ingestion and Event Capture.}
+Emails arrive via manual forwarding or inbox rules to watcher-specific ingestion addresses. The SMTP adapter extracts the watcher token from the recipient address and forwards raw email to the backend. The backend validates senders against allowlists, parses headers, sanitizes PII, and emits an immutable \texttt{MESSAGE\_RECEIVED} event. Email bodies are processed for extraction then discarded—only metadata is retained. No inference or state mutation occurs at ingestion.
+
+\textbf{Event Store.}
+The PostgreSQL event store is the system's sole source of truth. All 45+ event types are logged append-only with microsecond timestamps. Events are never modified or deleted. This enables deterministic replay, forensic auditability, and safe logic evolution. State is always derived by replaying events.
+
+\textbf{Watcher Runtime.}
+The watcher runtime is \emph{not} a long-lived process. It is stateless execution invoked only when an event occurs or a scheduled evaluation triggers. On each invocation: load events, reconstruct state via replay, apply transition rules, emit new events, exit. No background loops, no hidden memory, no autonomous behavior.
+
+\textbf{Threads and Reminders.}
+Threads represent tracked conversations, created when extraction detects time-relevant content. \textbf{Threads do not own deadlines}—deadlines belong to reminders. Reminders are portable semantic obligations that can be edited, merged, dismissed, or reassigned between threads. A single email may generate multiple independent reminders. Thread matching uses Message-ID chaining, subject normalization, and Conversation-Index headers.
+
+\textbf{Grounded Extraction Pipeline.}
+The extraction pipeline uses a Regex+LLM approach:
+\begin{enumerate}
+\item Regex extractor identifies candidate text spans (dates, keywords, patterns)
+\item LLM interprets context and extracts structured facts
+\item Validation ensures every extraction cites a \texttt{source\_span} that exists in the original email
+\item Ungrounded outputs (hallucinated text) are discarded
+\end{enumerate}
+Extraction events include: \texttt{HARD\_DEADLINE\_OBSERVED}, \texttt{SOFT\_DEADLINE\_SIGNAL\_OBSERVED}, \texttt{URGENCY\_SIGNAL\_OBSERVED}, \texttt{CLOSURE\_SIGNAL\_OBSERVED}. LLMs are never invoked during event replay.
+
+\textbf{Urgency Evaluation.}
+Time enters the system through explicit \texttt{TIME\_TICK} events emitted every 15 minutes. Urgency is computed from \texttt{hours\_until\_deadline} and \texttt{hours\_since\_activity} against policy thresholds. Urgency levels: OK $\rightarrow$ WARNING $\rightarrow$ CRITICAL $\rightarrow$ OVERDUE. Alerts fire \textbf{only on state transitions} (e.g., ok$\rightarrow$warning), never on steady state, preventing alert fatigue. Closed threads never alert.
+
+\textbf{Notification and Reporting.}
+Notifications are the only outward action. Alert delivery uses a notification worker with exponential backoff retry. Reports are intentionally \emph{reassurance-first}: emphasizing what appears resolved or stable before highlighting items requiring attention. Every status is traceable to observed emails and elapsed time via causal event chains.
+
+\textbf{Dashboard Interface.}
+The Next.js 14 frontend is a read-heavy inspection surface displaying watcher state, threads, urgency levels, extracted signals, and event timelines. Users can pause/resume watchers, manually close threads, edit reminders, and configure policies. The frontend contains no business logic— all state derives from backend API responses. All authoritative changes flow through event creation.
+
+\textbf{Infrastructure Stack.}
+\begin{itemize}
+\item \textbf{Backend Control Plane:} TypeScript/Bun with Hono framework (active)
+\item \textbf{Event Store:} PostgreSQL append-only tables
+\item \textbf{LLM Service:} Python/vLLM for fact extraction (planned)
+\item \textbf{SMTP Adapter:} Lightweight email ingress (planned; HTTP endpoint active)
+\item \textbf{Frontend:} Next.js 14 App Router with Tailwind CSS (active)
+\item \textbf{Authentication:} JWT access/refresh tokens, Google/GitHub OAuth with PKCE
+\item \textbf{Billing:} Stripe integration with 4 tiers (free/starter/pro/enterprise)
+\item \textbf{Scheduler:} Background job system for \texttt{TIME\_TICK} generation
+\end{itemize}
+
+\textbf{Security Model.}
+Vigil follows least-privilege principles. It never accesses inboxes or user credentials. Only allowlisted senders may create threads. PII and secrets are sanitized before storage. Rate limiting prevents abuse. Webhook signatures use HMAC-SHA256. All actions are logged with full traceability.
+
+\textbf{Business Model.}
+Vigil is offered as a subscription SaaS with usage-aligned pricing based on ingestion volume and active watchers. Four tiers: Free (usable for individual oversight), Starter, Pro, and Enterprise. The value proposition is loss prevention, reduced cognitive load, and confidence that important communication is being watched—distinct from throughput or task automation common in the broader email management software market.
+
+\textbf{Design Philosophy.}
+Vigil favors determinism over intelligence, transparency over automation, and restraint over completeness. Reports reassure first and alert second. LLM outputs are advisory, never authoritative—users can edit, merge, dismiss, or reassign any extraction. Manual user actions always override automation and persist permanently. Humans remain the sole decision-makers.
+
+\textbf{Conclusion.}
+Vigil is a delegated vigilance layer for time-sensitive email communication. By combining event-sourced architecture, grounded semantic extraction, portable reminders, and reassurance-oriented reporting, it ensures that important correspondence does not fail quietly—and that recipients can trust when things are under control.
+
+\end{document}

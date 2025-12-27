@@ -1,8 +1,105 @@
 # Frontend - Vigil Web Application
 
-**Next.js Web Application deployed via Vercel**
+**Next.js 14 Web Application with App Router**
 
-User-facing web application providing splash page, user authentication, and watcher management dashboard for the Vigil vigilance system.
+User-facing web application providing authentication, account management, watcher dashboard, and **full user control over extracted reminders**.
+
+## Key User Capabilities
+
+The frontend enables complete user control for correcting automated extractions:
+
+- **View active reminders** created automatically by the LLM
+- **Edit, merge, or dismiss** any extraction (~10% error rate expected)
+- **Reassign reminders** to different threads (portable semantic obligations)
+- **Link emails to multiple threads** via soft associations
+- **View and resolve conflicts** (duplicate reminders, deadline mismatches)
+- **Monitor response times** and communication patterns
+- **Override any automation** with persistent manual corrections
+
+## Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Set up environment
+cp .env.example .env.local
+# Edit .env.local with your configuration
+
+# Run development server
+npm run dev
+
+# Build for production
+npm run build
+npm start
+```
+
+## Features
+
+- **Authentication**: Email/password and OAuth (Google, GitHub)
+- **Password Reset**: Secure token-based password recovery
+- **Account Management**: Profile, security settings, billing
+- **Stripe Integration**: Subscription management and payment
+- **Dashboard**: Watcher overview and thread monitoring
+- **Response Time Metrics**: Track when emails are sent, received, and responded to
+- **Reminder Management**: Full control over extracted reminders
+- **Conflict Resolution**: Review and resolve duplicate/conflicting reminders
+- **Responsive**: Mobile-first design with Tailwind CSS
+
+## Project Structure
+
+```
+frontend/
+├── src/
+│   ├── app/                    # Next.js App Router pages
+│   │   ├── page.tsx           # Landing page
+│   │   ├── layout.tsx         # Root layout
+│   │   ├── providers.tsx      # Context providers
+│   │   ├── auth/              # Auth pages
+│   │   │   ├── login/
+│   │   │   ├── register/
+│   │   │   ├── forgot-password/
+│   │   │   ├── reset-password/
+│   │   │   └── callback/      # OAuth callback
+│   │   ├── dashboard/         # Main dashboard
+│   │   └── account/           # Account management
+│   │       ├── page.tsx       # Profile
+│   │       ├── security/      # Security settings
+│   │       └── billing/       # Subscription & billing
+│   ├── components/            # Reusable components
+│   │   └── auth/
+│   │       └── oauth-buttons.tsx
+│   └── lib/                   # Core libraries
+│       ├── api/               # API client
+│       │   └── client.ts
+│       ├── auth/              # Auth context
+│       │   └── context.tsx
+│       └── stripe/            # Stripe provider
+│           └── provider.tsx
+├── package.json
+├── tsconfig.json
+├── tailwind.config.ts
+└── next.config.js
+```
+
+## Environment Variables
+
+```bash
+# Backend API
+NEXT_PUBLIC_API_URL=http://localhost:3001
+BACKEND_URL=http://localhost:3001
+
+# Stripe (client-side publishable key)
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+
+# OAuth (display flags)
+NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED=true
+NEXT_PUBLIC_GITHUB_OAUTH_ENABLED=true
+
+# App
+NEXT_PUBLIC_APP_NAME=Vigil
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
 
 ## SDD Traceability
 
@@ -13,7 +110,9 @@ The [Software Design Document (SDD)](../docs/SDD.md) is the **authoritative sour
 | Dashboard | MR-Frontend-1, MR-Frontend-2, MR-Frontend-3 |
 | Thread Display | FR-1, FR-2, FR-3, FR-4, FR-5 |
 | Thread Management | FR-6, FR-6b, FR-6c, FR-9 |
-| Urgency Visualization | FR-17, FR-18, FR-19 |
+| Reminder Management | User control over drafts, edits, merges, dismissals |
+| Conflict Resolution | Duplicate detection, deadline mismatch flagging |
+| Response Time Metrics | FR-17, FR-18, FR-19 |
 | LLM Extraction Display | FR-7, FR-7a, FR-8, FR-10 |
 | Report Generation | FR-15 |
 | Watcher Configuration | FR-4, FR-5 |
@@ -21,6 +120,46 @@ The [Software Design Document (SDD)](../docs/SDD.md) is the **authoritative sour
 | Display-Only Principle | FR-16 (Delegated Vigilance), FR-20 (Expressly Constrained) |
 
 See [SDD Section 5: Implementation Coverage Table](../docs/SDD.md#implementation-coverage-table) for complete mapping of requirements to implementations.
+
+---
+
+## Response Time Monitoring
+
+A key feature: visualizing communication velocity.
+
+### Dashboard Metrics
+
+```typescript
+// Thread metrics displayed
+{
+  thread_id: "t_abc123",
+  subject: "Q4 Report",
+  status: "open",
+  metrics: {
+    hours_since_activity: 48,
+    hours_until_deadline: 72,
+    response_count: 5,
+    avg_response_time_hours: 12,
+    last_response_at: "2025-12-24T10:00:00Z"
+  }
+}
+```
+
+### Timeline View
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Thread Timeline: Q4 Report                                 │
+├─────────────────────────────────────────────────────────────┤
+│  Dec 20, 10:00 AM  │ Email sent by client@example.com       │
+│       ↓            │                                        │
+│  Dec 20, 2:00 PM   │ Response from you (4h response time)   │
+│       ↓            │                                        │
+│  Dec 21, 9:00 AM   │ Follow-up from client (19h later)      │
+│       ↓            │                                        │
+│  [48h silence]     │ ⚠️ Approaching silence threshold       │
+└─────────────────────────────────────────────────────────────┘
+```
 
 ---
 
@@ -55,10 +194,142 @@ Backend API (Required)
 ├── /api/auth/* → Authentication tokens
 ├── /api/watchers/* → Watcher state (from event replay)
 ├── /api/threads/* → Thread projections
+├── /api/reminders/* → Reminder management (confirm, edit, dismiss, merge)
+├── /api/conflicts/* → Conflict detection and resolution
 └── /api/events/* → Event log data
 ```
 
 ---
+
+## Reminder Management UI
+
+The frontend provides complete control over extracted reminders:
+
+### Reminder States & Actions
+
+| State | User Actions Available |
+|-------|----------------------|
+| `active` | Edit, Merge, Dismiss, Reassign Thread |
+| `dismissed` | View only (audit trail preserved) |
+| `merged` | View only (merged into another reminder) |
+
+Reminders are created in `active` state automatically. Users correct mistakes rather than confirming each extraction.
+
+### Conflict Resolution Flow
+
+```
+1. Backend detects potential conflict (duplicate, deadline mismatch)
+2. Conflict appears in user's review queue
+3. User reviews both reminders side-by-side
+4. User chooses: Keep Both, Merge, Dismiss One
+5. Frontend calls /api/conflicts/:id/resolve
+6. Resolution event persists the decision
+```
+
+### One Email, Multiple Concerns
+
+When an email generates multiple extractions:
+
+```
+Email: "Please send the report by Friday and schedule a call for next week"
+    ↓
+Reminder 1: Hard deadline - "report by Friday" (active)
+Reminder 2: Soft deadline - "call for next week" (active)
+    ↓
+User reviews if needed (~10% error rate)
+    ↓
+User can: Edit either, Merge into one, Dismiss either, Reassign to different thread
+```
+
+### Multi-Thread Assignment
+
+Emails can belong to multiple threads through **soft associations**:
+
+```typescript
+// Add email to a thread
+// POST /api/emails/:id/threads
+{
+  thread_id: "t_abc123",
+  action: "add"  // Creates ACTIVE association
+}
+
+// Remove email from a thread (soft delete)
+// POST /api/emails/:id/threads
+{
+  thread_id: "t_abc123",
+  action: "remove"  // Marks association as INACTIVE
+}
+```
+
+**Association Model:**
+- Messages have **implications** on thread state (activity, silence, participants)
+- Associations can be `ACTIVE` (affects calculations) or `INACTIVE` (hidden)
+- Removing a message from a thread = marking association as inactive
+- Original association preserved in event log for full traceability
+- Same email can be active in multiple threads simultaneously
+
+---
+
+## Authentication Flow
+
+### Email/Password Authentication
+
+```
+1. User submits login form
+2. Frontend calls POST /api/auth/login
+3. Backend validates credentials, returns JWT
+4. Frontend stores tokens in localStorage
+5. Subsequent requests include Authorization header
+6. Token refresh handled automatically
+```
+
+### OAuth Authentication
+
+```
+1. User clicks OAuth button (Google/GitHub)
+2. Frontend redirects to /api/auth/oauth/{provider}/start
+3. Backend redirects to OAuth provider
+4. User authenticates with provider
+5. Provider redirects to /api/auth/oauth/{provider}/callback
+6. Backend creates/links account, issues JWT
+7. Backend redirects to frontend /auth/callback with tokens
+8. Frontend stores tokens, redirects to dashboard
+```
+
+### Password Reset
+
+```
+1. User enters email on forgot-password page
+2. Frontend calls POST /api/auth/password-reset/request
+3. Backend sends email with reset link
+4. User clicks link, lands on reset-password page
+5. Frontend verifies token via POST /api/auth/password-reset/verify
+6. User enters new password
+7. Frontend calls POST /api/auth/password-reset/confirm
+8. User redirected to login
+```
+
+## Stripe Integration
+
+### Checkout Flow
+
+```typescript
+// Upgrade button click
+const handleUpgrade = async (plan: string) => {
+  const { url } = await api.createCheckoutSession(plan);
+  window.location.href = url; // Redirect to Stripe Checkout
+};
+```
+
+### Billing Portal
+
+```typescript
+// Manage subscription button
+const handleManageBilling = async () => {
+  const { url } = await api.createBillingPortalSession();
+  window.location.href = url; // Redirect to Stripe Portal
+};
+```
 
 ## User & Account Management
 
@@ -69,7 +340,7 @@ The frontend handles **client-side authentication** but is **NOT the system of r
 ```
 ┌──────────────────┐     ┌──────────────────┐
 │    Frontend      │     │     Backend       │
-│  (NextAuth.js)   │     │  (Authoritative)  │
+│  (React Context) │     │  (Authoritative)  │
 ├──────────────────┤     ├──────────────────┤
 │ • Login form     │─────▶│ • User table      │
 │ • Register form  │     │ • Account table   │
@@ -85,7 +356,7 @@ The frontend handles **client-side authentication** but is **NOT the system of r
 | Login UI | ✅ Form, validation, UX | JWT token on success |
 | Registration UI | ✅ Form, validation, UX | Account/User creation |
 | Token Storage | ✅ httpOnly cookies or localStorage | Token signing/validation |
-| Session State | ✅ React context, NextAuth session | Token expiry enforcement |
+| Session State | ✅ React context | Token expiry enforcement |
 | OAuth Flow | ✅ Provider redirects | User creation from OAuth |
 | Password Reset | ✅ Form UI | Email sending, token validation |
 | Protected Routes | ✅ Client-side guards | 401/403 responses |
@@ -357,11 +628,15 @@ cp .env.example .env.local
 **Key Environment Variables:**
 ```bash
 # Backend API
-NEXT_PUBLIC_API_URL=https://api.vigil.email
-NEXT_PUBLIC_WS_URL=wss://api.vigil.email/ws
+# Development: keep pointing to your local backend
+NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_WS_URL=ws://localhost:3001/ws
+# Production: https://api.vigil.run and wss://api.vigil.run/ws
 
 # Authentication
-NEXTAUTH_URL=https://vigil.email
+# Development: http://localhost:3000
+# Production: https://vigil.run
+NEXTAUTH_URL=http://localhost:3000
 NEXTAUTH_SECRET=your-secret-key
 
 # OAuth Providers (optional)
@@ -422,7 +697,7 @@ vercel --prod
 ### Environment Setup
 1. Connect GitHub repository to Vercel
 2. Configure environment variables in Vercel dashboard
-3. Set up custom domain (vigil.email)
+3. Set up custom domain (vigil.run)
 4. Configure backend CORS to allow frontend origin
 
 ### Build Configuration
