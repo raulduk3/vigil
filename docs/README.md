@@ -1,101 +1,117 @@
 # Vigil Documentation
 
-Comprehensive documentation for the Vigil vigilance system.
-
-## SDD Traceability
-
-The [Software Design Document (SDD)](SDD.md) is the **authoritative source of truth** for all system requirements. This index document covers navigation to all SDD sections.
-
-| This Document | SDD Sections |
-|---------------|--------------|
-| Core Specifications | All sections (FR-*, IR-*, MR-*, SEC-*, CONS-*, ASSUM-*) |
-| Component Documentation | MR-* (Module Requirements) |
-| Quick Navigation | SDD Sections 1-11 |
-| Architectural Principles | SDD Section 1, FR-16, FR-20, CONS-1 through CONS-8 |
-
-See [SDD Section 5: Implementation Coverage Table](SDD.md#implementation-coverage-table) for complete mapping of requirements to implementations.
+**Version:** 3.0.0 | **Status:** Commercial Model | **Date:** January 2, 2026
 
 ---
 
-## Documents
+## Product Focus
 
-### Core Specifications
-- **[Software Design Document (SDD)](SDD.md)** - Complete production-grade specification with Feature Requirements (FR-1 through FR-20), Infrastructure Requirements (IR-1 through IR-24), Module Requirements, Security Requirements, and Data Consistency Requirements
-- **[System Design Document](SYSTEM_DESIGN.md)** - Implementation-grade system design with four subsystems, concrete components, and engineering constraints
+Vigil delivers **one capability: provable silence tracking for email threads**.
 
-### Component Documentation
-- **[Backend Control Plane](../backend/README.md)** - TypeScript/Bun backend API, event store, watcher runtime
-- **[LLM Extraction Service](../llm-service/README.md)** - Python/vLLM fact extraction (deadlines, signals, closure)
-- **[SMTP Adapter](../smtp-adapter/README.md)** - Lightweight email ingress adapter
-- **[Frontend](../frontend/README.md)** - Next.js/Vercel web application (splash, auth, dashboard)
+The system deterministically:
+- Organizes forwarded emails into conversation threads
+- Detects actionable requests via bounded LLM extraction
+- Tracks silence duration on threads awaiting response
+- Emits alerts when silence crosses policy thresholds
+- Produces immutable, replayable evidence timelines
 
-### Additional Resources
-- **[Event Types Reference](../backend/src/events/types.ts)** - Complete event type definitions (20+ types)
-- **[Environment Configuration](DEPLOYMENT.md)** - Network routing and deployment setup (TBD)
+The system **never**:
+- Owns or infers deadlines
+- Creates reminders or tasks
+- Infers urgency or importance
+- Tells users what to do
+- Automates responses
 
+---
 
-## Quick Navigation
+## Core Documents
 
-**For Product Understanding:**
-- Start with main [README](../README.md)
-- Read [SDD](SDD.md) sections 1.1-1.4 (System Overview, Primitives)
-- Read [System Design Document](SYSTEM_DESIGN.md) sections 1-2
+| Document | Purpose |
+|----------|---------|
+| [SDD.md](SDD.md) | Software Design Document — Requirements (FR-*, MR-*, SEC-*) |
+| [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md) | Technical architecture and implementation |
 
-**For Implementation:**
-- Read complete [SDD](SDD.md) for acceptance criteria and test requirements
-- Read [System Design Document](SYSTEM_DESIGN.md) for component architecture
-- Review component-specific READMEs
-- Study [Event Types Reference](../backend/src/events/types.ts)
+---
 
-**For Testing:**
-- [SDD](SDD.md) Section 2: Feature Requirements with unit test specifications
-- [SDD](SDD.md) Section 3: Infrastructure Requirements with verification methods
-- [SDD](SDD.md) Section 4: Module Requirements with failure modes
+## Event Model
 
-**For Operations:**
-- Review [Deployment Guide](DEPLOYMENT.md) (TBD)
-- Check component `.env.example` files
-- [SDD](SDD.md) Section 1.5: Distributed Deployment Model
-- [SDD](SDD.md) Section 1.7: Logging Architecture
+### Active Events
 
+| Event | Purpose |
+|-------|---------|
+| `EMAIL_RECEIVED` | Email ingested |
+| `THREAD_EMAIL_ADDED` | Activity on thread |
+| `THREAD_OPENED` | Thread created from action request |
+| `THREAD_CLOSED` | Thread resolved |
+| `ACTION_REQUEST_OBSERVED` | Request detected (opens threads) |
+| `CLOSURE_SIGNAL_OBSERVED` | Resolution detected (closes threads) |
+| `SILENCE_THRESHOLD_EXCEEDED` | Silence crossed threshold |
+| `ALERT_QUEUED` / `ALERT_SENT` | Alert lifecycle |
+| `TIME_TICK` | Scheduler tick |
+| `WATCHER_*` / `POLICY_UPDATED` | Watcher management |
 
-## Architectural Principles
+### Deprecated Events (Backward Compatible)
 
-1. **Events are the sole source of truth** - All state derived from immutable, append-only events
-2. **No long-lived mutable state** - Projections are disposable, rebuildable
-3. **No agent behavior** - No background loops, no autonomous actions
-4. **LLM as fact extraction appliance only** - Never decides, only extracts
-5. **Threads represent tracked conversations** - Created by extraction events, monitor silence/inactivity
-6. **Threads do NOT own deadlines** - Deadlines belong to reminders, not threads
-7. **Messages are NOT persisted** - Only metadata retained, bodies discarded after extraction
-8. **Reminder state is derived, not stored** - Computed on-demand from events
-9. **One-way data flow** - Baseline → Extraction → Thread → Reminder → Alert
-10. **Extraction events always emitted** - Audit trail preserved regardless of thread state
-11. **All data tracked for traceability** - Complete pipeline visibility for users
+Legacy events preserved for replay, no runtime behavior:
+- `HARD_DEADLINE_EXTRACTED`, `SOFT_DEADLINE_EXTRACTED`, `URGENCY_SIGNAL_EXTRACTED`
+- `REMINDER_CREATED`, `REMINDER_EDITED`, `REMINDER_DISMISSED`, etc.
 
-See [SDD](SDD.md) for complete specifications and [System Design Document](SYSTEM_DESIGN.md) for implementation details.
+---
 
+## Thread Model
 
-## Document Relationship
-
+```typescript
+type ThreadState = {
+  thread_id: string;
+  watcher_id: string;
+  status: "open" | "closed";
+  opened_at: number;
+  closed_at: number | null;
+  last_activity_at: number;
+  last_action_request_event_id: string | null;
+  message_ids: string[];
+  participants: string[];
+};
+// NO: deadline_utc, urgency_level, reminder_ids
 ```
-SDD.md (Production Specification)
-├── Feature Requirements (FR-1 to FR-20) - What the system does
-├── Infrastructure Requirements (IR-1 to IR-24) - Non-functional requirements
-├── Module Requirements (MR-*) - How components implement features
-├── Security Requirements (SEC-1 to SEC-8)
-├── Data Consistency (CONS-1 to CONS-8)
-└── Unit Test Requirements - Per-feature test specifications
 
-SYSTEM_DESIGN.md (Implementation Guide)
-├── Four-Subsystem Architecture
-├── Component Responsibilities
-├── Network Communication
-└── Engineering Constraints
+---
 
-Component READMEs
-├── backend/README.md - Backend implementation details
-├── llm-service/README.md - LLM service implementation
-├── smtp-adapter/README.md - SMTP adapter implementation
-└── frontend/README.md - Frontend implementation
+## Policy Model
+
+```typescript
+type WatcherPolicy = {
+  allowed_senders: string[];
+  silence_threshold_hours: number;
+  notification_channels: NotificationChannel[];
+};
+// NO: deadline fields, urgency fields, reporting cadence
 ```
+
+---
+
+## Architecture Principles
+
+1. **Events are truth** — All state derived from immutable, append-only events
+2. **Deterministic replay** — Same events always produce same state
+3. **Bounded LLM** — One question: "Does this contain an actionable request?"
+4. **Silence tracking only** — No deadlines, reminders, or urgency inference
+5. **Threshold-crossing alerts** — Fire once per transition, not repeatedly
+6. **Email bodies not persisted** — Sent to LLM then discarded
+
+---
+
+## Source Code Reference
+
+**Event System:**
+- `backend/src/events/index.ts` — Main entry, VigilEvent union
+- `backend/src/events/silence-events.ts` — Commercial model events
+- `backend/src/events/thread-events.ts` — Thread lifecycle
+- `backend/src/events/deprecation.ts` — Deprecated event handling
+
+**Core Runtime:**
+- `backend/src/watcher/runtime.ts` — Event replay, state reconstruction
+- `backend/src/watcher/silence-tracker.ts` — Silence computation
+- `backend/src/watcher/thread-model.ts` — Thread state
+- `backend/src/llm/action-request-extractor.ts` — Bounded extraction
+- `backend/src/ingestion/orchestrator.ts` — Email pipeline

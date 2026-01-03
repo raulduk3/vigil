@@ -4,16 +4,33 @@
 
 Backend control plane for Vigil vigilance system. This is the **authoritative decision-making component** that orchestrates all system behavior through event-sourced architecture.
 
+## Commercial Model: Provable Silence Tracking
+
+Vigil delivers **one and only one product capability: provable silence tracking for email threads**.
+
+### What We Deliver
+
+- **Thread Organization**: Group inbound emails into conversation threads
+- **Action Request Detection**: LLM answers ONE question: "Does this contain an actionable request?"
+- **Silence Tracking**: Monitor elapsed time since last thread activity
+- **Threshold Crossing Events**: Emit immutable `SILENCE_THRESHOLD_EXCEEDED` when policy limits crossed
+- **Evidence Timelines**: Replayable, immutable audit trail
+
+### What We Do NOT Do
+
+- ❌ Own or infer deadlines 
+- ❌ Create reminders or tasks 
+- ❌ Infer urgency or importance 
+- ❌ Tell users what to do
+- ❌ Automate responses
+
 ## Key Design Principles
 
-The backend implements these core constraints:
-
-1. **Automated with Correction** — LLM creates reminders automatically; users fix the ~10% mistakes.
-2. **Grounded Extraction** — Every LLM output must cite a `source_span` or it's discarded.
-3. **User Control** — Reminders can be edited, merged, dismissed, reassigned. Manual actions persist.
-4. **One Email, Multiple Concerns** — Single email can generate multiple independent reminders.
-5. **Conflict Detection** — Duplicates and conflicts are flagged, not auto-resolved.
-6. **Response Time Tracking** — Core feature: monitoring when emails are sent, received, and responded to.
+1. **Bounded LLM Extraction** — LLM answers ONE question only: "Does this contain an actionable request?"
+2. **Silence Tracking, Not Deadline Management** — Track time since last activity, not owned deadlines
+3. **Threshold-Crossing Alerts Only** — Alerts emit on transitions, not continuously
+4. **Deterministic Replay** — Same events always produce same state
+5. **Backward Compatible Replay** — Historical events preserved, deprecated events skipped for new logic
 
 ## SDD Traceability
 
@@ -36,141 +53,159 @@ See [SDD Section 5: Implementation Coverage Table](../docs/SDD.md#implementation
 
 ---
 
-## Extraction & Reminder Pipeline
+## Silence Tracking Pipeline
 
-The backend orchestrates the complete extraction and reminder management flow:
+The backend orchestrates the complete silence tracking flow:
 
-### Grounded Extraction Flow
+### Commercial Extraction Flow
 
 ```
 1. Email arrives at ingestion endpoint
-2. MESSAGE_RECEIVED event emitted (baseline fact)
-3. Regex extractor identifies candidate text spans
-4. LLM interprets context, extracts structured facts
-5. Each extraction MUST include source_span (verbatim quote)
-6. Backend validates source_span exists in original email
-7. Ungrounded extractions → DISCARDED
-8. Valid extractions → ACTIVE REMINDERS (automated)
-9. User corrects if LLM was wrong (~10% of cases)
+2. EMAIL_RECEIVED event emitted (baseline fact)
+3. LLM answers ONE question: "Does this contain an actionable request?"
+4. If yes → ACTION_REQUEST_OBSERVED event
+5. Thread opened/updated (THREAD_OPENED or THREAD_EMAIL_ADDED)
+6. If resolution language detected → CLOSURE_SIGNAL_OBSERVED event
+7. Scheduler emits TIME_TICK events
+8. Silence tracker computes hours_since_last_activity
+9. When threshold crossed → SILENCE_THRESHOLD_EXCEEDED event
+10. Alert queued for delivery
 ```
 
-### Source Span Validation
-
-Every extraction must cite verbatim text from the original email:
+### Action Request Detection (Bounded LLM)
 
 ```typescript
-// Example extraction response
+// Single-question extraction
 {
-  deadline_found: true,
-  deadline_utc: 1735336800000,
-  deadline_text: "Friday December 27, 2025 at 5pm",
-  source_span: "by Friday December 27, 2025 at 5pm EST",  // MUST exist in email
-  confidence: "high"
+  contains_action_request: true | false,
+  action_summary: string | null,        // Brief description if found
+  confidence: "high" | "medium" | "low"
 }
 
-// Validation: source_span.toLowerCase() must be found in email_text.toLowerCase()
-// If not found → extraction is DISCARDED
+// NO: deadline_utc, urgency_level, source_span
+// NO: multiple extractions per email
+// NO: deadline/urgency inference
 ```
 
-### Reminder Lifecycle Events
+### Silence Events (Active)
 
 ```typescript
-// Reminder created automatically from extraction
-REMINDER_CREATED: {
-  reminder_id, thread_id, extraction_event_id,
-  deadline_utc, source_span, confidence, status: "active"
+// Explicit request for response detected
+ACTION_REQUEST_OBSERVED: {
+  event_id, watcher_id, message_id,
+  action_summary: string,
+  confidence: "high" | "medium" | "low",
+  timestamp
 }
 
-// User edits reminder (correcting LLM mistake)
-REMINDER_EDITED: { reminder_id, changes: {...}, edited_by: user_id }
-
-// User dismisses incorrect extraction
-REMINDER_DISMISSED: { reminder_id, dismissed_by: user_id, reason? }
-
-// User merges duplicate reminders
-REMINDER_MERGED: { source_reminder_id, target_reminder_id, merged_by: user_id }
-
-// User reassigns to different thread (portable reminders)
-REMINDER_REASSIGNED: { reminder_id, from_thread_id, to_thread_id, reassigned_by: user_id }
-
-// User creates manual reminder (no extraction)
-REMINDER_MANUAL_CREATED: { reminder_id, thread_id, created_by: user_id, ... }
-```
-
-### Reminders as Portable Semantic Obligations
-
-Reminders are **independent of messages and threads**. They represent semantic obligations (deadlines, requests, tasks) extracted by the LLM that can:
-
-- Be **moved between threads** without affecting message history
-- Be **monitored for urgency** regardless of thread attachment
-- Be **created manually** by users without any source email
-- Be **deactivated** while remaining in the audit trail
-
-```typescript
-// Reminder can be reassigned to any thread
-REMINDER_REASSIGNED: {
-  reminder_id: "rem_123",
-  from_thread_id: "thr_old",  // No longer monitors on this thread
-  to_thread_id: "thr_new",    // Now monitors on this thread
-  reassigned_by: "user_456"
-}
-// Thread urgency calculations update automatically
-```
-
-### Conflict Detection
-
-The backend flags potential conflicts for user review:
-
-```typescript
-// Duplicate detection
-CONFLICT_DETECTED: {
-  type: "duplicate_reminder",
-  reminder_ids: [r1, r2],
-  similarity_score: 0.95,
-  status: "pending_user_review"
+// Resolution language detected
+CLOSURE_SIGNAL_OBSERVED: {
+  event_id, watcher_id, message_id, thread_id,
+  closure_summary: string,
+  timestamp
 }
 
-// Conflicting deadlines
-CONFLICT_DETECTED: {
-  type: "deadline_mismatch",
-  thread_id,
-  deadlines: [{ reminder_id: r1, deadline: d1 }, { reminder_id: r2, deadline: d2 }],
-  status: "pending_user_review"
+// Silence crossed policy threshold (immutable evidence)
+SILENCE_THRESHOLD_EXCEEDED: {
+  event_id, watcher_id, thread_id,
+  hours_silent: number,
+  threshold_hours: number,
+  last_activity_at: number,
+  timestamp
 }
 ```
 
-### User Override Persistence
+### Deprecated Events (Backward Compatible)
 
-All user corrections emit events that persist permanently:
+Legacy events are preserved in the event store for audit replay but no longer trigger new behavior:
 
 ```typescript
-// User overrides are NEVER overwritten
-// Event replay respects the most recent user action
-// Automation cannot modify user-confirmed state
+// DEPRECATED - No longer emitted
+HARD_DEADLINE_EXTRACTED    // Replaced by ACTION_REQUEST_OBSERVED
+SOFT_DEADLINE_EXTRACTED    // Deprecated entirely
+URGENCY_SIGNAL_EXTRACTED   // Deprecated entirely
+REMINDER_CREATED           // Deprecated - silence tracking only
+REMINDER_DISMISSED         // Deprecated
+REMINDER_EDITED            // Deprecated
+REMINDER_MERGED            // Deprecated
+REMINDER_REASSIGNED        // Deprecated
+REMINDER_MANUAL_CREATED    // Deprecated
+REMINDER_EVALUATED         // Deprecated
+```
+
+### Simplified Thread State (Commercial Model)
+
+```typescript
+type SimplifiedThreadState = {
+  thread_id: string;
+  watcher_id: string;
+  status: "open" | "closed";
+  opened_at: number;
+  closed_at: number | null;
+  last_activity_at: number;
+  last_action_request_event_id: string | null;
+  message_ids: string[];
+  participants: string[];
+};
+
+// REMOVED from commercial model:
+// - deadline_utc
+// - urgency_level
+// - reminder_ids
+```
+
+### Simplified Policy (Commercial Model)
+
+```typescript
+type SimplifiedWatcherPolicy = {
+  allowed_senders: string[];
+  silence_threshold_hours: number;          // Default: 72 (range: 1-720)
+  notification_channels: NotificationChannel[];
+};
+
+// REMOVED from commercial model:
+// - deadline_warning_hours
+// - deadline_critical_hours
+// - enable_soft_deadline_reminders
+// - enable_urgency_signal_reminders
 ```
 
 ---
 
-## Response Time Monitoring
+## Silence Duration Monitoring
 
-Core feature: tracking communication velocity.
+Core feature: tracking how long threads have been silent (awaiting response).
 
 ### Tracked Metrics
 
 | Metric | How Computed |
 |--------|--------------|
 | `hours_since_activity` | `(now - last_activity_at) / (1000 * 60 * 60)` |
-| `hours_until_deadline` | `(deadline_utc - now) / (1000 * 60 * 60)` |
-| `response_interval` | Time between consecutive messages in thread |
-| `silence_duration` | Time since last thread activity |
+| `silence_status` | `hours_since_activity >= silence_threshold_hours` |
+| `threshold_crossed` | Transition from `silent=false` to `silent=true` |
 
-### API Endpoints for Response Metrics
+### Silence Threshold Events
+
+```typescript
+// Emitted ONCE when silence threshold is first crossed
+SILENCE_THRESHOLD_EXCEEDED: {
+  thread_id, watcher_id,
+  hours_silent: 74,
+  threshold_hours: 72,
+  last_activity_at: 1735336800000
+}
+
+// NOT emitted again until thread has new activity
+// and crosses threshold again
+```
+
+### API Endpoints for Silence Metrics
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/threads/:id/timeline` | GET | Full activity timeline with timestamps |
-| `/api/threads/:id/metrics` | GET | Response time statistics |
-| `/api/watchers/:id/summary` | GET | Aggregate response patterns |
+| `/api/threads/:id/status` | GET | Thread silence status and duration |
+| `/api/watchers/:id/threads` | GET | All threads with silence status |
+| `/api/watchers/:id/silent` | GET | Only threads exceeding silence threshold |
 
 ---
 
@@ -209,8 +244,11 @@ MR-BackendIngestion    MR-LLMService*          MR-WatcherRuntime
 | Requirement | Owner | Reason |
 |-------------|-------|--------|
 | MR-Frontend-1,2,3 | Frontend | UI display logic |
-| IR-8, IR-9 | SMTP Adapter | Email transport |
 | MR-LLMService-1,2,3,4,5 | LLM Service | Extraction inference |
+
+**Email Services (Managed - No Code Required):**
+- **Inbound:** Cloudflare Email Routing (catch-all → webhook)
+- **Outbound:** Resend API (alerts, reports)
 
 ---
 
@@ -534,68 +572,72 @@ This section guides AI agents implementing discrete features within the backend.
 
 ### Event Types Reference
 
-All event types are defined in `src/events/types.ts`. The system currently defines **24 event types** organized by category:
+Event types are defined in modular files under `src/events/`. The system organizes events by responsibility:
 
-**Control Plane Events:**
-- `ACCOUNT_CREATED` - Account registration
-- `USER_CREATED` - User added to account
-- `WATCHER_CREATED` - Watcher creation with ingest token
-- `WATCHER_ACTIVATED` - Monitoring started
-- `WATCHER_PAUSED` - Monitoring suspended
-- `WATCHER_RESUMED` - Monitoring resumed
-- `POLICY_UPDATED` - Policy configuration changed
+**Active Event Categories:**
 
-**Message Ingress Events:**
-- `MESSAGE_RECEIVED` - Baseline observation (always emitted first)
+| Module | Events | Purpose |
+|--------|--------|---------|
+| `silence-events.ts` | `ACTION_REQUEST_OBSERVED`, `CLOSURE_SIGNAL_OBSERVED`, `SILENCE_THRESHOLD_EXCEEDED` | Commercial model |
+| `thread-events.ts` | `THREAD_OPENED`, `THREAD_EMAIL_ADDED`, `THREAD_CLOSED`, `THREAD_REOPENED` | Thread lifecycle |
+| `alert-events.ts` | `ALERT_QUEUED`, `ALERT_SENT`, `ALERT_FAILED` | Alert delivery |
+| `scheduler-events.ts` | `TIME_TICK`, `REPORT_GENERATED` | Scheduler |
+| `control-plane-events.ts` | `ACCOUNT_CREATED`, `USER_CREATED`, `WATCHER_CREATED`, etc. | Control plane |
+| `ingestion-events.ts` | `EMAIL_RECEIVED`, `EMAIL_REJECTED` | Email ingestion |
 
-**LLM Extraction Events (Three-Tier Model):**
-- `MESSAGE_ROUTED` - Thread routing decision
-- `HARD_DEADLINE_OBSERVED` - Tier 1: Explicit deadline extracted (binding)
-- `SOFT_DEADLINE_SIGNAL_OBSERVED` - Tier 2: Fuzzy temporal language (advisory)
-- `URGENCY_SIGNAL_OBSERVED` - Tier 3: Priority indicators (no deadline)
-- `CLOSURE_SIGNAL_OBSERVED` - Resolution language detected
+**Deprecated Event Categories (Backward Compatible):**
 
-**Thread Lifecycle Events:**
-- `THREAD_OPENED` - New thread created
-- `THREAD_UPDATED` - Thread state changed
-- `THREAD_ACTIVITY_OBSERVED` - Activity timestamp for silence tracking
-- `THREAD_CLOSED` - Thread closed (terminal state)
+| Module | Events | Status |
+|--------|--------|--------|
+| `extraction-events.ts` | `HARD_DEADLINE_EXTRACTED`, `SOFT_DEADLINE_EXTRACTED`, `URGENCY_SIGNAL_EXTRACTED`, `CLOSURE_SIGNAL_EXTRACTED` | Deprecated |
+| `reminder-events.ts` | `REMINDER_CREATED`, `REMINDER_DISMISSED`, `REMINDER_EDITED`, etc. | Deprecated |
 
-**Time & Reminder Events:**
-- `TIME_TICK` - Periodic urgency re-evaluation trigger
-- `REMINDER_EVALUATED` - Urgency computation result
-- `REMINDER_GENERATED` - Derived artifact with causal traceability (FR-19)
-
-**Notification Events:**
-- `ALERT_QUEUED` - Alert ready for delivery
-- `ALERT_SENT` - Successful notification delivery
-- `ALERT_FAILED` - Delivery failure
-
-**Reporting Events:**
-- `REPORT_GENERATED` - Summary report created
-- `REPORT_SENT` - Report delivered to recipient
+**Event Module Structure:**
+```
+src/events/
+├── index.ts              # Main entry point, VigilEvent union, type guards
+├── types.ts              # Re-export for backward compatibility
+├── base-types.ts         # BaseEvent, PIIType, UrgencyLevel
+├── silence-events.ts     # Commercial model (ACTIVE)
+├── thread-events.ts      # Thread lifecycle
+├── alert-events.ts       # Alert delivery
+├── scheduler-events.ts   # TIME_TICK, reports
+├── control-plane-events.ts # Account/Watcher management
+├── ingestion-events.ts   # Email ingestion
+├── policy-types.ts       # WatcherPolicy, NotificationChannel
+├── extraction-events.ts  # Legacy extraction (DEPRECATED)
+├── reminder-events.ts    # Reminder events (DEPRECATED)
+├── attribution-events.ts # Signal attribution
+└── deprecation.ts        # Deprecated event handling
+```
 
 ### Testing Patterns
 
 ```typescript
-// Unit test pattern for runtime features
+// Unit test pattern for silence tracking
 import { describe, test, expect } from "bun:test";
-import { replayEvents, evaluateThreadUrgency } from "../src/watcher/runtime";
+import { SilenceTracker } from "../src/watcher/silence-tracker";
 
-describe("FR-10: Urgency Evaluation", () => {
-  test("thread with deadline in past has urgency=overdue", () => {
-    const events = [
-      createWatcherCreatedEvent(),
-      createWatcherActivatedEvent(),
-      createMessageReceivedEvent(),
-      createHardDeadlineObservedEvent({ deadline_utc: Date.now() - 3600000 }),
-      createThreadOpenedEvent(),
-    ];
+describe("Silence Tracking", () => {
+  test("emits SILENCE_THRESHOLD_EXCEEDED on first crossing", () => {
+    const tracker = new SilenceTracker();
+    const thread = {
+      thread_id: "thr_1",
+      last_activity_at: Date.now() - (73 * 60 * 60 * 1000), // 73 hours ago
+      status: "open"
+    };
+    const policy = { silence_threshold_hours: 72 };
     
-    const state = replayEvents(events);
-    const urgency = evaluateThreadUrgency(state.threads[0], Date.now(), defaultPolicy);
+    const event = tracker.evaluate(thread, policy, Date.now());
     
-    expect(urgency).toBe("overdue");
+    expect(event?.type).toBe("SILENCE_THRESHOLD_EXCEEDED");
+    expect(event?.hours_silent).toBeGreaterThan(72);
+  });
+  
+  test("does NOT emit again until activity resets silence", () => {
+    const tracker = new SilenceTracker();
+    // After threshold exceeded, no new event until thread has new activity
+    // and crosses threshold again
   });
 });
 ```
@@ -606,59 +648,61 @@ The backend is the **only component** that:
 - Creates and validates events
 - Persists events to immutable event store
 - Invokes watcher runtime for state reconstruction
-- Orchestrates LLM service for fact extraction
+- Orchestrates bounded LLM extraction (action requests only)
+- Tracks silence duration on open threads
 - Dispatches notifications via worker
 
 **Core Principle:** Events are the sole source of truth. All state is derived by replaying events.
 
 ## Key Design Constraints
 
-**Thread-Deadline Separation:** Threads do NOT own deadlines. Deadlines belong to Reminders, which are derived artifacts. Threads track conversations and silence/inactivity.
+**Bounded LLM Extraction:** LLM answers ONE question only: "Does this contain an actionable request?" No deadline inference, no urgency levels, no complex extraction.
 
-**Router LLM Thread Creation:** The router LLM runs on every email. Thread creation is driven by extraction events (hard deadlines, soft signals, urgency signals), not by explicit user intent.
+**Silence Tracking, Not Deadline Management:** Threads track `last_activity_at` and emit `SILENCE_THRESHOLD_EXCEEDED` when policy threshold crossed. No owned deadlines.
 
-**Extraction Event Audit Trail:** Extraction events are ALWAYS emitted for audit purposes, even when a thread already exists for a message.
+**Threshold-Crossing Alerts:** Alerts emit ONCE on state transition. No continuous alerting. Thread must have new activity before alerting again.
+
+**Deprecated Event Handling:** Historical events (reminders, deadlines) preserved for audit replay but no longer trigger new behavior.
 
 **Message Non-Persistence:** The system does NOT store full email body content. Only metadata is retained; bodies are discarded after LLM extraction.
 
 **Idempotence per Watcher:** Replay idempotence is enforced at watcher scope. Same events always produce same state.
 
-**Component Health Centralization:** All component health signals centralize to backend via `/internal/health/report`. Backend exposes unified `GET /api/system/health`.
+**Component Health Centralization:** All component health signals centralize to backend via `/internal/health/report`. Backend exposes `GET /api/system/health`.
 
 ## Implementation Status
 
-**Overall:** 402/413 tests passing (97.3%). Core pipeline implemented and functional.
+**Overall:** 1672+ tests passing. Core silence tracking pipeline implemented and functional.
 
 ### Fully Implemented 
 
 #### Event Types & Storage
-- **Event types** (`src/events/types.ts`) - 24 event types with type guards
+- **Event types** (`src/events/`) - Modular event definitions across 12 files
+- **Commercial events** (`src/events/silence-events.ts`) - ACTION_REQUEST_OBSERVED, CLOSURE_SIGNAL_OBSERVED, SILENCE_THRESHOLD_EXCEEDED
 - **Event store** (`src/events/event-store.ts`) - PostgreSQL append-only storage with deduplication
 - **Thread detection** (`src/watcher/thread-detection.ts`) - Message-ID chaining, Conversation-Index, subject+participants matching
 - **Traceability** (`src/events/traceability.ts`) - Audit trail and causal chain tracking
+- **Deprecation handling** (`src/events/deprecation.ts`) - Backward compatible replay of legacy events
+
+#### Silence Tracking (Commercial Model)
+- **Silence tracker** (`src/watcher/silence-tracker.ts`) - Silence duration computation, threshold crossing detection
+- **Thread model** (`src/watcher/thread-model.ts`) - Simplified commercial thread state (no deadlines)
+- **Action request extractor** (`src/llm/action-request-extractor.ts`) - Bounded LLM extraction (one question only)
 
 #### Watcher Runtime & Core Logic
-- **Event replay** (`src/watcher/runtime.ts`) - State reconstruction from events (MR-WatcherRuntime-1 through MR-WatcherRuntime-5)
-- **Urgency evaluation** (`src/watcher/urgency.ts`) - Time-relative urgency with deadline and silence thresholds
-- **Alert queuing** (`src/watcher/alert-queue.ts`) - State transition detection and reminder generation
-- **Scheduler** (`src/scheduler/scheduler.ts`) - TIME_TICK generation, report scheduling (daily/weekly/monthly)
+- **Event replay** (`src/watcher/runtime.ts`) - State reconstruction from events
+- **Alert queuing** (`src/watcher/alert-queue.ts`) - State transition detection
+- **Scheduler** (`src/scheduler/scheduler.ts`) - TIME_TICK generation, report scheduling
 
 #### Email Ingestion Pipeline
 - **Email parsing** (`src/ingestion/orchestrator.ts`) - RFC 5322 compliant with header extraction
 - **Sender validation** (`src/ingestion/validator.ts`) - Allowlist checking, subject normalization
 - **Message deduplication** - By Message-ID with duplicate tracking
-- **Orchestration** - Complete MR-BackendIngestion-1 through MR-BackendIngestion-4 pipeline
-
-#### LLM Extraction
-- **Deadline extraction** (`src/llm/extractor.ts`) - Hard deadline detection with date parsing
-- **Soft deadline signals** - Fuzzy temporal language detection
-- **Urgency signals** - Priority/obligation indicators
-- **Closure detection** - Resolution/completion language
 
 #### Notification & Delivery
 - **Alert formatting** (`src/worker/notification.ts`) - Email, webhook, SMS generation
 - **Delivery infrastructure** (`src/worker/notification-worker.ts`) - Retry logic with exponential backoff
-- **Channel routing** (`src/worker/worker.ts`) - Multi-channel delivery with urgency filtering
+- **Channel routing** (`src/worker/worker.ts`) - Multi-channel delivery
 
 #### Authentication & Accounts
 - **Password hashing** (`src/auth/password.ts`) - bcrypt cost factor 12
@@ -666,21 +710,11 @@ The backend is the **only component** that:
 - **User management** (`src/auth/users.ts`) - User CRUD operations
 - **Auth middleware** (`src/auth/middleware.ts`) - Protected endpoints
 
-### Partial / In Progress 
+### Deprecated (Backward Compatible)
 
-#### API & Integration (402/413 tests passing)
-- **Test failures:** 11 tests (2.7%):
-  - Subject normalization: 2 tests (unicode, tag prefixes)
-  - Extraction filtering: 1 test (allowed senders)
-  - Notification retry: 1 test (timeout logic)
-  - Audit trail validation: 7 tests (causal chains, cycle detection)
-
-### Not Yet Exposed
-
-#### API Route Handlers
-- Watcher CRUD endpoints (handlers exist, not in route table)
-- Thread operations (handlers exist, not in route table)
-- Background worker polling (code exists, not started automatically)
+- **Deadline extraction** - `HARD_DEADLINE_EXTRACTED`, `SOFT_DEADLINE_EXTRACTED` preserved for replay
+- **Urgency signals** - `URGENCY_SIGNAL_EXTRACTED` preserved for replay
+- **Reminder system** - All `REMINDER_*` events preserved for replay
 
 ## Structure
 
@@ -701,19 +735,34 @@ backend/
 │   │   ├── usage.ts        # Usage tracking per billing period
 │   │   ├── subscription.ts # Plan management, Stripe integration
 │   │   └── stripe.ts       # Stripe webhook handlers
-│   ├── events/             # Event types and persistence
-│   │   ├── types.ts        # 24 event type definitions
-│   │   ├── event-store.ts  # PostgreSQL event store
-│   │   └── traceability.ts # Audit trail validation
+│   ├── events/             # Event types and persistence (MODULAR)
+│   │   ├── index.ts        # Main entry point, VigilEvent union
+│   │   ├── types.ts        # Re-export for backward compatibility
+│   │   ├── base-types.ts   # BaseEvent, PIIType, UrgencyLevel
+│   │   ├── silence-events.ts  # Commercial model (ACTIVE)
+│   │   ├── thread-events.ts   # Thread lifecycle
+│   │   ├── alert-events.ts    # Alert delivery
+│   │   ├── scheduler-events.ts # TIME_TICK, reports
+│   │   ├── control-plane-events.ts # Account/Watcher management
+│   │   ├── ingestion-events.ts    # Email ingestion
+│   │   ├── policy-types.ts        # WatcherPolicy, NotificationChannel
+│   │   ├── extraction-events.ts   # Legacy extraction (DEPRECATED)
+│   │   ├── reminder-events.ts     # Reminder events (DEPRECATED)
+│   │   ├── attribution-events.ts  # Signal attribution
+│   │   ├── deprecation.ts         # Deprecated event handling
+│   │   ├── event-store.ts         # PostgreSQL event store
+│   │   └── traceability.ts        # Audit trail validation
 │   ├── ingestion/          # Email processing pipeline
-│   │   ├── orchestrator.ts # Complete ingestion flow (MR-BackendIngestion)
+│   │   ├── orchestrator.ts # Complete ingestion flow
 │   │   └── validator.ts    # Email validation and normalization
 │   ├── llm/                # LLM extraction service
-│   │   └── extractor.ts    # Deadline, urgency, closure detection
+│   │   ├── action-request-extractor.ts  # Bounded LLM (COMMERCIAL)
+│   │   └── extractor.ts    # Legacy extraction (DEPRECATED)
 │   ├── watcher/            # Watcher runtime and state
 │   │   ├── runtime.ts      # Event replay and state reconstruction
-│   │   ├── urgency.ts      # Urgency evaluation logic
-│   │   ├── alert-queue.ts  # Alert generation and queuing
+│   │   ├── silence-tracker.ts   # Silence tracking (COMMERCIAL)
+│   │   ├── thread-model.ts      # Simplified thread state (COMMERCIAL)
+│   │   ├── alert-queue.ts       # Alert generation and queuing
 │   │   └── thread-detection.ts  # Thread grouping algorithm
 │   ├── scheduler/          # Periodic task scheduling
 │   │   ├── scheduler.ts    # TIME_TICK and report scheduling
@@ -725,6 +774,9 @@ backend/
 │   └── db/                 # Database access
 │       └── client.ts       # PostgreSQL connection pool
 ├── test/                   # Centralized unit tests
+│   ├── events/             # Event system tests (84 migration tests)
+│   ├── watcher/            # Silence tracker, thread model tests
+│   ├── llm/                # Action request extractor tests
 │   └── billing/            # Billing module tests
 ├── scripts/
 │   └── release.ts          # Release automation
@@ -760,14 +812,8 @@ type WatcherPolicy = {
   // Sender Control
   allowed_senders: string[];              // Email allowlist (exact match, case-insensitive)
   
-  // Timing Thresholds
+  // Silence Threshold (Commercial Model)
   silence_threshold_hours: number;        // Default: 72 (range: 1-720)
-  deadline_warning_hours: number;         // Default: 24 (must be > critical)
-  deadline_critical_hours: number;        // Default: 2 (must be > 0)
-  
-  // Reminder Type Control
-  enable_soft_deadline_reminders: boolean;   // Whether soft signals create reminders (default: false)
-  enable_urgency_signal_reminders: boolean;  // Whether urgency signals create reminders (default: false)
   
   // Notification Configuration
   notification_channels: NotificationChannel[];
@@ -777,14 +823,20 @@ type WatcherPolicy = {
   reporting_recipients: string[];         // Email addresses for summary reports
   reporting_time?: string;                // ISO 8601 time (e.g., "09:00:00Z")
   reporting_day?: number;                 // 1-7 for weekly, 1-31 for monthly
+  
+  // DEPRECATED (preserved for backward compatibility)
+  deadline_warning_hours?: number;        // No longer used
+  deadline_critical_hours?: number;       // No longer used
+  enable_soft_deadline_reminders?: boolean;   // No longer used
+  enable_urgency_signal_reminders?: boolean;  // No longer used
 };
 ```
 
 **Key Policy Rules:**
 - `allowed_senders`: Exact email match, case-insensitive, no wildcards (empty = allow all)
-- `deadline_warning_hours` must be > `deadline_critical_hours`
+- `silence_threshold_hours`: Hours of thread inactivity before alert (default 72)
 - At least one enabled notification channel required for activation
-- Threads are always created for audit purposes; policy controls whether reminders are generated
+- Deprecated fields ignored during policy evaluation
 
 ### Lifecycle Events
 
@@ -806,12 +858,12 @@ type WatcherPolicy = {
 
 Each watcher has a unique ingestion address:
 ```
-<sanitized-name>-<ingest_token>@ingest.email.vigil.run
+<sanitized-name>-<ingest_token>@vigil.run
 ```
 
 Examples:
-- `personal-finance-a7f3k9@ingest.email.vigil.run`
-- `legal-matters-b2j8m1@ingest.email.vigil.run`
+- `personal-finance-a7f3k9@vigil.run`
+- `legal-matters-b2j8m1@vigil.run`
 
 Routing is **address-only** (content never examined).
 
@@ -914,7 +966,8 @@ The backend communicates with external services over HTTP:
 | Service | Purpose | Configuration |
 |---------|---------|---------------|
 | LLM Service | Fact extraction from emails | `LLM_SERVICE_URL` |
-| SMTP Adapter | Receives forwarded emails | Incoming HTTP POST |
+| Cloudflare Email | Inbound emails via webhook | `POST /api/ingestion/cloudflare-email` |
+| Resend API | Outbound email alerts | `RESEND_API_KEY` |
 | Frontend | API for web UI | `CORS_ORIGINS` |
 
 ## Configuration
@@ -952,6 +1005,38 @@ bun test                          # Run all tests
 bun test test/events/             # Run specific test directory
 bun test test/watcher/runtime     # Run specific test file
 ```
+
+### Testing Email Ingestion
+
+Use the **Email Ingestion Test Endpoint** to simulate Cloudflare webhook payloads during development:
+
+```bash
+# Send a test email via HTTP POST (simulating Cloudflare webhook)
+curl -X POST http://localhost:3001/api/ingestion/cloudflare-email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "sender@example.com",
+    "to": "finance-YOUR_TOKEN@vigil.run",
+    "subject": "Invoice Due Friday",
+    "text": "Please pay by Friday 5pm EST"
+  }'
+
+# Send a deadline email
+curl -X POST http://localhost:3001/api/ingestion/cloudflare-email \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "vendor@example.com",
+    "to": "finance-YOUR_TOKEN@vigil.run",
+    "subject": "Payment Required",
+    "text": "Your payment of $500 is due by December 31, 2025"
+  }'
+```
+
+**Test Scenarios:**
+- **Deadline email**: Include explicit date/time in body
+- **Urgency signal**: Include "urgent", "ASAP", "please respond"
+- **Closure signal**: Include "resolved", "completed", "no longer needed"
+- **Thread continuation**: Use same subject line with "Re:" prefix
 
 ## Code Quality
 

@@ -1,9 +1,47 @@
 /**
- * OAuth Configuration and Types
+ * OAuth Authentication
  *
- * Prepares the system for Google and GitHub OAuth integration.
- * Implements the foundation for OAuth 2.0 / OpenID Connect flows.
+ * Google and GitHub OAuth with PKCE support.
  */
+
+import { queryOne, query } from "../db/client";
+import { generateTokenPair, storeRefreshToken, type TokenPair } from "./jwt";
+import { logger } from "../logger";
+
+// ============================================================================
+// Configuration
+// ============================================================================
+
+interface OAuthConfig {
+    clientId: string;
+    clientSecret: string;
+    authUrl: string;
+    tokenUrl: string;
+    userInfoUrl: string;
+    scopes: string[];
+}
+
+function getGoogleConfig(): OAuthConfig {
+    return {
+        clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+        authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+        tokenUrl: "https://oauth2.googleapis.com/token",
+        userInfoUrl: "https://www.googleapis.com/oauth2/v2/userinfo",
+        scopes: ["openid", "email", "profile"],
+    };
+}
+
+function getGitHubConfig(): OAuthConfig {
+    return {
+        clientId: process.env.GITHUB_CLIENT_ID ?? "",
+        clientSecret: process.env.GITHUB_CLIENT_SECRET ?? "",
+        authUrl: "https://github.com/login/oauth/authorize",
+        tokenUrl: "https://github.com/login/oauth/access_token",
+        userInfoUrl: "https://api.github.com/user",
+        scopes: ["read:user", "user:email"],
+    };
+}
 
 // ============================================================================
 // Types
@@ -11,399 +49,245 @@
 
 export type OAuthProvider = "google" | "github";
 
-export interface OAuthConfig {
-    provider: OAuthProvider;
-    clientId: string;
-    clientSecret: string;
-    redirectUri: string;
-    scopes: string[];
-    authorizationUrl: string;
-    tokenUrl: string;
-    userInfoUrl: string;
-}
-
-export interface OAuthTokens {
-    access_token: string;
-    refresh_token?: string;
-    expires_in: number;
-    token_type: string;
-    scope?: string;
-    id_token?: string; // OpenID Connect
-}
-
-export interface OAuthUserInfo {
-    provider: OAuthProvider;
-    provider_user_id: string;
+interface OAuthUserInfo {
     email: string;
-    email_verified: boolean;
-    name?: string;
-    picture?: string;
-    raw: Record<string, unknown>;
-}
-
-export interface OAuthState {
-    state: string;
-    code_verifier?: string; // PKCE
-    redirect_after?: string;
-    created_at: number;
-}
-
-export interface OAuthAccountLink {
-    link_id: string;
-    user_id: string;
-    provider: OAuthProvider;
-    provider_user_id: string;
-    email: string;
-    access_token_encrypted?: string;
-    refresh_token_encrypted?: string;
-    token_expires_at?: number;
-    created_at: Date;
-    updated_at: Date;
+    name: string | null;
+    avatarUrl: string | null;
 }
 
 // ============================================================================
-// Provider Configurations
+// Authorization URL Generation
 // ============================================================================
 
-export const GOOGLE_OAUTH_CONFIG: Omit<
-    OAuthConfig,
-    "clientId" | "clientSecret" | "redirectUri"
-> = {
-    provider: "google",
-    scopes: ["openid", "email", "profile"],
-    authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth",
-    tokenUrl: "https://oauth2.googleapis.com/token",
-    userInfoUrl: "https://openidconnect.googleapis.com/v1/userinfo",
-};
-
-export const GITHUB_OAUTH_CONFIG: Omit<
-    OAuthConfig,
-    "clientId" | "clientSecret" | "redirectUri"
-> = {
-    provider: "github",
-    scopes: ["read:user", "user:email"],
-    authorizationUrl: "https://github.com/login/oauth/authorize",
-    tokenUrl: "https://github.com/login/oauth/access_token",
-    userInfoUrl: "https://api.github.com/user",
-};
-
-// ============================================================================
-// Configuration Loader
-// ============================================================================
-
-/**
- * Get OAuth configuration for a provider from environment variables.
- */
-export function getOAuthConfig(provider: OAuthProvider): OAuthConfig | null {
-    const baseUrl = process.env.APP_BASE_URL || "http://localhost:3000";
-
-    if (provider === "google") {
-        const clientId = process.env.GOOGLE_CLIENT_ID;
-        const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-
-        if (!clientId || !clientSecret) {
-            return null;
-        }
-
-        return {
-            ...GOOGLE_OAUTH_CONFIG,
-            clientId,
-            clientSecret,
-            redirectUri: `${baseUrl}/api/auth/callback/google`,
-        };
-    }
-
-    if (provider === "github") {
-        const clientId = process.env.GITHUB_CLIENT_ID;
-        const clientSecret = process.env.GITHUB_CLIENT_SECRET;
-
-        if (!clientId || !clientSecret) {
-            return null;
-        }
-
-        return {
-            ...GITHUB_OAUTH_CONFIG,
-            clientId,
-            clientSecret,
-            redirectUri: `${baseUrl}/api/auth/callback/github`,
-        };
-    }
-
-    return null;
-}
-
-/**
- * Check which OAuth providers are configured.
- */
-export function getEnabledProviders(): OAuthProvider[] {
-    const enabled: OAuthProvider[] = [];
-
-    if (getOAuthConfig("google")) {
-        enabled.push("google");
-    }
-
-    if (getOAuthConfig("github")) {
-        enabled.push("github");
-    }
-
-    return enabled;
-}
-
-/**
- * Check if a specific provider is enabled.
- */
-export function isProviderEnabled(provider: OAuthProvider): boolean {
-    return getOAuthConfig(provider) !== null;
-}
-
-// ============================================================================
-// URL Builders
-// ============================================================================
-
-/**
- * Build the OAuth authorization URL.
- */
-export function buildAuthorizationUrl(
-    config: OAuthConfig,
+export function generateAuthUrl(
+    provider: OAuthProvider,
+    redirectUri: string,
     state: string,
     codeChallenge?: string
 ): string {
+    const config =
+        provider === "google" ? getGoogleConfig() : getGitHubConfig();
+
     const params = new URLSearchParams({
         client_id: config.clientId,
-        redirect_uri: config.redirectUri,
+        redirect_uri: redirectUri,
         response_type: "code",
         scope: config.scopes.join(" "),
         state,
     });
 
-    // PKCE support (recommended for public clients)
-    if (codeChallenge) {
+    // PKCE for Google
+    if (provider === "google" && codeChallenge) {
         params.set("code_challenge", codeChallenge);
         params.set("code_challenge_method", "S256");
     }
 
-    // Google-specific: prompt for consent
-    if (config.provider === "google") {
-        params.set("access_type", "offline");
-        params.set("prompt", "consent");
-    }
-
-    return `${config.authorizationUrl}?${params.toString()}`;
+    return `${config.authUrl}?${params.toString()}`;
 }
 
 // ============================================================================
-// PKCE Helpers
+// Token Exchange
 // ============================================================================
 
-import { randomBytes, createHash } from "crypto";
-
-/**
- * Generate a PKCE code verifier.
- */
-export function generateCodeVerifier(): string {
-    return randomBytes(32).toString("base64url");
-}
-
-/**
- * Generate a PKCE code challenge from a verifier.
- */
-export function generateCodeChallenge(verifier: string): string {
-    return createHash("sha256").update(verifier).digest("base64url");
-}
-
-/**
- * Generate a random state parameter.
- */
-export function generateState(): string {
-    return randomBytes(16).toString("hex");
-}
-
-// ============================================================================
-// State Management (In-Memory - resets on server restart for security)
-// ============================================================================
-
-const oauthStates = new Map<string, OAuthState>();
-
-// Log that OAuth states are cleared on startup
-console.log(`[OAuth] State storage initialized (in-memory, clears on restart)`);
-
-// Log state storage for debugging
-const logStateOp = (op: string, state: string, count: number) => {
-    console.log(
-        `[OAuth State] ${op}: ${state.substring(0, 8)}... (total: ${count})`
-    );
-};
-
-/**
- * Store OAuth state for verification.
- */
-export function storeOAuthState(
-    state: string,
-    codeVerifier?: string,
-    redirectAfter?: string
-): void {
-    oauthStates.set(state, {
-        state,
-        code_verifier: codeVerifier,
-        redirect_after: redirectAfter,
-        created_at: Date.now(),
-    });
-    logStateOp("STORE", state, oauthStates.size);
-
-    // Cleanup old states (older than 10 minutes)
-    const cutoff = Date.now() - 10 * 60 * 1000;
-    for (const [key, value] of oauthStates) {
-        if (value.created_at < cutoff) {
-            oauthStates.delete(key);
-            logStateOp("EXPIRED", key, oauthStates.size);
-        }
-    }
-}
-
-/**
- * Retrieve and consume OAuth state.
- */
-export function consumeOAuthState(state: string): OAuthState | null {
-    const stored = oauthStates.get(state);
-    if (!stored) {
-        logStateOp("NOT_FOUND", state, oauthStates.size);
-        return null;
-    }
-
-    oauthStates.delete(state);
-    logStateOp("CONSUMED", state, oauthStates.size);
-
-    // Verify not expired (10 minute window)
-    if (Date.now() - stored.created_at > 10 * 60 * 1000) {
-        logStateOp("EXPIRED_ON_CONSUME", state, oauthStates.size);
-        return null;
-    }
-
-    return stored;
-}
-
-// ============================================================================
-// Token Exchange Helpers
-// ============================================================================
-
-/**
- * Exchange authorization code for tokens.
- */
 export async function exchangeCodeForTokens(
-    config: OAuthConfig,
+    provider: OAuthProvider,
     code: string,
+    redirectUri: string,
     codeVerifier?: string
-): Promise<OAuthTokens> {
-    const params = new URLSearchParams({
+): Promise<TokenPair | null> {
+    const config =
+        provider === "google" ? getGoogleConfig() : getGitHubConfig();
+
+    // Exchange code for OAuth tokens
+    const tokenParams: Record<string, string> = {
         client_id: config.clientId,
         client_secret: config.clientSecret,
         code,
+        redirect_uri: redirectUri,
         grant_type: "authorization_code",
-        redirect_uri: config.redirectUri,
-    });
+    };
 
-    if (codeVerifier) {
-        params.set("code_verifier", codeVerifier);
+    if (provider === "google" && codeVerifier) {
+        tokenParams.code_verifier = codeVerifier;
     }
 
-    const response = await fetch(config.tokenUrl, {
+    const tokenResponse = await fetch(config.tokenUrl, {
         method: "POST",
         headers: {
             "Content-Type": "application/x-www-form-urlencoded",
             Accept: "application/json",
         },
-        body: params.toString(),
+        body: new URLSearchParams(tokenParams).toString(),
+    });
+
+    if (!tokenResponse.ok) {
+        logger.error("OAuth token exchange failed", {
+            provider,
+            status: tokenResponse.status,
+        });
+        return null;
+    }
+
+    const tokenData = (await tokenResponse.json()) as { access_token?: string };
+    const accessToken = tokenData.access_token;
+
+    if (!accessToken) {
+        logger.error("No access token in OAuth response", { provider });
+        return null;
+    }
+
+    // Get user info
+    const userInfo = await fetchUserInfo(provider, accessToken, config);
+    if (!userInfo) {
+        return null;
+    }
+
+    // Find or create user
+    const user = await findOrCreateUser(userInfo.email, provider);
+    if (!user) {
+        return null;
+    }
+
+    // Generate Vigil tokens
+    const tokens = generateTokenPair({
+        user_id: user.user_id,
+        account_id: user.account_id,
+        email: user.email,
+        role: user.role,
+    });
+
+    await storeRefreshToken(user.user_id, tokens.refreshToken);
+
+    return tokens;
+}
+
+// ============================================================================
+// User Info Fetching
+// ============================================================================
+
+async function fetchUserInfo(
+    provider: OAuthProvider,
+    accessToken: string,
+    config: OAuthConfig
+): Promise<OAuthUserInfo | null> {
+    const response = await fetch(config.userInfoUrl, {
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: "application/json",
+        },
     });
 
     if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Token exchange failed: ${error}`);
+        logger.error("Failed to fetch OAuth user info", {
+            provider,
+            status: response.status,
+        });
+        return null;
     }
 
-    return response.json() as Promise<OAuthTokens>;
-}
-
-/**
- * Fetch user info from the provider.
- */
-export async function fetchUserInfo(
-    config: OAuthConfig,
-    accessToken: string
-): Promise<OAuthUserInfo> {
-    const headers: Record<string, string> = {
-        Authorization: `Bearer ${accessToken}`,
-        Accept: "application/json",
+    const data = (await response.json()) as {
+        email?: string;
+        name?: string;
+        picture?: string;
+        login?: string;
+        avatar_url?: string;
     };
 
-    // GitHub requires User-Agent
-    if (config.provider === "github") {
-        headers["User-Agent"] = "Vigil-App";
+    if (provider === "google") {
+        return {
+            email: data.email ?? "",
+            name: data.name ?? null,
+            avatarUrl: data.picture ?? null,
+        };
     }
 
-    const response = await fetch(config.userInfoUrl, { headers });
+    // GitHub - may need separate email request
+    let email: string | null = data.email ?? null;
+    if (!email) {
+        email = await fetchGitHubEmail(accessToken);
+    }
+
+    if (!email) {
+        logger.error("No email from GitHub OAuth");
+        return null;
+    }
+
+    return {
+        email: email ?? "",
+        name: data.name ?? data.login ?? null,
+        avatarUrl: data.avatar_url ?? null,
+    };
+}
+
+async function fetchGitHubEmail(accessToken: string): Promise<string | null> {
+    const response = await fetch("https://api.github.com/user/emails", {
+        headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: "application/json",
+        },
+    });
 
     if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Failed to fetch user info: ${error}`);
+        return null;
     }
 
-    const data = (await response.json()) as Record<string, unknown>;
+    const emails = (await response.json()) as Array<{
+        email: string;
+        primary: boolean;
+        verified: boolean;
+    }>;
+    const primary = emails.find((e) => e.primary && e.verified);
 
-    // Normalize user info based on provider
-    if (config.provider === "google") {
-        return {
-            provider: "google",
-            provider_user_id: String(data.sub),
-            email: String(data.email || ""),
-            email_verified: Boolean(data.email_verified ?? false),
-            name: data.name ? String(data.name) : undefined,
-            picture: data.picture ? String(data.picture) : undefined,
-            raw: data,
-        };
+    return primary?.email ?? null;
+}
+
+// ============================================================================
+// User Management
+// ============================================================================
+
+interface UserRecord {
+    user_id: string;
+    account_id: string;
+    email: string;
+    role: "owner" | "member";
+}
+
+async function findOrCreateUser(
+    email: string,
+    _provider: OAuthProvider
+): Promise<UserRecord | null> {
+    // Try to find existing user
+    const existing = await queryOne<UserRecord>(
+        `SELECT u.user_id, u.account_id, u.email, u.role
+         FROM users u
+         WHERE u.email = $1`,
+        [email]
+    );
+
+    if (existing) {
+        return existing;
     }
 
-    if (config.provider === "github") {
-        // GitHub may require separate call for email
-        let email = data.email ? String(data.email) : "";
-        let emailVerified = false;
+    // Create new account and user
+    const accountId = crypto.randomUUID();
+    const userId = crypto.randomUUID();
 
-        if (!email) {
-            // Fetch emails from GitHub
-            const emailsResponse = await fetch(
-                "https://api.github.com/user/emails",
-                {
-                    headers,
-                }
-            );
+    await query(
+        `INSERT INTO accounts (account_id, owner_email, plan)
+         VALUES ($1, $2, 'free')`,
+        [accountId, email]
+    );
 
-            if (emailsResponse.ok) {
-                const emails = (await emailsResponse.json()) as Array<{
-                    email: string;
-                    primary: boolean;
-                    verified: boolean;
-                }>;
-                const primary = emails.find((e) => e.primary && e.verified);
-                if (primary) {
-                    email = primary.email;
-                    emailVerified = primary.verified;
-                }
-            }
-        }
+    await query(
+        `INSERT INTO users (user_id, account_id, email, password_hash, role)
+         VALUES ($1, $2, $3, '', 'owner')`,
+        [userId, accountId, email]
+    );
 
-        return {
-            provider: "github",
-            provider_user_id: String(data.id),
-            email: email,
-            email_verified: emailVerified,
-            name: data.name
-                ? String(data.name)
-                : data.login
-                  ? String(data.login)
-                  : undefined,
-            picture: data.avatar_url ? String(data.avatar_url) : undefined,
-            raw: data,
-        };
-    }
-
-    throw new Error(`Unknown provider: ${config.provider}`);
+    return {
+        user_id: userId,
+        account_id: accountId,
+        email,
+        role: "owner",
+    };
 }

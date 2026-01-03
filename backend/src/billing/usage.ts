@@ -1,309 +1,133 @@
 /**
- * Usage Tracking Service
+ * Usage Tracking
  *
- * Tracks email usage per account for billing period enforcement.
- * Implements weekly limits based on subscription tier.
+ * Weekly billing periods for email ingestion limits.
  */
 
-import { query, queryOne } from "@/db/client";
-import {
-    type SubscriptionPlan,
-    type AccountUsage,
-    type UsageCheckResult,
-    getCurrentUsagePeriod,
-    getPlanLimits,
-    hasUnlimitedEmails,
-} from "./types";
+import { queryOne, query } from "../db/client";
+import { PLAN_LIMITS, type PlanTier, type AccountUsage } from "./types";
 
 // ============================================================================
-// Usage Queries
+// Billing Period
 // ============================================================================
 
 /**
- * Get or create usage record for current period.
+ * Get the start of the current weekly billing period (Monday 00:00 UTC).
  */
+export function getCurrentPeriodStart(): number {
+    const now = new Date();
+    const day = now.getUTCDay();
+    const diff = day === 0 ? 6 : day - 1; // Days since Monday
+    const monday = new Date(now);
+    monday.setUTCDate(now.getUTCDate() - diff);
+    monday.setUTCHours(0, 0, 0, 0);
+    return monday.getTime();
+}
+
+/**
+ * Get the end of the current weekly billing period.
+ */
+export function getCurrentPeriodEnd(): number {
+    const start = getCurrentPeriodStart();
+    return start + 7 * 24 * 60 * 60 * 1000; // + 7 days
+}
+
+// ============================================================================
+// Usage Management
+// ============================================================================
+
 export async function getOrCreateUsage(
     accountId: string,
-    plan: SubscriptionPlan
+    plan: PlanTier
 ): Promise<AccountUsage> {
-    const period = getCurrentUsagePeriod();
-    const limits = getPlanLimits(plan);
+    const periodStart = getCurrentPeriodStart();
+    const periodEnd = getCurrentPeriodEnd();
+    const limits = PLAN_LIMITS[plan];
 
-    // Try to get existing record
-    const existing = await queryOne<{
-        account_id: string;
-        period_start: string;
-        period_end: string;
-        emails_processed: number;
-        emails_limit: number;
-        watchers_count: number;
-        watchers_limit: number;
-        created_at: Date;
-        updated_at: Date;
-    }>(
-        `SELECT * FROM account_usage 
-         WHERE account_id = $1 
-         AND period_start = $2`,
-        [accountId, period.period_start]
+    // Try to get existing usage record
+    const existing = await queryOne<AccountUsage>(
+        `SELECT * FROM account_usage
+         WHERE account_id = $1 AND period_start = $2`,
+        [accountId, periodStart]
     );
 
     if (existing) {
-        return {
-            account_id: existing.account_id,
-            period_start: parseInt(existing.period_start),
-            period_end: parseInt(existing.period_end),
-            emails_processed: existing.emails_processed,
-            emails_limit: existing.emails_limit,
-            watchers_count: existing.watchers_count,
-            watchers_limit: existing.watchers_limit,
-            created_at: existing.created_at.getTime(),
-            updated_at: existing.updated_at.getTime(),
-        };
+        return existing;
     }
 
-    // Create new record for this period
-    const now = Date.now();
+    // Create new usage record
     await query(
-        `INSERT INTO account_usage (
-            account_id, period_start, period_end, 
-            emails_processed, emails_limit,
-            watchers_count, watchers_limit,
-            created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-        ON CONFLICT (account_id, period_start) DO NOTHING`,
+        `INSERT INTO account_usage 
+         (account_id, period_start, period_end, emails_processed, emails_limit, watchers_count, watchers_limit)
+         VALUES ($1, $2, $3, 0, $4, 0, $5)`,
         [
             accountId,
-            period.period_start,
-            period.period_end,
-            0,
+            periodStart,
+            periodEnd,
             limits.emails_per_week,
-            0,
             limits.max_watchers,
         ]
     );
 
     return {
         account_id: accountId,
-        period_start: period.period_start,
-        period_end: period.period_end,
+        period_start: periodStart,
+        period_end: periodEnd,
         emails_processed: 0,
         emails_limit: limits.emails_per_week,
         watchers_count: 0,
         watchers_limit: limits.max_watchers,
-        created_at: now,
-        updated_at: now,
     };
 }
 
-/**
- * Check if an email can be processed based on usage limits.
- */
-export async function checkEmailUsage(
-    accountId: string,
-    plan: SubscriptionPlan
-): Promise<UsageCheckResult> {
-    // Enterprise has unlimited
-    if (hasUnlimitedEmails(plan)) {
-        const period = getCurrentUsagePeriod();
-        return {
-            allowed: true,
-            current_usage: 0,
-            limit: -1,
-            remaining: -1,
-            period_ends_at: period.period_end,
-        };
-    }
+export async function incrementEmailCount(accountId: string): Promise<boolean> {
+    const periodStart = getCurrentPeriodStart();
 
+    const result = await query(
+        `UPDATE account_usage
+         SET emails_processed = emails_processed + 1
+         WHERE account_id = $1 AND period_start = $2
+         AND (emails_limit = -1 OR emails_processed < emails_limit)
+         RETURNING emails_processed`,
+        [accountId, periodStart]
+    );
+
+    return result.rowCount !== null && result.rowCount > 0;
+}
+
+export async function canProcessEmail(
+    accountId: string,
+    plan: PlanTier
+): Promise<boolean> {
     const usage = await getOrCreateUsage(accountId, plan);
-    const remaining = usage.emails_limit - usage.emails_processed;
-    const allowed = remaining > 0;
 
-    return {
-        allowed,
-        current_usage: usage.emails_processed,
-        limit: usage.emails_limit,
-        remaining: Math.max(0, remaining),
-        period_ends_at: usage.period_end,
-        denial_reason: allowed ? undefined : "LIMIT_EXCEEDED",
-    };
-}
-
-/**
- * Increment email usage count for an account.
- * Call this after successfully processing an email.
- */
-export async function incrementEmailUsage(
-    accountId: string,
-    plan: SubscriptionPlan,
-    count: number = 1
-): Promise<AccountUsage> {
-    const period = getCurrentUsagePeriod();
-    const limits = getPlanLimits(plan);
-
-    // Upsert and increment
-    const result = await queryOne<{
-        account_id: string;
-        period_start: string;
-        period_end: string;
-        emails_processed: number;
-        emails_limit: number;
-        watchers_count: number;
-        watchers_limit: number;
-        created_at: Date;
-        updated_at: Date;
-    }>(
-        `INSERT INTO account_usage (
-            account_id, period_start, period_end, 
-            emails_processed, emails_limit,
-            watchers_count, watchers_limit,
-            created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-        ON CONFLICT (account_id, period_start) 
-        DO UPDATE SET 
-            emails_processed = account_usage.emails_processed + $4,
-            updated_at = NOW()
-        RETURNING *`,
-        [
-            accountId,
-            period.period_start,
-            period.period_end,
-            count,
-            limits.emails_per_week,
-            0,
-            limits.max_watchers,
-        ]
-    );
-
-    if (!result) {
-        throw new Error(`Failed to update usage for account ${accountId}`);
+    if (usage.emails_limit === -1) {
+        return true; // Unlimited
     }
 
-    return {
-        account_id: result.account_id,
-        period_start: parseInt(result.period_start),
-        period_end: parseInt(result.period_end),
-        emails_processed: result.emails_processed,
-        emails_limit: result.emails_limit,
-        watchers_count: result.watchers_count,
-        watchers_limit: result.watchers_limit,
-        created_at: result.created_at.getTime(),
-        updated_at: result.updated_at.getTime(),
-    };
+    return usage.emails_processed < usage.emails_limit;
 }
 
-/**
- * Get usage history for an account.
- */
-export async function getUsageHistory(
+export async function canCreateWatcher(
     accountId: string,
-    periodCount: number = 12
-): Promise<AccountUsage[]> {
-    const results = await query<{
-        account_id: string;
-        period_start: string;
-        period_end: string;
-        emails_processed: number;
-        emails_limit: number;
-        watchers_count: number;
-        watchers_limit: number;
-        created_at: Date;
-        updated_at: Date;
-    }>(
-        `SELECT * FROM account_usage 
-         WHERE account_id = $1 
-         ORDER BY period_start DESC 
-         LIMIT $2`,
-        [accountId, periodCount]
-    );
+    plan: PlanTier
+): Promise<boolean> {
+    const usage = await getOrCreateUsage(accountId, plan);
 
-    return results.rows.map((row) => ({
-        account_id: row.account_id,
-        period_start: parseInt(row.period_start),
-        period_end: parseInt(row.period_end),
-        emails_processed: row.emails_processed,
-        emails_limit: row.emails_limit,
-        watchers_count: row.watchers_count,
-        watchers_limit: row.watchers_limit,
-        created_at: row.created_at.getTime(),
-        updated_at: row.updated_at.getTime(),
-    }));
-}
-
-/**
- * Check if account can create a new watcher.
- */
-export async function checkWatcherLimit(
-    _accountId: string,
-    plan: SubscriptionPlan,
-    currentWatcherCount: number
-): Promise<UsageCheckResult> {
-    const limits = getPlanLimits(plan);
-    const period = getCurrentUsagePeriod();
-
-    // Unlimited watchers
-    if (limits.max_watchers === -1) {
-        return {
-            allowed: true,
-            current_usage: currentWatcherCount,
-            limit: -1,
-            remaining: -1,
-            period_ends_at: period.period_end,
-        };
+    if (usage.watchers_limit === -1) {
+        return true; // Unlimited
     }
 
-    const remaining = limits.max_watchers - currentWatcherCount;
-    const allowed = remaining > 0;
-
-    return {
-        allowed,
-        current_usage: currentWatcherCount,
-        limit: limits.max_watchers,
-        remaining: Math.max(0, remaining),
-        period_ends_at: period.period_end,
-        denial_reason: allowed ? undefined : "LIMIT_EXCEEDED",
-    };
+    return usage.watchers_count < usage.watchers_limit;
 }
 
-/**
- * Update watcher count in usage record.
- */
-export async function updateWatcherCount(
-    accountId: string,
-    plan: SubscriptionPlan,
-    watcherCount: number
-): Promise<void> {
-    const period = getCurrentUsagePeriod();
-    const limits = getPlanLimits(plan);
+export async function incrementWatcherCount(accountId: string): Promise<void> {
+    const periodStart = getCurrentPeriodStart();
 
     await query(
-        `INSERT INTO account_usage (
-            account_id, period_start, period_end, 
-            emails_processed, emails_limit,
-            watchers_count, watchers_limit,
-            created_at, updated_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-        ON CONFLICT (account_id, period_start) 
-        DO UPDATE SET 
-            watchers_count = $6,
-            updated_at = NOW()`,
-        [
-            accountId,
-            period.period_start,
-            period.period_end,
-            0,
-            limits.emails_per_week,
-            watcherCount,
-            limits.max_watchers,
-        ]
+        `UPDATE account_usage
+         SET watchers_count = watchers_count + 1
+         WHERE account_id = $1 AND period_start = $2`,
+        [accountId, periodStart]
     );
-}
-
-/**
- * Reset usage for testing purposes.
- * DO NOT use in production.
- */
-export async function resetUsage(accountIdToReset: string): Promise<void> {
-    await query(`DELETE FROM account_usage WHERE account_id = $1`, [
-        accountIdToReset,
-    ]);
 }

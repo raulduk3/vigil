@@ -39,10 +39,11 @@ export interface AuthResponse {
 
 export interface Watcher {
   watcher_id: string;
-  account_id: string;
+  account_id?: string;
   name: string;
   status: 'created' | 'active' | 'paused' | 'deleted';
-  ingest_email: string;
+  ingest_token: string;
+  ingestion_address: string;
   policy: WatcherPolicy;
   created_at: number;
 }
@@ -51,14 +52,8 @@ export interface WatcherPolicy {
   // Sender Control
   allowed_senders: string[];
 
-  // Timing Thresholds
+  // Timing Thresholds (Commercial Model: silence tracking only)
   silence_threshold_hours: number;
-  deadline_warning_hours?: number;
-  deadline_critical_hours?: number;
-
-  // Reminder Type Control
-  enable_soft_deadline_reminders?: boolean;
-  enable_urgency_signal_reminders?: boolean;
 
   // Notification Configuration
   notification_channels: NotificationChannel[];
@@ -68,6 +63,9 @@ export interface WatcherPolicy {
   reporting_recipients?: string[];
   reporting_time?: string;
   reporting_day?: string | number; // Day name for weekly, or day number (1-31) for monthly
+
+  // Timezone for report scheduling
+  timezone?: string; // IANA timezone (e.g., "America/New_York")
 }
 
 export interface NotificationChannel {
@@ -80,13 +78,36 @@ export interface NotificationChannel {
 export interface Thread {
   thread_id: string;
   watcher_id: string;
-  subject: string;
   status: 'open' | 'closed';
-  urgency: 'ok' | 'warning' | 'critical' | 'overdue';
-  first_message_at: number;
+  opened_at: number;
+  closed_at: number | null;
   last_activity_at: number;
-  deadline?: number;
+  normalized_subject: string;
+  original_sender: string;
   message_count: number;
+  silence_alerted: boolean;
+  // Alias for backwards compatibility with UI components
+  subject: string;
+}
+
+export interface Reminder {
+  reminder_id: string;
+  thread_id: string;
+  reminder_type: 'hard_deadline' | 'soft_deadline' | 'urgency_signal' | 'manual';
+  deadline_utc: number | null;
+  source_span: string | null;
+  description: string | null;
+  confidence: string | null;
+  status: 'active' | 'dismissed' | 'merged';
+  created_by: string | null;
+  created_at: number;
+  merged_into: string | null;
+  email_id: string | null;
+  extraction_event_id: string | null;
+  // Semantic naming fields
+  name: string | null;
+  short_name: string | null;
+  grouped_signal_ids: string[] | null;
 }
 
 export interface VigilEvent {
@@ -95,6 +116,35 @@ export interface VigilEvent {
   watcher_id: string;
   timestamp: number;
   payload: Record<string, unknown>;
+}
+
+// Signal proposal state returned by backend
+export interface SignalProposal {
+  proposal_id: string;
+  extraction_event_id: string;
+  signal_type: 'HARD_DEADLINE' | 'SOFT_DEADLINE' | 'URGENCY_SIGNAL' | 'CLOSURE_SIGNAL';
+  proposed_action: {
+    type: string;
+    [key: string]: unknown;
+  };
+  target_reminder_id?: string;
+  rationale: string;
+  confidence: number;
+  context: {
+    source_excerpt: string;
+    existing_reminder_summary?: string;
+    thread_subject?: string;
+  };
+  signal_group_id?: string;
+  auto_applied: boolean;
+  created_at: number;
+  status: 'pending' | 'accepted' | 'overridden' | 'ignored';
+  responded_at?: number;
+  responded_by?: string;
+  override_action?: {
+    type: string;
+    [key: string]: unknown;
+  };
 }
 
 export interface Subscription {
@@ -338,6 +388,19 @@ class ApiClient {
     }
   }
 
+  async deleteAccount(): Promise<{ success: boolean; error?: string }> {
+    try {
+      await this.request('DELETE', '/api/account', {
+        requireAuth: true,
+      });
+      // Clear auth after successful deletion
+      this.clearAuth();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : 'Failed to delete account' };
+    }
+  }
+
   // ============================================================================
   // Password Reset
   // ============================================================================
@@ -470,16 +533,164 @@ class ApiClient {
   // Threads
   // ============================================================================
 
+  private normalizeThread(thread: Omit<Thread, 'subject'> & { subject?: string }): Thread {
+    return {
+      ...thread,
+      // Map normalized_subject to subject for backwards compatibility with UI components
+      subject: thread.subject ?? thread.normalized_subject ?? 'No subject',
+    };
+  }
+
   async getThreads(watcherId: string): Promise<{ threads: Thread[] }> {
-    return this.request('GET', `/api/watchers/${watcherId}/threads`, { requireAuth: true });
+    const result = await this.request<{ threads: Array<Omit<Thread, 'subject'> & { subject?: string }> }>(
+      'GET',
+      `/api/watchers/${watcherId}/threads`,
+      { requireAuth: true }
+    );
+    return {
+      threads: (result.threads || []).map(t => this.normalizeThread(t)),
+    };
   }
 
   async getThread(watcherId: string, threadId: string): Promise<{ thread: Thread }> {
-    return this.request('GET', `/api/watchers/${watcherId}/threads/${threadId}`, { requireAuth: true });
+    const result = await this.request<{ thread: Omit<Thread, 'subject'> & { subject?: string } }>(
+      'GET',
+      `/api/watchers/${watcherId}/threads/${threadId}`,
+      { requireAuth: true }
+    );
+    return {
+      thread: this.normalizeThread(result.thread),
+    };
   }
 
   async closeThread(watcherId: string, threadId: string): Promise<{ closed: boolean; thread_id: string; closed_at: number }> {
     return this.request('POST', `/api/watchers/${watcherId}/threads/${threadId}/close`, { requireAuth: true });
+  }
+
+  // ============================================================================
+  // Reminders
+  // ============================================================================
+
+  async getReminders(watcherId: string, options?: { status?: string; thread_id?: string }): Promise<{ reminders: Reminder[] }> {
+    const params = new URLSearchParams();
+    if (options?.status) params.set('status', options.status);
+    if (options?.thread_id) params.set('thread_id', options.thread_id);
+    const query = params.toString() ? `?${params}` : '';
+    return this.request('GET', `/api/watchers/${watcherId}/reminders${query}`, { requireAuth: true });
+  }
+
+  async createReminder(
+    watcherId: string,
+    data: {
+      thread_id: string;
+      reminder_type?: 'hard_deadline' | 'soft_deadline' | 'urgency_signal' | 'manual';
+      deadline_utc?: number | null;
+      description: string;
+    }
+  ): Promise<{ reminder_id: string; thread_id: string; status: string; created_at: number }> {
+    return this.request('POST', `/api/watchers/${watcherId}/reminders`, {
+      body: data,
+      requireAuth: true,
+    });
+  }
+
+  async editReminder(
+    watcherId: string,
+    reminderId: string,
+    changes: {
+      deadline_utc?: number | null;
+      description?: string;
+      reminder_type?: 'hard_deadline' | 'soft_deadline' | 'urgency_signal' | 'manual';
+    }
+  ): Promise<{ reminder_id: string; edited: boolean; edited_at: number }> {
+    return this.request('PATCH', `/api/watchers/${watcherId}/reminders/${reminderId}`, {
+      body: changes,
+      requireAuth: true,
+    });
+  }
+
+  async dismissReminder(
+    watcherId: string,
+    reminderId: string,
+    reason?: string
+  ): Promise<{ reminder_id: string; dismissed: boolean; dismissed_at: number }> {
+    return this.request('POST', `/api/watchers/${watcherId}/reminders/${reminderId}/dismiss`, {
+      body: reason ? { reason } : undefined,
+      requireAuth: true,
+    });
+  }
+
+  async mergeReminder(
+    watcherId: string,
+    sourceReminderId: string,
+    data: {
+      target_reminder_id: string;
+      merge_reason?: 'duplicate' | 'pulse' | 'related' | 'superset' | 'manual';
+      merge_justification?: string;
+      deadline_resolution?: 'keep_target' | 'keep_source' | 'manual';
+      final_deadline_utc?: number;
+      combined_description?: string;
+    }
+  ): Promise<{ source_reminder_id: string; target_reminder_id: string; merged: boolean; merged_at: number }> {
+    return this.request('POST', `/api/watchers/${watcherId}/reminders/${sourceReminderId}/merge`, {
+      body: data,
+      requireAuth: true,
+    });
+  }
+
+  async reassignReminder(
+    watcherId: string,
+    reminderId: string,
+    toThreadId: string
+  ): Promise<{ reminder_id: string; from_thread_id: string; to_thread_id: string; reassigned: boolean; reassigned_at: number }> {
+    return this.request('POST', `/api/watchers/${watcherId}/reminders/${reminderId}/reassign`, {
+      body: { to_thread_id: toThreadId },
+      requireAuth: true,
+    });
+  }
+
+  /**
+   * Rename a reminder with a new semantic name.
+   */
+  async renameReminder(
+    watcherId: string,
+    reminderId: string,
+    newName: string
+  ): Promise<{ reminder_id: string; old_name: string; new_name: string; renamed: boolean; renamed_at: number }> {
+    return this.request('PATCH', `/api/watchers/${watcherId}/reminders/${reminderId}/rename`, {
+      body: { name: newName },
+      requireAuth: true,
+    });
+  }
+
+  /**
+   * Get extraction signals for a reminder.
+   * Returns the full traceability chain: Reminder → Signal (extraction event) → Message
+   */
+  async getReminderSignals(
+    watcherId: string,
+    reminderId: string
+  ): Promise<{
+    reminder_id: string;
+    signals: Array<{
+      event_id: string;
+      type: string;
+      timestamp: number;
+      email_id: string | null;
+      payload: Record<string, unknown>;
+    }>;
+    source_message: {
+      event_id: string;
+      type: string;
+      timestamp: number;
+      email_id: string | null;
+      sender: string | null;
+      subject: string | null;
+    } | null;
+  }> {
+    return this.request('GET', `/api/watchers/${watcherId}/reminders/${reminderId}/signals`, {
+      requireAuth: true,
+    });
   }
 
   // ============================================================================
@@ -489,7 +700,7 @@ class ApiClient {
   async getEvents(
     watcherId: string,
     options?: { limit?: number; before?: number; type?: string }
-  ): Promise<{ events: VigilEvent[] }> {
+  ): Promise<{ events: VigilEvent[]; pagination?: { total?: number; limit: number; has_more: boolean } }> {
     const params = new URLSearchParams();
     if (options?.limit) params.set('limit', String(options.limit));
     if (options?.before) params.set('before', String(options.before));
@@ -505,23 +716,172 @@ class ApiClient {
     options?: { limit?: number }
   ): Promise<{ events: VigilEvent[] }> {
     // Fetch all events and filter by thread_id in payload
-    // Backend may add dedicated endpoint later
+    // Also include signal extraction events by email_id for emails in this thread
     const limit = options?.limit || 200;
     const result = await this.getEvents(watcherId, { limit });
+    const events = result.events || [];
 
-    // Filter events that belong to this thread
-    const threadEvents = result.events.filter(event => {
-      const payload = event.payload as Record<string, unknown>;
-      return payload.thread_id === threadId ||
-             (event.type === 'THREAD_OPENED' && payload.thread_id === threadId) ||
-             (event.type === 'THREAD_CLOSED' && payload.thread_id === threadId) ||
-             (event.type === 'REMINDER_GENERATED' && payload.thread_id === threadId) ||
-             (event.type === 'REMINDER_EVALUATED' && payload.thread_id === threadId) ||
-             (event.type === 'ALERT_QUEUED' && payload.thread_id === threadId) ||
-             (event.type === 'ALERT_SENT' && payload.thread_id === threadId);
-    });
+    // Helper to get field from event (handles both payload and flat structure)
+    const getField = (event: VigilEvent, field: string): unknown => {
+      const payload = (event.payload || {}) as Record<string, unknown>;
+      const eventAny = event as unknown as Record<string, unknown>;
+      return payload[field] ?? eventAny[field];
+    };
+
+    // First pass: find all events directly associated with this thread
+    // and collect email_ids from those events
+    const threadEmailIds = new Set<string>();
+    const threadEvents: VigilEvent[] = [];
+
+    for (const event of events) {
+      const eventThreadId = getField(event, 'thread_id') as string | undefined;
+      const eventEmailId = getField(event, 'email_id') as string | undefined;
+      
+      if (eventThreadId === threadId) {
+        threadEvents.push(event);
+        if (eventEmailId) {
+          threadEmailIds.add(eventEmailId);
+        }
+      }
+    }
+
+    // Second pass: include signal extraction events that belong to emails in this thread
+    // Signal events (HARD_DEADLINE_EXTRACTED, etc.) don't have thread_id but have email_id
+    const signalEventTypes = [
+      'HARD_DEADLINE_EXTRACTED',
+      'SOFT_DEADLINE_EXTRACTED',
+      'URGENCY_SIGNAL_EXTRACTED',
+      'CLOSURE_SIGNAL_EXTRACTED',
+      'EXTRACTION_STARTED',
+      'EXTRACTION_COMPLETED',
+    ];
+
+    for (const event of events) {
+      if (signalEventTypes.includes(event.type)) {
+        const eventEmailId = getField(event, 'email_id') as string | undefined;
+        if (eventEmailId && threadEmailIds.has(eventEmailId)) {
+          // Only add if not already included
+          if (!threadEvents.find(e => e.event_id === event.event_id)) {
+            threadEvents.push(event);
+          }
+        }
+      }
+    }
+
+    // Sort by timestamp
+    threadEvents.sort((a, b) => b.timestamp - a.timestamp);
 
     return { events: threadEvents };
+  }
+
+  /**
+   * Get messages (EMAIL_RECEIVED events) for a thread.
+   * Returns emails that belong to the thread along with any extraction events.
+   */
+  async getThreadMessages(
+    watcherId: string,
+    threadId: string
+  ): Promise<{
+    messages: Array<{
+      email_id: string;
+      event_id: string;
+      timestamp: number;
+      sender: string;
+      subject: string;
+      body_excerpt: string;
+      sent_at: number;
+    }>;
+  }> {
+    // First get all EMAIL_RECEIVED events
+    const result = await this.getEvents(watcherId, { limit: 500, type: 'EMAIL_RECEIVED' });
+    const allEmails = result.events || [];
+
+    // Get thread events to find email_ids in this thread
+    const threadResult = await this.getThreadEvents(watcherId, threadId, { limit: 500 });
+    const threadEvents = threadResult.events || [];
+
+    // Collect email_ids from THREAD_OPENED and THREAD_EMAIL_ADDED events
+    const threadEmailIds = new Set<string>();
+    for (const event of threadEvents) {
+      if (event.type === 'THREAD_OPENED' || event.type === 'THREAD_EMAIL_ADDED') {
+        const payload = (event.payload || event) as Record<string, unknown>;
+        const emailId = payload.email_id as string;
+        if (emailId) threadEmailIds.add(emailId);
+      }
+    }
+
+    // Also check the event itself for email_id (for flat events)
+    for (const event of threadEvents) {
+      const eventAny = event as unknown as Record<string, unknown>;
+      if (eventAny.email_id) {
+        threadEmailIds.add(eventAny.email_id as string);
+      }
+    }
+
+    // Filter EMAIL_RECEIVED to only those in this thread
+    const messages = allEmails
+      .filter(event => {
+        const payload = (event.payload || event) as Record<string, unknown>;
+        const emailId = (payload.email_id as string) || (event as unknown as Record<string, unknown>).email_id as string;
+        return emailId && threadEmailIds.has(emailId);
+      })
+      .map(event => {
+        const payload = (event.payload || event) as Record<string, unknown>;
+        return {
+          email_id: (payload.email_id as string) || (event as unknown as Record<string, unknown>).email_id as string || '',
+          event_id: event.event_id,
+          timestamp: event.timestamp,
+          sender: (payload.original_sender as string) || (payload.sender as string) || 'Unknown',
+          subject: (payload.subject as string) || 'No subject',
+          body_excerpt: (payload.body_excerpt as string) || '',
+          sent_at: (payload.sent_at as number) || event.timestamp,
+        };
+      })
+      .sort((a, b) => a.sent_at - b.sent_at); // Chronological order
+
+    return { messages };
+  }
+
+  // ============================================================================
+  // Proposals
+  // ============================================================================
+
+  async getProposals(
+    watcherId: string,
+    status: 'pending' | 'all' = 'pending'
+  ): Promise<{
+    watcher_id: string;
+    proposals: SignalProposal[];
+    total: number;
+    user_threshold?: number;
+    summary?: { pending: number; auto_applied_today: number };
+  }> {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    const query = params.toString() ? `?${params}` : '';
+    return this.request('GET', `/api/watchers/${watcherId}/proposals${query}`, {
+      requireAuth: true,
+    });
+  }
+
+  async respondToProposal(
+    watcherId: string,
+    proposalId: string,
+    body: {
+      response: 'accepted' | 'overridden' | 'ignored';
+      override_action?: { type: string; [key: string]: unknown };
+      override_target_reminder_id?: string;
+    }
+  ): Promise<{
+    proposal_id: string;
+    response: 'accepted' | 'overridden' | 'ignored';
+    responded_at: number;
+    message: string;
+  }> {
+    return this.request('POST', `/api/watchers/${watcherId}/proposals/${proposalId}/respond`, {
+      body,
+      requireAuth: true,
+    });
   }
 
   // ============================================================================
@@ -554,13 +914,18 @@ class ApiClient {
     });
   }
 
-  async createBillingPortalSession(): Promise<{ portal_url: string }> {
-    return this.request('POST', '/api/billing/portal', {
-      body: {
-        return_url: `${window.location.origin}/account/billing`,
-      },
-      requireAuth: true,
-    });
+  async createBillingPortalSession(): Promise<{ portal_url: string | null; error?: string }> {
+    try {
+      return await this.request('POST', '/api/billing/portal', {
+        body: {
+          return_url: `${window.location.origin}/account/billing`,
+        },
+        requireAuth: true,
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to open billing portal';
+      return { portal_url: null, error: errorMessage };
+    }
   }
 
   async cancelSubscription(): Promise<{ success: boolean }> {
@@ -595,6 +960,68 @@ class ApiClient {
 
   async getHealth(): Promise<{ status: string }> {
     return this.request('GET', '/health');
+  }
+
+  // ============================================================================
+  // Developer Tools
+  // ============================================================================
+
+  /**
+   * Send a test email of the specified type for a watcher.
+   *
+   * Available types:
+   * - alert: Urgency alert notification
+   * - digest: Daily/weekly digest report
+   * - report: Activity report
+   * - thread_state: Thread state change notification
+   * - reminder_alert: Reminder deadline alert
+   * - signal_proposal: Signal proposal for review
+   */
+  async sendTestEmail(
+    watcherId: string,
+    emailType: 'alert' | 'digest' | 'report' | 'thread_state' | 'reminder_alert' | 'signal_proposal'
+  ): Promise<{ success: boolean; message?: string; message_id?: string; error?: string }> {
+    return this.request('POST', `/api/watchers/${watcherId}/dev/test-email`, {
+      body: { email_type: emailType },
+      requireAuth: true,
+    });
+  }
+
+  /**
+   * Simulate email ingestion with test data.
+   */
+  async testIngest(
+    watcherId: string,
+    data: {
+      from?: string;
+      subject?: string;
+      body?: string;
+    }
+  ): Promise<{ success: boolean; events_generated?: number; event_types?: string[]; error?: string }> {
+    return this.request('POST', `/api/watchers/${watcherId}/dev/ingest-test`, {
+      body: data,
+      requireAuth: true,
+    });
+  }
+
+  /**
+   * Run a predefined test scenario.
+   *
+   * Available scenarios (aligned with commercial model):
+   * - action_request: Email containing an explicit actionable request
+   * - simple_info: Informational email, no action required
+   * - closure_signal: Email indicating issue is resolved
+   * - followup: Follow-up email on existing conversation
+   * - bump: Simple "any update?" email (tests silence tracking)
+   */
+  async testScenario(
+    watcherId: string,
+    scenario: 'action_request' | 'simple_info' | 'closure_signal' | 'followup' | 'bump'
+  ): Promise<{ success: boolean; scenario?: string; events_generated?: number; event_types?: string[]; error?: string }> {
+    return this.request('POST', `/api/watchers/${watcherId}/dev/test-scenario`, {
+      body: { scenario },
+      requireAuth: true,
+    });
   }
 }
 

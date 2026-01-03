@@ -36,5 +36,5 @@ fi
 echo -e "${GREEN}Starting Vigil backend server...${NC}"
 echo ""
 
-# Start the server
-bun --hot src/index.ts
+# Start the server (without --hot to avoid port conflict with Bun.serve())
+bun src/index.ts

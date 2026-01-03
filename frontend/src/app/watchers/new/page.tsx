@@ -26,18 +26,15 @@ function CreateWatcherContent() {
 
     setIsLoading(true);
     try {
+      // Detect user's timezone from browser
+      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+      
       const result = await api.createWatcher(name, {
         // Sender control - add user email as allowed sender by default
         allowed_senders: user?.email ? [user.email] : [],
 
-        // Timing thresholds (positive numbers required by backend)
+        // Timing thresholds (commercial model: silence tracking only)
         silence_threshold_hours: 72,
-        deadline_warning_hours: 24,
-        deadline_critical_hours: 2,
-
-        // Reminder type control
-        enable_soft_deadline_reminders: false,
-        enable_urgency_signal_reminders: false,
 
         // Notification channels - add user email with 'all' urgency filter
         notification_channels: user?.email ? [{ type: 'email', destination: user.email, urgency_filter: 'all', enabled: true }] : [],
@@ -45,6 +42,9 @@ function CreateWatcherContent() {
         // Reporting config - add user email as report recipient
         reporting_cadence: 'on_demand',
         reporting_recipients: user?.email ? [user.email] : [],
+
+        // Timezone for report scheduling - auto-detected from browser
+        timezone: userTimezone,
       });
       // Attempt activation (optional). If activation fails due to missing channels,
       // we still navigate to the watcher detail page for configuration.

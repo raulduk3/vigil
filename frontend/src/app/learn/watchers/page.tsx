@@ -129,7 +129,7 @@ export default function WatchersPage() {
               <ol className="list-decimal pl-5 space-y-3">
                 <li>Click "New Watcher" in your dashboard</li>
                 <li>Name it "Client Work"</li>
-                <li>Copy the unique email address (e.g., <code className="text-sm bg-gray-100 px-1.5 py-0.5 rounded">client-work-a7f3k9@ingest.email.vigil.run</code>)</li>
+                <li>Copy the unique email address (e.g., <code className="text-sm bg-gray-100 px-1.5 py-0.5 rounded">client-work-a7f3k9@vigil.run</code>)</li>
                 <li>Set up a forwarding rule in Gmail or Outlook to forward client emails to this address</li>
                 <li>Vigil starts monitoring those conversations automatically</li>
               </ol>

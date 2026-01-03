@@ -28,52 +28,109 @@ function formatRelativeTime(ts: number | undefined): string {
   return `${days}d ago`;
 }
 
+// Events that are meaningful to end users (shown in simplified view)
+// System/technical events are hidden by default
+const USER_FRIENDLY_EVENTS = new Set<string>([
+  // Email activity
+  'EMAIL_RECEIVED',
+  // What was found in emails
+  'HARD_DEADLINE_OBSERVED',
+  'SOFT_DEADLINE_SIGNAL_OBSERVED',
+  'URGENCY_SIGNAL_OBSERVED',
+  'CLOSURE_SIGNAL_OBSERVED',
+  // Thread lifecycle (conversations)
+  'THREAD_OPENED',
+  'THREAD_ACTIVITY_OBSERVED',
+  'THREAD_CLOSED',
+  // Notifications
+  'ALERT_SENT',
+  'ALERT_FAILED',
+  // Manual actions
+  'REMINDER_DISMISSED',
+  'REMINDER_COMPLETED',
+  // Urgency changes - only show meaningful state changes
+  'URGENCY_STATE_CHANGED',
+  // User-initiated watcher actions
+  'WATCHER_CREATED',
+  'WATCHER_PAUSED',
+  'WATCHER_RESUMED',
+]);
+
+// User-friendly category names
 function getEventCategory(type: string): string {
-  // Account & User events
-  if (type === 'ACCOUNT_CREATED' || type === 'USER_CREATED') return 'Account';
+  // Email activity
+  if (type === 'EMAIL_RECEIVED' || type === 'MESSAGE_IGNORED' || type === 'MESSAGE_REJECTED') return 'Email';
   
-  // Watcher lifecycle events
-  if (type.startsWith('WATCHER_') || type === 'POLICY_UPDATED') return 'Watcher';
-  
-  // Message events
-  if (type === 'MESSAGE_RECEIVED' || type === 'MESSAGE_IGNORED' || type === 'MESSAGE_REJECTED') return 'Message';
-  
-  // Thread lifecycle events
-  if (type.startsWith('THREAD_') || type.startsWith('MESSAGE_THREAD_')) return 'Thread';
-  
-  // LLM Extraction events
+  // What was detected/found
   if (type === 'EXTRACTION_COMPLETE' || type === 'HARD_DEADLINE_OBSERVED' || type === 'SOFT_DEADLINE_SIGNAL_OBSERVED' || 
-      type === 'URGENCY_SIGNAL_OBSERVED' || type === 'CLOSURE_SIGNAL_OBSERVED') return 'Extraction';
+      type === 'URGENCY_SIGNAL_OBSERVED' || type === 'CLOSURE_SIGNAL_OBSERVED') return 'Detection';
   
-  // Reminder events
-  if (type.startsWith('REMINDER_')) return 'Reminder';
+  // Thread lifecycle (conversations)
+  if (type.startsWith('THREAD_') || type.startsWith('MESSAGE_THREAD_')) return 'Conversation';
   
-  // Alert/Notification events
-  if (type.startsWith('ALERT_') || type === 'NOTIFICATION_SENT') return 'Alert';
+  // Notifications
+  if (type.startsWith('ALERT_') || type === 'NOTIFICATION_SENT') return 'Notification';
   
-  // State evaluation events
-  if (type === 'URGENCY_STATE_CHANGED') return 'State';
+  // Urgency status
+  if (type === 'URGENCY_STATE_CHANGED' || type.startsWith('REMINDER_')) return 'Status';
+  
+  // Settings/config events (less important for users)
+  if (type.startsWith('WATCHER_') || type === 'POLICY_UPDATED') return 'Settings';
+  
+  // Account events (less important for daily use)
+  if (type === 'ACCOUNT_CREATED' || type === 'USER_CREATED') return 'Account';
   
   return 'System';
 }
 
 function getEventBadgeColor(category: string): string {
   switch (category) {
-    case 'Watcher': return 'bg-blue-50 text-blue-700';
-    case 'Message': return 'bg-purple-50 text-purple-700';
-    case 'Thread': return 'bg-green-50 text-green-700';
-    case 'Extraction': return 'bg-orange-50 text-orange-700';
-    case 'Reminder': return 'bg-yellow-50 text-yellow-700';
-    case 'Alert': return 'bg-red-50 text-red-700';
-    case 'State': return 'bg-indigo-50 text-indigo-700';
-    case 'Account': return 'bg-gray-50 text-gray-700';
-    case 'System': return 'bg-gray-50 text-gray-600';
-    default: return 'bg-gray-50 text-gray-600';
+    case 'Email': return 'bg-purple-50 text-purple-700';
+    case 'Detection': return 'bg-amber-50 text-amber-700';
+    case 'Conversation': return 'bg-blue-50 text-blue-700';
+    case 'Notification': return 'bg-red-50 text-red-700';
+    case 'Status': return 'bg-green-50 text-green-700';
+    case 'Settings': return 'bg-slate-50 text-slate-600';
+    case 'Account': return 'bg-gray-50 text-gray-600';
+    case 'System': return 'bg-gray-50 text-gray-500';
+    default: return 'bg-gray-50 text-gray-500';
   }
 }
 
 function normalizeEventType(type: string): string {
-  // Convert SNAKE_CASE to Title Case
+  // Map technical event types to user-friendly names
+  const friendlyNames: Record<string, string> = {
+    'EMAIL_RECEIVED': 'Email Received',
+    'MESSAGE_IGNORED': 'Email Ignored',
+    'MESSAGE_REJECTED': 'Email Rejected',
+    'EXTRACTION_COMPLETE': 'Analysis Complete',
+    'HARD_DEADLINE_OBSERVED': 'Deadline Found',
+    'SOFT_DEADLINE_SIGNAL_OBSERVED': 'Timeline Detected',
+    'URGENCY_SIGNAL_OBSERVED': 'Urgency Detected',
+    'CLOSURE_SIGNAL_OBSERVED': 'Resolution Detected',
+    'THREAD_OPENED': 'Conversation Started',
+    'THREAD_ACTIVITY_OBSERVED': 'New Activity',
+    'THREAD_CLOSED': 'Conversation Resolved',
+    'ALERT_QUEUED': 'Alert Preparing',
+    'ALERT_SENT': 'Notification Sent',
+    'ALERT_FAILED': 'Notification Failed',
+    'REMINDER_EVALUATED': 'Status Check',
+    'REMINDER_DISMISSED': 'Dismissed',
+    'REMINDER_COMPLETED': 'Completed',
+    'URGENCY_STATE_CHANGED': 'Urgency Changed',
+    'WATCHER_CREATED': 'Watcher Created',
+    'WATCHER_ACTIVATED': 'Watcher Started',
+    'WATCHER_PAUSED': 'Watcher Paused',
+    'WATCHER_RESUMED': 'Watcher Resumed',
+    'WATCHER_DELETED': 'Watcher Deleted',
+    'POLICY_UPDATED': 'Settings Changed',
+  };
+  
+  if (friendlyNames[type]) {
+    return friendlyNames[type];
+  }
+  
+  // Fallback: Convert SNAKE_CASE to Title Case
   return type
     .split('_')
     .map(word => word.charAt(0) + word.slice(1).toLowerCase())
@@ -84,97 +141,121 @@ function getEventSummary(event: VigilEvent): string {
   const data = { ...event.payload, ...event } as Record<string, unknown>;
   
   switch (event.type) {
-    // Message events
-    case 'MESSAGE_RECEIVED':
-      return String(data.subject || 'No subject');
+    // Email events - focus on what the email is about
+    case 'EMAIL_RECEIVED':
+      return String(data.subject || 'New email received');
     case 'MESSAGE_IGNORED':
-      return `Ignored: ${String(data.reason || 'filtering rule')}`;
+      return `Skipped: ${String(data.reason || 'not in allowlist')}`;
     case 'MESSAGE_REJECTED':
-      return `Rejected: ${String(data.reason || 'not allowed')}`;
+      return `Blocked: ${String(data.reason || 'sender not allowed')}`;
     
-    // Extraction events
+    // Detection events - focus on what was found
     case 'EXTRACTION_COMPLETE':
       const hasSignals = data.hard_deadline || data.soft_deadline_signals || data.urgency_signals || data.closure_signals;
       if (!hasSignals) {
-        return 'No deadlines or signals detected';
+        return 'No action items detected';
       }
-      const signals = [];
-      if (data.hard_deadline) signals.push('hard deadline');
-      if (data.soft_deadline_signals) signals.push('soft deadline');
-      if (data.urgency_signals) signals.push('urgency');
-      if (data.closure_signals) signals.push('closure');
-      return `Extraction complete: ${signals.join(', ')}`;
+      const items = [];
+      if (data.hard_deadline) items.push('deadline');
+      if (data.soft_deadline_signals) items.push('timeline');
+      if (data.urgency_signals) items.push('urgent request');
+      if (data.closure_signals) items.push('resolution');
+      return `Found: ${items.join(', ')}`;
     case 'HARD_DEADLINE_OBSERVED':
-      return `Hard deadline: ${formatTimestamp(data.deadline_utc as number)}`;
+      return `Due: ${formatTimestamp(data.deadline_utc as number)}`;
     case 'SOFT_DEADLINE_SIGNAL_OBSERVED':
-      return `Soft deadline: "${String(data.signal_text || '').slice(0, 40)}..."`;
+      const horizon = data.estimated_horizon_hours as number;
+      return horizon ? `Timeline: ~${horizon} hours` : 'Flexible timeline mentioned';
     case 'URGENCY_SIGNAL_OBSERVED':
-      return `Urgency: ${String(data.signal_type || 'urgent').replace('_', ' ')}`;
+      const signalType = String(data.signal_type || 'request').replace(/_/g, ' ');
+      return `${signalType.charAt(0).toUpperCase() + signalType.slice(1)}`;
     case 'CLOSURE_SIGNAL_OBSERVED':
-      return `Closure signal detected: "${String(data.signal_text || '').slice(0, 30)}..."`;
+      const closureType = String(data.closure_type || 'resolved');
+      return closureType === 'resolved' ? 'Issue resolved' : `${closureType} detected`;
     
-    // Thread events
+    // Conversation events - focus on what happened
     case 'THREAD_OPENED':
-      return String(data.normalized_subject || 'New thread');
+      return String(data.normalized_subject || 'New conversation');
     case 'THREAD_ACTIVITY_OBSERVED':
-      return `Activity from ${String(data.sender || 'participant')}`;
+      const sender = String(data.original_sender || data.sender || '').split('@')[0] || 'Someone';
+      return `Reply from ${sender}`;
     case 'THREAD_CLOSED':
-      return `Closed by ${String(data.closed_by || 'system')}`;
+      return data.closed_by === 'user_action' ? 'Marked as resolved' : 'Auto-resolved';
     case 'MESSAGE_THREAD_ASSOCIATED':
-      return 'Message associated with thread';
+      return 'Added to conversation';
     case 'MESSAGE_THREAD_DEACTIVATED':
-      return 'Message deactivated from thread';
+      return 'Removed from conversation';
     case 'MESSAGE_THREAD_REACTIVATED':
-      return 'Message reactivated in thread';
+      return 'Re-added to conversation';
     
-    // Watcher events
+    // Settings events - be concise
     case 'WATCHER_CREATED':
-      return `Created: ${String(data.name || 'Watcher')}`;
+      return `"${String(data.name || 'Watcher')}" created`;
     case 'WATCHER_ACTIVATED':
-      return 'Watcher activated';
+      return 'Monitoring started';
     case 'WATCHER_PAUSED':
-      return `Paused${data.reason ? ': ' + String(data.reason) : ''}`;
+      return data.reason ? String(data.reason) : 'Monitoring paused';
     case 'WATCHER_RESUMED':
-      return 'Watcher resumed';
+      return 'Monitoring resumed';
     case 'WATCHER_UPDATED':
-      return data.name ? `Name updated to: ${String(data.name)}` : 'Settings updated';
+      return data.name ? `Renamed to "${String(data.name)}"` : 'Settings updated';
     case 'WATCHER_DELETED':
-      return 'Watcher deleted';
+      return 'Permanently deleted';
     case 'POLICY_UPDATED':
-      return 'Policy configuration updated';
+      return 'Notification settings updated';
     
-    // Reminder events
+    // Status events - focus on the urgency level
     case 'REMINDER_CREATED':
     case 'REMINDER_MANUAL_CREATED':
-      return `${String(data.reminder_type || 'reminder').replace('_', ' ')} - ${formatTimestamp(data.deadline_utc as number)}`;
+      // Show friendly title instead of raw deadline
+      const reminderDesc = data.description ? String(data.description) : 
+                          data.deadline_utc ? `Due ${formatTimestamp(data.deadline_utc as number)}` :
+                          'Reminder created';
+      return reminderDesc;
     case 'REMINDER_EDITED':
-      return 'Reminder updated';
+      return 'Updated';
     case 'REMINDER_EVALUATED':
-      return `Urgency: ${String(data.urgency_state || 'ok')}`;
+      const state = String(data.urgency_state || 'ok');
+      const stateLabels: Record<string, string> = {
+        'ok': '✓ On track',
+        'warning': '⚠ Approaching deadline',
+        'critical': '🔴 Deadline soon',
+        'overdue': '❗ Overdue',
+      };
+      return stateLabels[state] || state;
     case 'REMINDER_DISMISSED':
-      return `Dismissed by ${String(data.dismissed_by || 'user')}`;
+      return 'Dismissed';
     case 'REMINDER_COMPLETED':
-      return 'Marked as completed';
+      return 'Completed';
     case 'REMINDER_MERGED':
-      return 'Merged with another reminder';
+      return 'Combined with another';
     
-    // Alert events
+    // Notification events - focus on outcome
     case 'ALERT_QUEUED':
-      return `Alert queued: ${String(data.urgency || 'notification')}`;
+      return 'Preparing notification...';
     case 'ALERT_SENT':
-      return `${String(data.channel_type || 'notification')} sent`;
+      const channelType = String(data.channel_type || 'email');
+      return channelType === 'email' ? 'Email sent' : `${channelType} notification sent`;
     case 'ALERT_FAILED':
-      return `Failed: ${String(data.error_message || 'unknown error').slice(0, 50)}`;
+      return `Could not send: ${String(data.error_message || 'unknown issue').slice(0, 40)}`;
     
-    // State events
+    // Urgency changes - be clear about the change
     case 'URGENCY_STATE_CHANGED':
-      return `${String(data.from_state || 'ok')} → ${String(data.to_state || 'warning')}`;
+      const fromState = String(data.from_state || 'ok');
+      const toState = String(data.to_state || 'warning');
+      const urgencyLabels: Record<string, string> = {
+        'ok': 'On track',
+        'warning': 'Warning',
+        'critical': 'Critical',
+        'overdue': 'Overdue',
+      };
+      return `${urgencyLabels[fromState] || fromState} → ${urgencyLabels[toState] || toState}`;
     
     // Account events
     case 'ACCOUNT_CREATED':
-      return `Account: ${String(data.owner_email || 'owner')}`;
+      return 'Account created';
     case 'USER_CREATED':
-      return `User: ${String(data.email || 'user')}`;
+      return `${String(data.email || 'User')} added`;
     
     default:
       return event.type.replace(/_/g, ' ').toLowerCase();
@@ -198,111 +279,61 @@ export function EventTable({
 }: EventTableProps) {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [groupByThread, setGroupByThread] = useState(true);
-  const [flowPreset, setFlowPreset] = useState<boolean>(false);
+  // Default to simple chronological view (no grouping)
+  const [groupByThread, setGroupByThread] = useState(false);
+  // Default to simplified view (user-friendly events only)
+  const [showAllEvents, setShowAllEvents] = useState<boolean>(false);
 
-  const categories = ['all', ...Array.from(new Set(events.map(e => getEventCategory(e.type))))];
-  // Optional flow preset: limit to essential flow types
-  const FLOW_TYPES = new Set<string> ([
-    'MESSAGE_RECEIVED',
-    'ROUTE_EXTRACTION_COMPLETE',
-    'THREAD_OPENED',
-    'THREAD_ACTIVITY_OBSERVED',
-    'EXTRACTION_COMPLETE',
-    'HARD_DEADLINE_OBSERVED',
-    'SOFT_DEADLINE_SIGNAL_OBSERVED',
-    'URGENCY_SIGNAL_OBSERVED',
-    'CLOSURE_SIGNAL_OBSERVED',
-    'THREAD_CLOSED',
-  ]);
+  // Get categories from filtered events for consistent filtering
+  const filteredByViewMode = showAllEvents 
+    ? events 
+    : events.filter(e => USER_FRIENDLY_EVENTS.has(e.type));
+  const categories = ['all', ...Array.from(new Set(filteredByViewMode.map(e => getEventCategory(e.type))))];
 
   const filteredByCategory = categoryFilter === 'all'
-    ? events
-    : events.filter(e => getEventCategory(e.type) === categoryFilter);
+    ? filteredByViewMode
+    : filteredByViewMode.filter(e => getEventCategory(e.type) === categoryFilter);
 
-  const filteredEvents = flowPreset
-    ? filteredByCategory.filter(e => FLOW_TYPES.has(e.type))
-    : filteredByCategory;
+  const filteredEvents = filteredByCategory;
 
-  // Group events by thread for hierarchical display
-  const groupedEvents = React.useMemo(() => {
-    // When not grouping, show newest-first consistently
+  // Simple event ordering - newest first by default
+  // Optional grouping by thread (off by default for simpler view)
+  const displayEvents = React.useMemo(() => {
+    // Simple chronological order (newest first) - the default
     if (!groupByThread) {
       return [...filteredEvents]
         .sort((a, b) => b.timestamp - a.timestamp)
-        .map(e => ({ event: e, isNested: false, threadStart: false, threadEnd: false }));
+        .map(e => ({ event: e, isGrouped: false }));
     }
 
-    const groups: Array<{ event: VigilEvent; isNested: boolean; threadStart?: boolean; threadEnd?: boolean }> = [];
-    const threadMap = new Map<string, VigilEvent[]>();
-    const nonThreadEvents: VigilEvent[] = [];
-
-    // First pass: separate thread events from non-thread events
-    filteredEvents.forEach(event => {
-      if ((event as any).thread_id) {
-        const tid = (event as any).thread_id as string;
-        if (!threadMap.has(tid)) {
-          threadMap.set(tid, []);
-        }
-        threadMap.get(tid)!.push(event);
-      } else {
-        nonThreadEvents.push(event);
-      }
-    });
-
-    // Build thread groups: order internal events by flow preset or chronological
-    const threadGroups = Array.from(threadMap.entries()).map(([threadId, evs]) => {
-      const ordered = evs.slice().sort((a, b) => {
-        if (flowPreset) {
-          const weight = (t: string) => {
-            switch (t) {
-              case 'MESSAGE_RECEIVED': return 10;
-              case 'ROUTE_EXTRACTION_COMPLETE': return 20;
-              case 'THREAD_OPENED': return 30;
-              case 'THREAD_ACTIVITY_OBSERVED': return 40;
-              case 'EXTRACTION_COMPLETE': return 50;
-              case 'HARD_DEADLINE_OBSERVED': return 51;
-              case 'SOFT_DEADLINE_SIGNAL_OBSERVED': return 52;
-              case 'URGENCY_SIGNAL_OBSERVED': return 53;
-              case 'CLOSURE_SIGNAL_OBSERVED': return 54;
-              case 'THREAD_CLOSED': return 60;
-              default: return 100;
-            }
-          };
-          const wa = weight(a.type);
-          const wb = weight(b.type);
-          if (wa !== wb) return wa - wb;
-        }
-        return a.timestamp - b.timestamp;
-      });
-      const lastTimestamp = Math.max(...ordered.map(e => e.timestamp));
-      return { threadId, events: ordered, lastTimestamp };
-    });
-
-    // Interleave: sort by most recent activity first
-    const allItems: Array<{ type: 'thread' | 'event'; timestamp: number; data: any }> = [
-      ...threadGroups.map(g => ({ type: 'thread' as const, timestamp: g.lastTimestamp, data: g })),
-      ...nonThreadEvents.map(e => ({ type: 'event' as const, timestamp: e.timestamp, data: e })),
-    ].sort((a, b) => b.timestamp - a.timestamp);
-
-    // Build the final grouped structure
-    allItems.forEach(item => {
-      if (item.type === 'event') {
-        groups.push({ event: item.data, isNested: false });
-      } else {
-        const threadGroup = item.data;
-        threadGroup.events.forEach((event: VigilEvent, idx: number) => {
-          groups.push({
-            event,
-            isNested: true,
-            threadStart: idx === 0,
-            threadEnd: idx === threadGroup.events.length - 1,
-          });
+    // When grouping is enabled, lightly group by thread but keep it simple
+    const result: Array<{ event: VigilEvent; isGrouped: boolean }> = [];
+    const seen = new Set<string>();
+    
+    // Sort all events newest first
+    const sorted = [...filteredEvents].sort((a, b) => b.timestamp - a.timestamp);
+    
+    sorted.forEach(event => {
+      const threadId = (event as any).thread_id as string | undefined;
+      
+      if (!threadId) {
+        // Non-thread events just go in order
+        result.push({ event, isGrouped: false });
+      } else if (!seen.has(threadId)) {
+        // First time seeing this thread - add all events for this thread together
+        seen.add(threadId);
+        const threadEvents = sorted
+          .filter(e => (e as any).thread_id === threadId)
+          .sort((a, b) => b.timestamp - a.timestamp); // newest first within thread too
+        
+        threadEvents.forEach(te => {
+          result.push({ event: te, isGrouped: threadEvents.length > 1 });
         });
       }
+      // Skip events we've already added as part of a thread group
     });
 
-    return groups;
+    return result;
   }, [filteredEvents, groupByThread]);
 
   if (events.length === 0) {
@@ -332,16 +363,20 @@ export function EventTable({
           ))}
         </div>
         <div className="ml-auto flex items-center gap-3">
-          <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+          <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer" title="Show technical system events">
             <input
               type="checkbox"
-              checked={flowPreset}
-              onChange={(e) => setFlowPreset(e.target.checked)}
+              checked={showAllEvents}
+              onChange={(e) => {
+                setShowAllEvents(e.target.checked);
+                // Reset category filter when switching views
+                setCategoryFilter('all');
+              }}
               className="w-4 h-4 rounded border-gray-300 text-vigil-600 focus:ring-vigil-500"
             />
-            Essential flow only
+            Show all events
           </label>
-          <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+          <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer" title="Group related events by conversation">
             <input
               type="checkbox"
               checked={groupByThread}
@@ -379,39 +414,22 @@ export function EventTable({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-100">
-            {groupedEvents.map((item) => {
-              const { event, isNested, threadStart, threadEnd } = item;
+            {displayEvents.map((item) => {
+              const { event, isGrouped } = item;
               const category = getEventCategory(event.type);
               const isExpanded = expandedRow === event.event_id;
               
               return (
                 <React.Fragment key={event.event_id}>
-                  <tr className={`hover:bg-gray-50 transition-colors ${isNested ? 'bg-blue-50/30' : ''}`}>
+                  <tr className={`hover:bg-gray-50 transition-colors ${isGrouped ? 'bg-blue-50/20' : ''}`}>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        {isNested && (
-                          <div className="flex items-center">
-                            <div className="w-6 flex items-center justify-center">
-                              {threadStart && (
-                                <div className="w-3 h-3 border-l-2 border-b-2 border-blue-300 rounded-bl" />
-                              )}
-                              {!threadStart && !threadEnd && (
-                                <div className="w-px h-full bg-blue-300" />
-                              )}
-                              {threadEnd && (
-                                <div className="w-3 h-3 border-l-2 border-t-2 border-blue-300 rounded-tl -mb-3" />
-                              )}
-                            </div>
-                          </div>
-                        )}
-                        <div className="flex flex-col">
-                          <span className="text-gray-900 font-medium">
-                            {formatRelativeTime(event.timestamp)}
-                          </span>
-                          <span className="text-xs text-gray-500">
-                            {formatTimestamp(event.timestamp)}
-                          </span>
-                        </div>
+                      <div className="flex flex-col">
+                        <span className="text-gray-900 font-medium">
+                          {formatRelativeTime(event.timestamp)}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {formatTimestamp(event.timestamp)}
+                        </span>
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
@@ -420,14 +438,9 @@ export function EventTable({
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        {threadStart && (
-                          <span className="text-blue-600 text-xs font-mono">●</span>
-                        )}
-                        <span className="text-gray-900 text-sm">
-                          {normalizeEventType(event.type)}
-                        </span>
-                      </div>
+                      <span className="text-gray-900 text-sm">
+                        {normalizeEventType(event.type)}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-gray-700 line-clamp-2">
@@ -444,35 +457,35 @@ export function EventTable({
                     </td>
                   </tr>
                   {isExpanded && (
-                    <tr className={isNested ? 'bg-blue-50/20' : 'bg-gray-50'}>
+                    <tr className="bg-gray-50">
                       <td colSpan={5} className="px-4 py-4">
-                        <div className={`space-y-2 ${isNested ? 'ml-10' : ''}`}>
+                        <div className="space-y-2">
                           <div className="flex items-center gap-2 mb-3">
                             <span className="text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                              Event Details
+                              Details
                             </span>
                             <div className="flex-1 h-px bg-gray-200" />
                           </div>
-                          <div className="grid grid-cols-2 gap-4 text-xs">
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs">
                             <div>
                               <span className="text-gray-500 block mb-1">Event ID</span>
-                              <code className="text-gray-900 font-mono text-xs">{event.event_id}</code>
-                            </div>
-                            <div>
-                              <span className="text-gray-500 block mb-1">Watcher ID</span>
-                              <code className="text-gray-900 font-mono text-xs">{event.watcher_id}</code>
+                              <code className="text-gray-900 font-mono text-xs break-all">{event.event_id}</code>
                             </div>
                             {(event as any).thread_id && (
                               <div>
-                                <span className="text-gray-500 block mb-1">Thread ID</span>
-                                <code className="text-gray-900 font-mono text-xs">{(event as any).thread_id}</code>
+                                <span className="text-gray-500 block mb-1">Conversation ID</span>
+                                <code className="text-gray-900 font-mono text-xs break-all">{(event as any).thread_id}</code>
                               </div>
                             )}
+                            <div>
+                              <span className="text-gray-500 block mb-1">Exact Time</span>
+                              <span className="text-gray-900">{new Date(event.timestamp).toLocaleString()}</span>
+                            </div>
                           </div>
                           {Object.keys(event.payload || {}).length > 0 && (
                             <details className="mt-3">
                               <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
-                                View full payload
+                                Technical details
                               </summary>
                               <pre className="mt-2 p-3 bg-white rounded border border-gray-200 text-xs overflow-x-auto">
                                 {JSON.stringify(event.payload, null, 2)}

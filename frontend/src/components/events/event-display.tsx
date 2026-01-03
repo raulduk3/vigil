@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { VigilEvent } from '@/lib/api/client';
+import { formatReminderType, formatFriendlyDate, formatUrgencyState } from '@/lib/format';
 
 /**
  * Event metadata display utilities
@@ -61,9 +62,14 @@ export function getEventMetadata(event: VigilEvent): EventMetadata {
   // We use the event itself as the data source, falling back to payload
   const data = { ...event.payload, ...event } as Record<string, unknown>;
 
-  // Default metadata
+  // Default metadata with user-friendly fallback label
+  const friendlyDefaultLabel = event.type
+    .split('_')
+    .map(word => word.charAt(0) + word.slice(1).toLowerCase())
+    .join(' ');
+    
   const defaultMeta: EventMetadata = {
-    label: event.type.replace(/_/g, ' '),
+    label: friendlyDefaultLabel,
     description: 'Event recorded',
     details: [],
   };
@@ -74,18 +80,17 @@ export function getEventMetadata(event: VigilEvent): EventMetadata {
       return {
         ...defaultMeta,
         label: 'Account Created',
-        description: `New account created for ${data.owner_email || 'user'}`,
+        description: `New account for ${data.owner_email || 'user'}`,
         details: [
           { label: 'Owner', value: String(data.owner_email || 'N/A') },
-          { label: 'Account ID', value: truncate(String(data.account_id || ''), 12) },
         ],
       };
 
     case 'USER_CREATED':
       return {
         ...defaultMeta,
-        label: 'User Created',
-        description: `User ${data.email} added`,
+        label: 'Team Member Added',
+        description: `${data.email} joined`,
         details: [
           { label: 'Email', value: String(data.email || 'N/A') },
           { label: 'Role', value: String(data.role || 'member') },
@@ -96,7 +101,7 @@ export function getEventMetadata(event: VigilEvent): EventMetadata {
       return {
         ...defaultMeta,
         label: 'Watcher Created',
-        description: `Watcher "${data.name}" created`,
+        description: `"${data.name}" is ready to monitor emails`,
         details: [
           { label: 'Name', value: String(data.name || 'Unnamed') },
         ],
@@ -105,24 +110,24 @@ export function getEventMetadata(event: VigilEvent): EventMetadata {
     case 'WATCHER_ACTIVATED':
       return {
         ...defaultMeta,
-        label: 'Watcher Activated',
-        description: 'Monitoring started',
+        label: 'Monitoring Started',
+        description: 'Now watching for emails',
         details: [],
       };
 
     case 'WATCHER_PAUSED':
       return {
         ...defaultMeta,
-        label: 'Watcher Paused',
-        description: data.reason ? `Paused: ${data.reason}` : 'Monitoring paused',
+        label: 'Monitoring Paused',
+        description: data.reason ? String(data.reason) : 'Temporarily stopped',
         details: data.reason ? [{ label: 'Reason', value: String(data.reason) }] : [],
       };
 
     case 'WATCHER_RESUMED':
       return {
         ...defaultMeta,
-        label: 'Watcher Resumed',
-        description: 'Monitoring resumed',
+        label: 'Monitoring Resumed',
+        description: 'Back to watching emails',
         details: [],
       };
 
@@ -130,232 +135,284 @@ export function getEventMetadata(event: VigilEvent): EventMetadata {
       return {
         ...defaultMeta,
         label: 'Watcher Deleted',
-        description: 'Watcher permanently deleted',
+        description: 'Permanently removed',
         details: [],
       };
 
     case 'WATCHER_UPDATED':
       return {
         ...defaultMeta,
-        label: 'Watcher Updated',
-        description: data.name ? `Renamed to "${data.name}"` : 'Settings updated',
+        label: 'Settings Updated',
+        description: data.name ? `Renamed to "${data.name}"` : 'Configuration changed',
         details: data.name ? [{ label: 'New Name', value: String(data.name) }] : [],
       };
 
-    case 'POLICY_UPDATED':
-      const policy = data.policy as Record<string, unknown> | undefined;
-      const channelCount = Array.isArray(policy?.notification_channels) 
-        ? policy.notification_channels.length 
-        : 0;
+    case 'WATCHER_RENAMED':
       return {
         ...defaultMeta,
-        label: 'Policy Updated',
-        description: 'Watcher policy configuration changed',
+        label: 'Watcher Renamed',
+        description: data.new_name ? `Now called "${data.new_name}"` : 'Name changed',
         details: [
-          { label: 'Silence Threshold', value: `${policy?.silence_threshold_hours || 72}h` },
-          { label: 'Channels', value: String(channelCount) },
+          ...(data.old_name ? [{ label: 'Previously', value: String(data.old_name) }] : []),
+          ...(data.new_name ? [{ label: 'Now', value: String(data.new_name) }] : []),
+        ],
+      };
+
+    case 'POLICY_UPDATED':
+      return {
+        ...defaultMeta,
+        label: 'Notification Settings Changed',
+        description: 'Alert preferences updated',
+        details: [],
+      };
+
+    // Extraction Events
+    case 'EXTRACTION_STARTED':
+      return {
+        ...defaultMeta,
+        label: 'Analysis Started',
+        description: 'Processing email for deadlines and signals',
+        details: [],
+      };
+
+    case 'EXTRACTION_COMPLETED':
+      const findings = Number(data.findings_count) || 0;
+      return {
+        ...defaultMeta,
+        label: 'Analysis Complete',
+        description: findings > 0 ? `Found ${findings} signal${findings === 1 ? '' : 's'}` : 'No signals found',
+        details: [
+          ...(data.processing_time_ms ? [{ label: 'Time', value: `${Number(data.processing_time_ms).toFixed(0)}ms` }] : []),
         ],
       };
 
     // Message Events
-    case 'MESSAGE_RECEIVED':
+    case 'EMAIL_RECEIVED':
       return {
         ...defaultMeta,
-        label: 'Message Received',
+        label: 'Email Received',
         description: truncate(String(data.subject || 'No subject'), 60),
         details: [
-          { label: 'From', value: truncate(String(data.sender || 'Unknown'), 40) },
-          { label: 'Subject', value: truncate(String(data.subject || 'No subject'), 50) },
-          { label: 'Sent', value: formatTimestamp(data.sent_at as number) },
-          ...(data.pii_detected ? [{ label: 'PII', value: 'Detected & redacted' }] : []),
+          { label: 'From', value: truncate(String(data.original_sender || data.sender || 'Unknown'), 40) },
+          ...(data.pii_detected ? [{ label: 'Privacy', value: 'Personal info redacted' }] : []),
         ],
       };
 
     case 'MESSAGE_ROUTED':
+      const routeAction = data.routed_to_thread_id ? 'Added to conversation' : 'Started new conversation';
       return {
         ...defaultMeta,
-        label: 'Message Routed',
-        description: data.routed_to_thread_id ? 'Routed to existing thread' : 'New thread created',
+        label: 'Email Routed',
+        description: routeAction,
         details: [
-          { label: 'Confidence', value: String(data.confidence || 'N/A') },
-          ...(data.evidence ? [{ label: 'Evidence', value: truncate(String(data.evidence), 60) }] : []),
+          ...(data.match_confidence ? [{ label: 'Confidence', value: String(data.match_confidence) }] : []),
         ],
       };
 
-    // LLM Extraction Events
+    // LLM Extraction Events - User-friendly names
     case 'HARD_DEADLINE_OBSERVED':
       return {
         ...defaultMeta,
-        label: 'Hard Deadline Detected',
-        description: `Deadline: ${formatTimestamp(data.deadline_utc as number)}`,
+        label: 'Deadline Found',
+        description: `Due: ${formatTimestamp(data.deadline_utc as number)}`,
         details: [
-          { label: 'Deadline', value: formatTimestamp(data.deadline_utc as number) },
-          { label: 'Text', value: `"${truncate(String(data.deadline_text || ''), 50)}"` },
-          { label: 'Confidence', value: String(data.confidence || 'N/A') },
-          { label: 'Binding', value: data.binding ? 'Yes' : 'No' },
+          { label: 'Due Date', value: formatTimestamp(data.deadline_utc as number) },
+          ...(data.deadline_text ? [{ label: 'From', value: `"${truncate(String(data.deadline_text), 50)}"` }] : []),
         ],
       };
 
     case 'SOFT_DEADLINE_SIGNAL_OBSERVED':
       return {
         ...defaultMeta,
-        label: 'Soft Deadline Signal',
-        description: `"${truncate(String(data.signal_text || ''), 40)}"`,
+        label: 'Timeline Detected',
+        description: data.estimated_horizon_hours 
+          ? `Approximately ${data.estimated_horizon_hours} hours`
+          : 'Flexible timeline mentioned',
         details: [
-          { label: 'Signal', value: `"${truncate(String(data.signal_text || ''), 50)}"` },
-          { label: 'Est. Horizon', value: `~${data.estimated_horizon_hours || 0}h` },
-          { label: 'Confidence', value: String(data.confidence || 'N/A') },
+          ...(data.signal_text ? [{ label: 'Text', value: `"${truncate(String(data.signal_text), 50)}"` }] : []),
         ],
       };
 
     case 'URGENCY_SIGNAL_OBSERVED':
       return {
         ...defaultMeta,
-        label: 'Urgency Signal',
-        description: `${String(data.signal_type || 'signal').replace('_', ' ')} detected`,
+        label: 'Urgency Detected',
+        description: String(data.signal_type || 'Urgent request').replace(/_/g, ' '),
         details: [
-          { label: 'Type', value: String(data.signal_type || 'N/A').replace('_', ' ') },
-          { label: 'Signal', value: `"${truncate(String(data.signal_text || ''), 50)}"` },
-          { label: 'Confidence', value: String(data.confidence || 'N/A') },
+          ...(data.signal_text ? [{ label: 'Text', value: `"${truncate(String(data.signal_text), 50)}"` }] : []),
         ],
       };
 
     case 'CLOSURE_SIGNAL_OBSERVED':
       return {
         ...defaultMeta,
-        label: 'Closure Signal',
-        description: `${String(data.closure_type || 'closure')} resolution detected`,
+        label: 'Resolution Detected',
+        description: `${String(data.closure_type || 'resolved').replace(/_/g, ' ')} found`,
         details: [
-          { label: 'Type', value: String(data.closure_type || 'N/A') },
-          { label: 'Evidence', value: `"${truncate(String(data.source_span || ''), 50)}"` },
+          ...(data.source_span ? [{ label: 'Evidence', value: `"${truncate(String(data.source_span), 50)}"` }] : []),
         ],
       };
 
-    // Thread Events
+    // Thread Events - User-friendly names
     case 'THREAD_OPENED':
       return {
         ...defaultMeta,
-        label: 'Thread Opened',
+        label: 'Conversation Started',
         description: data.normalized_subject 
           ? `"${truncate(String(data.normalized_subject), 40)}"` 
-          : 'New thread started',
+          : 'New conversation tracking',
         details: [
-          ...(data.normalized_subject ? [{ label: 'Subject', value: truncate(String(data.normalized_subject), 50) }] : []),
           ...(data.original_sender ? [{ label: 'From', value: truncate(String(data.original_sender), 40) }] : []),
-          { label: 'Trigger', value: String(data.trigger_type || 'hard_deadline').replace('_', ' ') },
         ],
       };
 
     case 'THREAD_ACTIVITY_OBSERVED':
+      const senderName = String(data.original_sender || data.sender || '').split('@')[0] || 'Someone';
       return {
         ...defaultMeta,
-        label: 'Thread Activity',
-        description: `Activity from ${truncate(String(data.sender || 'unknown'), 30)}`,
+        label: 'New Activity',
+        description: `Reply from ${senderName}`,
         details: [
-          { label: 'From', value: truncate(String(data.sender || 'Unknown'), 40) },
-          { label: 'Activity At', value: formatTimestamp(data.activity_at as number) },
+          { label: 'From', value: truncate(String(data.original_sender || data.sender || 'Unknown'), 40) },
         ],
       };
 
     case 'THREAD_CLOSED':
       return {
         ...defaultMeta,
-        label: 'Thread Closed',
-        description: data.closed_by === 'user_action' ? 'Manually closed by user' : 'Auto-closed from evidence',
+        label: 'Conversation Resolved',
+        description: data.closed_by === 'user_action' ? 'Marked as done by you' : 'Automatically resolved',
         details: [
-          { label: 'Closed By', value: data.closed_by === 'user_action' ? 'User' : 'System' },
           ...(data.closure_reason ? [{ label: 'Reason', value: String(data.closure_reason) }] : []),
         ],
       };
 
-    // Reminder Events
+    // Reminder Events - User-friendly status names
     case 'REMINDER_EVALUATED':
       const urgencyLevel = data.urgency_level || data.urgency_state;
+      const evaluatedType = data.reminder_type as 'hard_deadline' | 'soft_deadline' | 'urgency_signal' | 'manual' | undefined;
+      const statusLabels: Record<string, string> = {
+        'ok': '✅ On Track',
+        'warning': '⚠️ Due Soon',
+        'critical': '🔴 Urgent',
+        'overdue': '❗ Overdue',
+      };
+      const statusDesc = statusLabels[String(urgencyLevel)] || formatUrgencyState(String(urgencyLevel || 'ok'));
       return {
         ...defaultMeta,
-        label: 'Urgency Evaluated',
-        description: `Status: ${String(urgencyLevel || 'ok')}`,
+        label: 'Status Check',
+        description: `${evaluatedType ? formatReminderType(evaluatedType) : 'Reminder'}: ${statusDesc}`,
         details: [
-          { label: 'Urgency', value: String(urgencyLevel || 'ok') },
-          ...(data.hours_until_deadline != null ? [{ label: 'Until Deadline', value: `${Number(data.hours_until_deadline).toFixed(1)}h` }] : []),
-          ...(data.hours_since_activity != null ? [{ label: 'Since Activity', value: `${Number(data.hours_since_activity).toFixed(1)}h` }] : []),
+          ...(data.hours_until_deadline != null ? [{ label: 'Time Left', value: `${Number(data.hours_until_deadline).toFixed(0)}h` }] : []),
         ],
       };
 
     case 'REMINDER_GENERATED':
+      const generatedType = data.reminder_type as 'hard_deadline' | 'soft_deadline' | 'urgency_signal' | 'manual' | undefined;
       return {
         ...defaultMeta,
-        label: 'Reminder Generated',
-        description: `${String(data.reminder_type || 'reminder').replace('_', ' ')} reminder`,
+        label: 'Reminder Created',
+        description: `Tracking ${generatedType ? formatReminderType(generatedType) : 'deadline'}`,
+        details: [],
+      };
+
+    case 'REMINDER_CREATED':
+      const createdReminderType = data.reminder_type as 'hard_deadline' | 'soft_deadline' | 'urgency_signal' | 'manual' | undefined;
+      return {
+        ...defaultMeta,
+        label: `${createdReminderType ? formatReminderType(createdReminderType) : 'Reminder'} Added`,
+        description: data.description ? String(data.description) : (data.deadline_utc ? `Due ${formatFriendlyDate(Number(data.deadline_utc))}` : 'New reminder'),
         details: [
-          { label: 'Type', value: String(data.reminder_type || 'N/A').replace('_', ' ') },
-          { label: 'Binding', value: data.binding ? 'Yes' : 'No' },
+          ...(data.source_span ? [{ label: 'From', value: `"${truncate(String(data.source_span), 50)}"` }] : []),
         ],
       };
 
-    // Alert Events
+    case 'REMINDER_DISMISSED':
+      return {
+        ...defaultMeta,
+        label: 'Reminder Dismissed',
+        description: data.reason ? String(data.reason) : 'Marked as handled',
+        details: [],
+      };
+
+    case 'REMINDER_MERGED':
+      return {
+        ...defaultMeta,
+        label: 'Reminders Combined',
+        description: 'Duplicate reminders merged together',
+        details: [],
+      };
+
+    // Alert Events - User-friendly notification labels
     case 'ALERT_QUEUED':
       return {
         ...defaultMeta,
-        label: 'Alert Queued',
-        description: `${String(data.urgency_state || 'alert')} alert ready`,
-        details: [
-          { label: 'Urgency', value: String(data.urgency_state || 'N/A') },
-          { label: 'Channels', value: String(Array.isArray(data.channels) ? data.channels.length : 0) },
-        ],
+        label: 'Notification Preparing',
+        description: 'Alert being prepared for delivery',
+        details: [],
       };
 
     case 'ALERT_SENT':
+      const channelType = String(data.channel_type || 'email');
+      const channelLabels: Record<string, string> = {
+        'email': 'Email sent',
+        'webhook': 'Webhook delivered',
+        'slack': 'Slack notification sent',
+      };
       return {
         ...defaultMeta,
-        label: 'Alert Sent',
-        description: `Delivered via ${String(data.channel_type || 'notification')}`,
+        label: 'Notification Sent',
+        description: channelLabels[channelType] || `${channelType} notification sent`,
         details: [
-          { label: 'Channel', value: String(data.channel_type || 'N/A') },
-          { label: 'Destination', value: truncate(String(data.destination || 'N/A'), 30) },
+          ...(data.destination ? [{ label: 'To', value: truncate(String(data.destination), 30) }] : []),
         ],
       };
 
     case 'ALERT_FAILED':
       return {
         ...defaultMeta,
-        label: 'Alert Failed',
-        description: `Delivery failed: ${truncate(String(data.error || 'Unknown error'), 40)}`,
+        label: 'Notification Failed',
+        description: `Could not deliver: ${truncate(String(data.error || 'Unknown error'), 40)}`,
         details: [
-          { label: 'Error', value: truncate(String(data.error || 'Unknown'), 60) },
-          { label: 'Channel', value: String(data.channel_type || 'N/A') },
+          { label: 'Issue', value: truncate(String(data.error || 'Unknown'), 50) },
         ],
       };
 
-    // Time Events
+    // Time Events - Hide technical details
     case 'TIME_TICK':
       return {
         ...defaultMeta,
-        label: 'Time Tick',
-        description: 'Scheduled urgency re-evaluation',
+        label: 'Scheduled Check',
+        description: 'System status update',
         details: [],
       };
 
-    // Report Events  
+    case 'URGENCY_EVALUATED':
+      const evalUrgency = data.urgency_state || data.current_urgency;
+      return {
+        ...defaultMeta,
+        label: 'Urgency Check',
+        description: evalUrgency ? formatUrgencyState(String(evalUrgency)) : 'Status evaluated',
+        details: [
+          ...(data.hours_until_deadline ? [{ label: 'Time Left', value: `${Number(data.hours_until_deadline).toFixed(0)}h` }] : []),
+        ],
+      };
+
+    // Report Events - Friendly labels
     case 'REPORT_GENERATED':
       return {
         ...defaultMeta,
-        label: 'Report Generated',
+        label: 'Report Ready',
         description: `${String(data.report_type || 'Summary')} report created`,
-        details: [
-          { label: 'Type', value: String(data.report_type || 'summary') },
-          { label: 'Period', value: String(data.period || 'N/A') },
-        ],
+        details: [],
       };
 
     case 'REPORT_SENT':
       return {
         ...defaultMeta,
-        label: 'Report Sent',
-        description: `Report delivered to ${data.recipient || 'recipient'}`,
-        details: [
-          { label: 'Recipient', value: truncate(String(data.recipient || 'N/A'), 40) },
-        ],
+        label: 'Report Delivered',
+        description: `Sent to ${data.recipient || 'your email'}`,
+        details: [],
       };
 
     default:

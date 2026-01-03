@@ -259,7 +259,7 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto px-6 lg:px-8 relative z-10">
           <div className="relative max-w-4xl">
             <p className="text-base font-medium text-vigil-700 mb-5 uppercase tracking-wider">
-              Email oversight · Powered by Kimi K2
+              Email oversight · Powered by GPT-4o-mini
             </p>
             <h1 className="text-5xl md:text-6xl font-display font-semibold text-gray-900 tracking-tight mb-7 text-balance leading-[1.1]">
               Catch what almost<br />
@@ -309,7 +309,7 @@ export default function HomePage() {
             Observe, extract, alert
           </h2>
           <p className="text-lg text-gray-600 leading-relaxed max-w-none">
-            You forward emails. Kimi K2 extracts deadlines and obligations. Email content is then discarded—only
+            You forward emails. GPT-4o-mini extracts deadlines and obligations. Email content is then discarded—only
             the extracted facts remain. The system tracks time and alerts you when something needs attention.
           </p>
         </div>
@@ -334,7 +334,7 @@ export default function HomePage() {
               description="Configure Gmail rules to automatically forward to Vigil"
             />
             <Link href="/learn/email-ingestion" className="inline-block text-base text-vigil-700 hover:text-vigil-800 font-medium mt-5">
-              Learn about email ingestion →
+              Learn about email ingestion
             </Link>
           </div>
 
@@ -357,7 +357,7 @@ export default function HomePage() {
               description="See how Vigil creates reminders from email text"
             />
             <Link href="/learn/reminders" className="inline-block text-base text-vigil-700 hover:text-vigil-800 font-medium mt-5">
-              Learn about reminders →
+              Learn about reminders
             </Link>
           </div>
 
@@ -380,14 +380,14 @@ export default function HomePage() {
               description="Review reminder status, urgency levels, and timelines"
             />
             <Link href="/learn/alerts" className="inline-block text-base text-vigil-700 hover:text-vigil-800 font-medium mt-5">
-              Learn about notifications →
+              Learn about notifications
             </Link>
           </div>
         </div>
       </Section>
 
       {/* Use Cases */}
-      <Section id="use-cases" className="bg-surface-sunken border-y border-gray-200 py-12 md:py-10">
+      <Section id="use-cases" className="bg-surface-sunken border-y border-gray-200 py-12 md:pt-8 md:pb-8">
         <div className="mb-2 md:mb-12">
           <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">
             Use cases
@@ -472,7 +472,7 @@ export default function HomePage() {
             Built for confidence
           </h2>
           <p className="text-lg text-gray-600 leading-relaxed max-w-none">
-            Kimi K2 handles natural language extraction. After that, everything is deterministic—events,
+            GPT-4o-mini handles natural language extraction. After that, everything is deterministic—events,
             state, alerts. You can edit or dismiss anything the model extracts. Full audit trail.
           </p>
         </div>
@@ -653,7 +653,7 @@ export default function HomePage() {
 
         <div className="text-center mt-8">
           <Link href="/learn/reminders" className="text-sm text-vigil-700 hover:text-vigil-800 font-medium">
-            Learn about reminders →
+            Learn about reminders
           </Link>
         </div>
       </Section>
@@ -675,7 +675,7 @@ export default function HomePage() {
 
         <div className="text-left mb-8">
           <Link href="/learn/architecture" className="text-sm text-vigil-700 hover:text-vigil-800 font-medium">
-            Explore system design →
+            Explore system design
           </Link>
         </div>
 
@@ -696,7 +696,7 @@ export default function HomePage() {
                 </svg>
               </div>
               <p className="font-semibold text-gray-900">Email</p>
-              <p className="text-xs text-gray-500">arrives via SMTP</p>
+              <p className="text-xs text-gray-500">via Cloudflare</p>
             </div>
             
             <span aria-hidden className="text-3xl leading-none text-gray-400 font-light rotate-90 md:rotate-0">→</span>
@@ -818,7 +818,6 @@ export default function HomePage() {
             >
               <h3 className="font-semibold text-gray-900 mb-1.5 group-hover:text-vigil-800 transition-colors">
                 {item.title}
-                <span className="inline-block ml-1.5 text-gray-400 group-hover:text-vigil-600 transition-colors">→</span>
               </h3>
               <p className="text-sm text-gray-600 leading-relaxed">{item.description}</p>
             </Link>
@@ -911,7 +910,7 @@ export default function HomePage() {
             <div className="mt-4 text-center">
               <span className="text-sm text-gray-500">Already have an account? </span>
               <Link href="/auth/login" className="text-sm text-vigil-700 hover:text-vigil-800 font-medium">
-                Sign in →
+                Sign in
               </Link>
             </div>
           </div>
@@ -925,8 +924,8 @@ export default function HomePage() {
             <div>
               <p className="font-display font-semibold text-gray-900 mb-3">Vigil</p>
               <p className="text-sm text-gray-500">
-                Email oversight.<br />
-                Powered by Kimi K2.
+                LLM-assisted email vigilance.
+                Event-sourced oversight.
               </p>
             </div>
             <div>
@@ -948,11 +947,12 @@ export default function HomePage() {
               </ul>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-3">Legal</p>
+              <p className="text-sm font-medium text-gray-700 mb-3">Company</p>
               <ul className="space-y-2 text-sm text-gray-500">
+                <li><Link href="/blog" className="hover:text-gray-700">Blog</Link></li>
+                <li><Link href="/support" className="hover:text-gray-700">Support</Link></li>
                 <li><Link href="/privacy" className="hover:text-gray-700">Privacy policy</Link></li>
                 <li><Link href="/terms" className="hover:text-gray-700">Terms of service</Link></li>
-                <li><a href="mailto:support@email.vigil.run" className="hover:text-gray-700">Contact</a></li>
               </ul>
             </div>
           </div>

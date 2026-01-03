@@ -1,53 +1,39 @@
 /**
- * JWT Token Management
+ * JWT Authentication
  *
- * Implements SEC-1: Token Expiry (1 hour access, 24 hours refresh)
- * Implements SEC-8: Token Scope (account_id)
- * 
- * Security: All tokens are invalidated on server restart via server instance ID.
+ * Access tokens (1h) + Refresh tokens (24h).
+ * Server instance ID invalidates all tokens on restart.
  */
 
-import { sign, verify, type JwtPayload } from "jsonwebtoken";
-import { randomUUID } from "crypto";
+import jwt from "jsonwebtoken";
+import { queryOne, query } from "../db/client";
+import { logger } from "../logger";
 
 // ============================================================================
 // Configuration
 // ============================================================================
 
-if (!process.env.JWT_SECRET) {
-    throw new Error(
-        "JWT_SECRET environment variable is required. " +
-            "Generate with: openssl rand -base64 32"
-    );
-}
-
-if (!process.env.JWT_REFRESH_SECRET) {
-    throw new Error(
-        "JWT_REFRESH_SECRET environment variable is required. " +
-            "Generate with: openssl rand -base64 32"
-    );
-}
-
-const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
-
-// Server instance ID - changes on every restart, invalidating all tokens
-// This ensures tokens don't persist across server restarts for security
-const SERVER_INSTANCE_ID = randomUUID();
-console.log(`[JWT] Server instance ID: ${SERVER_INSTANCE_ID.substring(0, 8)}... (tokens from previous instances are now invalid)`);
-
-/**
- * Get the current server instance ID (useful for debugging/health checks).
- */
-export function getServerInstanceId(): string {
-    return SERVER_INSTANCE_ID;
-}
-
-// SEC-1: Token Expiry - reasonable defaults
-// Access tokens: 1 hour (short-lived for security)
-// Refresh tokens: 24 hours (requires re-login daily)
 const ACCESS_TOKEN_EXPIRY = "1h";
 const REFRESH_TOKEN_EXPIRY = "24h";
+
+// Server instance ID - changes on restart, invalidating all tokens
+const SERVER_INSTANCE_ID = crypto.randomUUID();
+
+function getJwtSecret(): string {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+        throw new Error("JWT_SECRET environment variable required");
+    }
+    return secret;
+}
+
+function getRefreshSecret(): string {
+    const secret = process.env.JWT_REFRESH_SECRET;
+    if (!secret) {
+        throw new Error("JWT_REFRESH_SECRET environment variable required");
+    }
+    return secret;
+}
 
 // ============================================================================
 // Types
@@ -58,78 +44,41 @@ export interface TokenPayload {
     account_id: string;
     email: string;
     role: "owner" | "member";
-}
-
-export interface AccessTokenPayload extends TokenPayload {
-    type: "access";
-    sid: string; // Server instance ID
-}
-
-export interface RefreshTokenPayload {
-    user_id: string;
-    token_id: string;
-    type: "refresh";
-    sid: string; // Server instance ID
+    instance_id: string;
 }
 
 export interface TokenPair {
-    access_token: string;
-    refresh_token: string;
-    expires_in: number; // seconds
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
 }
 
 // ============================================================================
 // Token Generation
 // ============================================================================
 
-/**
- * Generate an access token for a user.
- * SEC-8: Token scoped to account_id.
- * Includes server instance ID to invalidate tokens on restart.
- */
-export function generateAccessToken(payload: TokenPayload): string {
-    const tokenPayload: AccessTokenPayload = {
-        ...payload,
-        type: "access",
-        sid: SERVER_INSTANCE_ID,
-    };
-
-    return sign(tokenPayload, JWT_SECRET, {
-        expiresIn: ACCESS_TOKEN_EXPIRY,
-        algorithm: "HS256",
-    });
-}
-
-/**
- * Generate a refresh token for a user.
- * Includes server instance ID to invalidate tokens on restart.
- */
-export function generateRefreshToken(userId: string, tokenId: string): string {
-    const payload: RefreshTokenPayload = {
-        user_id: userId,
-        token_id: tokenId,
-        type: "refresh",
-        sid: SERVER_INSTANCE_ID,
-    };
-
-    return sign(payload, JWT_REFRESH_SECRET, {
-        expiresIn: REFRESH_TOKEN_EXPIRY,
-        algorithm: "HS256",
-    });
-}
-
-/**
- * Generate both access and refresh tokens.
- * Tokens include the current server instance ID and will be invalid after restart.
- */
 export function generateTokenPair(
-    payload: TokenPayload,
-    refreshTokenId: string
+    payload: Omit<TokenPayload, "instance_id">
 ): TokenPair {
+    const fullPayload: TokenPayload = {
+        ...payload,
+        instance_id: SERVER_INSTANCE_ID,
+    };
+
+    const accessToken = jwt.sign(fullPayload, getJwtSecret(), {
+        expiresIn: ACCESS_TOKEN_EXPIRY,
+    });
+
+    const refreshToken = jwt.sign(
+        { user_id: payload.user_id, instance_id: SERVER_INSTANCE_ID },
+        getRefreshSecret(),
+        { expiresIn: REFRESH_TOKEN_EXPIRY }
+    );
+
     return {
-        access_token: generateAccessToken(payload),
-        refresh_token: generateRefreshToken(payload.user_id, refreshTokenId),
-        expires_in: 60 * 60, // 1 hour in seconds (matches ACCESS_TOKEN_EXPIRY)
+        accessToken,
+        refreshToken,
+        expiresIn: 3600, // 1 hour in seconds
     };
 }
 
@@ -137,132 +86,97 @@ export function generateTokenPair(
 // Token Verification
 // ============================================================================
 
-export interface VerificationResult<T> {
-    valid: boolean;
-    payload?: T;
-    error?: string;
-    expired?: boolean;
-}
-
-/**
- * Verify an access token.
- * Validates server instance ID to reject tokens from previous server instances.
- */
-export function verifyAccessToken(
-    token: string
-): VerificationResult<AccessTokenPayload> {
+export function verifyAccessToken(token: string): TokenPayload | null {
     try {
-        const payload = verify(token, JWT_SECRET, {
-            algorithms: ["HS256"],
-        }) as JwtPayload & AccessTokenPayload;
+        const payload = jwt.verify(token, getJwtSecret()) as TokenPayload;
 
-        if (payload.type !== "access") {
-            return { valid: false, error: "Invalid token type" };
+        // Check server instance ID
+        if (payload.instance_id !== SERVER_INSTANCE_ID) {
+            logger.debug("Token from different server instance");
+            return null;
         }
 
-        // Reject tokens from previous server instances
-        if (payload.sid !== SERVER_INSTANCE_ID) {
-            return { valid: false, error: "Token invalidated by server restart", expired: true };
-        }
-
-        return { valid: true, payload };
-    } catch (error: any) {
-        if (error.name === "TokenExpiredError") {
-            return { valid: false, error: "Token expired", expired: true };
-        }
-        if (error.name === "JsonWebTokenError") {
-            return { valid: false, error: "Invalid token" };
-        }
-        return { valid: false, error: "Token verification failed" };
-    }
-}
-
-/**
- * Verify a refresh token.
- * Validates server instance ID to reject tokens from previous server instances.
- */
-export function verifyRefreshToken(
-    token: string
-): VerificationResult<RefreshTokenPayload> {
-    try {
-        const payload = verify(token, JWT_REFRESH_SECRET, {
-            algorithms: ["HS256"],
-        }) as JwtPayload & RefreshTokenPayload;
-
-        if (payload.type !== "refresh") {
-            return { valid: false, error: "Invalid token type" };
-        }
-
-        // Reject tokens from previous server instances
-        if (payload.sid !== SERVER_INSTANCE_ID) {
-            return { valid: false, error: "Token invalidated by server restart", expired: true };
-        }
-
-        return { valid: true, payload };
-    } catch (error: any) {
-        if (error.name === "TokenExpiredError") {
-            return {
-                valid: false,
-                error: "Refresh token expired",
-                expired: true,
-            };
-        }
-        if (error.name === "JsonWebTokenError") {
-            return { valid: false, error: "Invalid refresh token" };
-        }
-        return { valid: false, error: "Refresh token verification failed" };
-    }
-}
-
-/**
- * Extract token from Authorization header.
- * Expects: "Bearer <token>"
- */
-export function extractBearerToken(
-    authHeader: string | null | undefined
-): string | null {
-    if (!authHeader) return null;
-
-    const parts = authHeader.split(" ");
-    if (
-        parts.length !== 2 ||
-        !parts[0] ||
-        parts[0].toLowerCase() !== "bearer"
-    ) {
+        return payload;
+    } catch (error) {
         return null;
     }
+}
 
-    return parts[1] ?? null;
+export async function verifyRefreshToken(
+    token: string
+): Promise<{ user_id: string } | null> {
+    try {
+        const payload = jwt.verify(token, getRefreshSecret()) as {
+            user_id: string;
+            instance_id: string;
+        };
+
+        // Check server instance ID
+        if (payload.instance_id !== SERVER_INSTANCE_ID) {
+            return null;
+        }
+
+        // Check if token is revoked in database
+        const tokenHash = await hashToken(token);
+        const dbToken = await queryOne<{ revoked: boolean }>(
+            "SELECT revoked FROM refresh_tokens WHERE token_hash = $1",
+            [tokenHash]
+        );
+
+        if (dbToken?.revoked) {
+            return null;
+        }
+
+        return { user_id: payload.user_id };
+    } catch (error) {
+        return null;
+    }
 }
 
 // ============================================================================
-// Token Expiry Calculation
+// Token Storage
 // ============================================================================
 
-/**
- * Get the expiry timestamp for a refresh token (24 hours from now).
- * Note: Tokens are also invalidated on server restart regardless of expiry.
- */
-export function getRefreshTokenExpiry(): Date {
-    const expiry = new Date();
-    expiry.setHours(expiry.getHours() + 24);
-    return expiry;
+export async function storeRefreshToken(
+    userId: string,
+    token: string
+): Promise<void> {
+    const tokenHash = await hashToken(token);
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
+
+    await query(
+        `INSERT INTO refresh_tokens (token_id, user_id, token_hash, expires_at)
+         VALUES ($1, $2, $3, $4)`,
+        [crypto.randomUUID(), userId, tokenHash, expiresAt]
+    );
 }
 
-/**
- * Parse JWT expiry to Date.
- */
-export function getTokenExpiry(token: string): Date | null {
-    try {
-        // Decode without verification to read expiry
-        const parts = token.split(".");
-        if (parts.length !== 3 || !parts[1]) return null;
+export async function revokeRefreshToken(token: string): Promise<void> {
+    const tokenHash = await hashToken(token);
+    await query(
+        "UPDATE refresh_tokens SET revoked = TRUE WHERE token_hash = $1",
+        [tokenHash]
+    );
+}
 
-        const payload = JSON.parse(Buffer.from(parts[1], "base64").toString());
-        if (!payload.exp) return null;
+export async function revokeAllUserTokens(userId: string): Promise<void> {
+    await query("UPDATE refresh_tokens SET revoked = TRUE WHERE user_id = $1", [
+        userId,
+    ]);
+}
 
-        return new Date(payload.exp * 1000);
-    } catch {
-        return null;
-    }
+// ============================================================================
+// Helpers
+// ============================================================================
+
+async function hashToken(token: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(token);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export function getServerInstanceId(): string {
+    return SERVER_INSTANCE_ID;
 }

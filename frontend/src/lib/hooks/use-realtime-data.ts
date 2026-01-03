@@ -97,14 +97,14 @@ export function useRealtimeData(options: UseRealtimeDataOptions = {}) {
 
       // Fetch threads for each watcher in parallel for speed
       const threadPromises = watcherList.map(async (watcher) => {
-        const { threads: watcherThreads } = await api.getThreads(watcher.watcher_id);
-        return { watcherId: watcher.watcher_id, threads: watcherThreads };
+        const result = await api.getThreads(watcher.watcher_id);
+        return { watcherId: watcher.watcher_id, threads: result.threads || [] };
       });
-      
+
       const threadResults = await Promise.all(threadPromises);
       const threadData: Record<string, Thread[]> = {};
       for (const { watcherId, threads } of threadResults) {
-        threadData[watcherId] = threads;
+        threadData[watcherId] = threads || [];
       }
 
       if (!isMountedRef.current) {

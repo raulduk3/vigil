@@ -1,13 +1,16 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
-import { api, type Watcher, type Thread, type VigilEvent, type WatcherPolicy } from '@/lib/api';
+import { api, type Watcher, type Thread, type VigilEvent, type WatcherPolicy, type Reminder, type SignalProposal } from '@/lib/api';
 import { RequireAuth } from '@/lib/auth';
 import { EventTable } from '@/components/events/event-table';
 import { NotificationChannelEditor, NotificationChannelSummary } from '@/components/notification-channel-editor';
 import { AppHeader, SubHeader } from '@/components/layout';
+import { formatFriendlyDate } from '@/lib/format';
+import { WatcherInbox } from '@/components/watcher/watcher-inbox';
+import { getSilenceState, computeSilenceDuration, formatSilenceDuration } from '@/lib/silence';
 
 // Time utilities for human-readable AM/PM format with timezone handling
 function getUserTimezone(): string {
@@ -119,6 +122,35 @@ const MONTHLY_DAY_OPTIONS = [
   { value: 27, label: '27th' },
   { value: 28, label: '28th' },
   { value: 29, label: 'Last day of month' },
+];
+
+// Common timezone options (organized by region)
+const TIMEZONE_OPTIONS = [
+  { value: '', label: 'UTC (Default)' },
+  // Americas
+  { value: 'America/New_York', label: 'Eastern Time (New York)' },
+  { value: 'America/Chicago', label: 'Central Time (Chicago)' },
+  { value: 'America/Denver', label: 'Mountain Time (Denver)' },
+  { value: 'America/Los_Angeles', label: 'Pacific Time (Los Angeles)' },
+  { value: 'America/Phoenix', label: 'Arizona (Phoenix)' },
+  { value: 'America/Anchorage', label: 'Alaska (Anchorage)' },
+  { value: 'Pacific/Honolulu', label: 'Hawaii (Honolulu)' },
+  { value: 'America/Toronto', label: 'Eastern Time (Toronto)' },
+  { value: 'America/Vancouver', label: 'Pacific Time (Vancouver)' },
+  // Europe
+  { value: 'Europe/London', label: 'London (GMT/BST)' },
+  { value: 'Europe/Paris', label: 'Central European (Paris)' },
+  { value: 'Europe/Berlin', label: 'Central European (Berlin)' },
+  { value: 'Europe/Amsterdam', label: 'Central European (Amsterdam)' },
+  // Asia/Pacific
+  { value: 'Asia/Tokyo', label: 'Japan (Tokyo)' },
+  { value: 'Asia/Shanghai', label: 'China (Shanghai)' },
+  { value: 'Asia/Singapore', label: 'Singapore' },
+  { value: 'Asia/Dubai', label: 'Dubai (GST)' },
+  { value: 'Asia/Kolkata', label: 'India (Kolkata)' },
+  { value: 'Australia/Sydney', label: 'Sydney (AEDT/AEST)' },
+  { value: 'Australia/Melbourne', label: 'Melbourne (AEDT/AEST)' },
+  { value: 'Pacific/Auckland', label: 'New Zealand (Auckland)' },
 ];
 
 // Time picker component
@@ -347,17 +379,28 @@ function EmailListEditor({
 function WatcherDetailContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const watcherId = params.id as string;
+  
+  // Get selected thread from URL
+  const selectedThreadId = searchParams.get('thread');
   
   const [watcher, setWatcher] = useState<(Watcher & { thread_count?: number; open_threads?: number }) | null>(null);
   const [threads, setThreads] = useState<Thread[]>([]);
   const [events, setEvents] = useState<VigilEvent[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [messages, setMessages] = useState<VigilEvent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'threads' | 'events' | 'settings'>('threads');
+  const [activeTab, setActiveTab] = useState<'overview' | 'messages' | 'events' | 'settings'>('overview');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hasMoreEvents, setHasMoreEvents] = useState(true);
   const [loadingMoreEvents, setLoadingMoreEvents] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  // Proposals state
+  const [proposals, setProposals] = useState<SignalProposal[]>([]);
+  const [proposalSummary, setProposalSummary] = useState<{ pending: number; auto_applied_today: number } | null>(null);
 
   // Settings form state
   const [editingName, setEditingName] = useState(false);
@@ -366,21 +409,39 @@ function WatcherDetailContent() {
   const [policyForm, setPolicyForm] = useState<Partial<WatcherPolicy>>({});
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  
+  // Handle thread selection via URL
+  const handleSelectThread = useCallback((threadId: string | null) => {
+    const url = new URL(window.location.href);
+    if (threadId) {
+      url.searchParams.set('thread', threadId);
+    } else {
+      url.searchParams.delete('thread');
+    }
+    router.push(url.pathname + url.search, { scroll: false });
+  }, [router]);
 
   const fetchData = useCallback(async () => {
     try {
-      const [watcherResult, threadsResult, eventsResult] = await Promise.all([
+      const [watcherResult, threadsResult, eventsResult, remindersResult, proposalsResult] = await Promise.all([
         api.getWatcher(watcherId),
         api.getThreads(watcherId),
-        api.getEvents(watcherId, { limit: 100 }),
+        api.getEvents(watcherId, { limit: 300 }),
+        api.getReminders(watcherId),
+        api.getProposals(watcherId, 'pending'),
       ]);
       setWatcher(watcherResult.watcher);
-      setThreads(threadsResult.threads);
+      setThreads(threadsResult.threads || []);
       // Ensure events are sorted newest-first for consistent display and pagination
-      setEvents([...eventsResult.events].sort((a, b) => b.timestamp - a.timestamp));
-      setHasMoreEvents(eventsResult.events.length === 100);
+      const events = eventsResult.events || [];
+      setEvents([...events].sort((a, b) => b.timestamp - a.timestamp));
+      setReminders(remindersResult.reminders || []);
+      setHasMoreEvents(events.length === 300);
       setNewName(watcherResult.watcher.name);
       setPolicyForm(watcherResult.watcher.policy || {});
+      // Proposals
+      setProposals(proposalsResult.proposals || []);
+      setProposalSummary(proposalsResult.summary || null);
     } catch (err) {
       console.error('Failed to fetch watcher:', err);
       setError(err instanceof Error ? err.message : 'Failed to load watcher');
@@ -389,9 +450,68 @@ function WatcherDetailContent() {
     }
   }, [watcherId]);
 
+  const fetchMessages = useCallback(async (loadMore = false) => {
+    if (!watcherId) return;
+    setLoadingMessages(true);
+    try {
+      let oldestMessage: number | undefined;
+      if (loadMore) {
+        setMessages(prev => {
+          if (prev.length > 0) {
+            oldestMessage = Math.min(...prev.map(m => m.timestamp));
+          }
+          return prev;
+        });
+      }
+      
+      const result = await api.getEvents(watcherId, {
+        type: 'EMAIL_RECEIVED',
+        limit: 50,
+        before: oldestMessage,
+      });
+      
+      if (loadMore) {
+        setMessages(prev => [...prev, ...(result.events || [])]);
+      } else {
+        setMessages(result.events || []);
+      }
+      setHasMoreMessages(result.pagination?.has_more || false);
+    } catch (err) {
+      console.error('Failed to fetch messages:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load messages');
+    } finally {
+      setLoadingMessages(false);
+    }
+  }, [watcherId]);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Preload messages on initial load for dashboard
+  useEffect(() => {
+    if (messages.length === 0 && !loadingMessages) {
+      fetchMessages();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fetchMessages]);
+
+  // Build email_id to thread_id mapping from THREAD_OPENED and THREAD_EMAIL_ADDED events
+  // This is needed because the commercial model doesn't put thread_id on EMAIL_RECEIVED events
+  const emailToThreadMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const event of events) {
+      if (event.type === 'THREAD_OPENED' || event.type === 'THREAD_EMAIL_ADDED') {
+        const data = { ...event.payload, ...event } as Record<string, unknown>;
+        const threadId = String(data.thread_id || '');
+        const emailId = String(data.email_id || '');
+        if (threadId && emailId) {
+          map.set(emailId, threadId);
+        }
+      }
+    }
+    return map;
+  }, [events]);
 
   const handleActivate = async () => {
     if (!watcher) return;
@@ -441,9 +561,7 @@ function WatcherDetailContent() {
   const handleCloseThread = async (threadId: string) => {
     try {
       await api.closeThread(watcherId, threadId);
-      setThreads(threads.map(t =>
-        t.thread_id === threadId ? { ...t, status: 'closed' as const } : t
-      ));
+      await fetchData(); // Refresh all data
     } catch (err) {
       console.error('Failed to close thread:', err);
       setError(err instanceof Error ? err.message : 'Failed to close thread');
@@ -471,19 +589,16 @@ function WatcherDetailContent() {
     setActionLoading('policy');
     setError(null);
     try {
-      // Build the full policy with required fields
+      // Build the full policy with required fields (commercial model - no deadlines/urgency)
       const fullPolicy: WatcherPolicy = {
         allowed_senders: policyForm.allowed_senders || [],
         silence_threshold_hours: policyForm.silence_threshold_hours || 72,
-        deadline_warning_hours: policyForm.deadline_warning_hours || 24,
-        deadline_critical_hours: policyForm.deadline_critical_hours || 2,
         notification_channels: policyForm.notification_channels || [],
-        enable_soft_deadline_reminders: policyForm.enable_soft_deadline_reminders,
-        enable_urgency_signal_reminders: policyForm.enable_urgency_signal_reminders,
         reporting_cadence: policyForm.reporting_cadence || 'on_demand',
         reporting_recipients: policyForm.reporting_recipients || [],
         reporting_time: policyForm.reporting_time,
         reporting_day: policyForm.reporting_day,
+        timezone: policyForm.timezone,
       };
       await api.updateWatcherPolicy(watcherId, fullPolicy);
       await fetchData();
@@ -540,18 +655,13 @@ function WatcherDetailContent() {
     }
   };
 
-  const formatDate = (timestamp: number) => {
-    return new Date(timestamp).toLocaleString();
+  const handleLoadMoreMessages = async () => {
+    if (loadingMessages || !hasMoreMessages) return;
+    await fetchMessages(true);
   };
 
-  const getUrgencyBadge = (urgency: string) => {
-    const classes: Record<string, string> = {
-      ok: 'badge-ok',
-      warning: 'badge-warning',
-      critical: 'badge-critical',
-      overdue: 'badge-overdue',
-    };
-    return classes[urgency] || 'badge-ok';
+  const formatDate = (timestamp: number) => {
+    return new Date(timestamp).toLocaleString();
   };
 
   if (isLoading) {
@@ -627,7 +737,7 @@ function WatcherDetailContent() {
         backHref="/dashboard"
         backLabel="Dashboard"
         title={watcher.name}
-        subtitle={watcher.ingest_email}
+        subtitle={watcher.ingestion_address}
         rightContent={headerActions}
       />
 
@@ -645,14 +755,24 @@ function WatcherDetailContent() {
         <div className="max-w-6xl mx-auto px-6">
           <nav className="flex space-x-8">
             <button
-              onClick={() => setActiveTab('threads')}
+              onClick={() => setActiveTab('overview')}
               className={`py-3 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'threads'
+                activeTab === 'overview'
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              Threads (<span className="font-mono">{openThreads.length}</span>)
+              Overview
+            </button>
+            <button
+              onClick={() => setActiveTab('messages')}
+              className={`py-3 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'messages'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Messages
             </button>
             <button
               onClick={() => setActiveTab('events')}
@@ -662,7 +782,7 @@ function WatcherDetailContent() {
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              Events (<span className="font-mono">{events.length}</span>{hasMoreEvents ? '+' : ''})
+              Events
             </button>
             <button
               onClick={() => setActiveTab('settings')}
@@ -674,90 +794,179 @@ function WatcherDetailContent() {
             >
               Settings
             </button>
+                {/* Proposals integrated in Overview; no separate tab yet */}
           </nav>
         </div>
       </div>
 
       {/* Content */}
-      <main className="max-w-6xl mx-auto px-6 py-8">
-        {activeTab === 'threads' && (
-          <div className="space-y-6">
-            {/* Open Threads */}
-            <div className="panel">
-              <div className="p-4 border-b border-gray-200">
-                <h2 className="font-semibold text-gray-900">Open Threads (<span className="font-mono">{openThreads.length}</span>)</h2>
+      <main className="max-w-7xl mx-auto px-6 py-6">
+        {activeTab === 'overview' && (
+          <div className="space-y-4">
+            {/* Stats Bar */}
+            <div className="flex items-center gap-6 text-sm text-gray-600">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-gray-900">{openThreads.length}</span>
+                <span>open thread{openThreads.length !== 1 ? 's' : ''}</span>
               </div>
-              {openThreads.length > 0 ? (
-                <div className="divide-y divide-gray-100">
-                  {openThreads.map(thread => (
-                    <div key={thread.thread_id} className="p-4 flex items-center justify-between hover:bg-gray-50">
-                      <div className="min-w-0 flex-1">
-                        <Link
-                          href={`/watchers/${watcherId}/threads/${thread.thread_id}`}
-                          className="font-medium text-gray-900 hover:text-blue-600 truncate block"
-                        >
-                          {thread.subject || 'No subject'}
-                        </Link>
-                        <p className="text-sm text-gray-500">
-                          Last activity: {formatDate(thread.last_activity_at)}
-                          {thread.deadline && ` • Deadline: ${formatDate(thread.deadline)}`}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className={`badge ${getUrgencyBadge(thread.urgency)}`}>{thread.urgency}</span>
-                        <Link
-                          href={`/watchers/${watcherId}/threads/${thread.thread_id}`}
-                          className="text-sm text-blue-600 hover:text-blue-700"
-                        >
-                          View
-                        </Link>
-                        <button
-                          onClick={() => handleCloseThread(thread.thread_id)}
-                          className="text-sm text-gray-500 hover:text-gray-700"
-                        >
-                          Close
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-8 text-center text-gray-500">
-                  No open threads. Forward emails to <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{watcher.ingest_email}</code> to start tracking.
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-gray-900">
+                  {openThreads.filter(t => getSilenceState({
+                    lastActivityAt: t.last_activity_at,
+                    status: t.status,
+                    thresholdHours: watcher.policy?.silence_threshold_hours || 72,
+                  }) === 'silent').length}
+                </span>
+                <span>silent</span>
+              </div>
+              {(() => {
+                // Find longest silent thread
+                const silentThreads = openThreads.filter(t => getSilenceState({
+                  lastActivityAt: t.last_activity_at,
+                  status: t.status,
+                  thresholdHours: watcher.policy?.silence_threshold_hours || 72,
+                }) === 'silent');
+                if (silentThreads.length === 0) return null;
+                const longestSilence = Math.max(...silentThreads.map(t => computeSilenceDuration(t.last_activity_at)));
+                return (
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">longest silence:</span>
+                    <span className="font-medium text-amber-600">{formatSilenceDuration(longestSilence)}</span>
+                  </div>
+                );
+              })()}
             </div>
 
-            {/* Closed Threads */}
-            {closedThreads.length > 0 && (
-              <div className="panel">
-                <div className="p-4 border-b border-gray-200">
-                  <h2 className="font-semibold text-gray-900">Closed Threads (<span className="font-mono">{closedThreads.length}</span>)</h2>
+            {/* Inbox Table */}
+            <div className="panel" style={{ height: 'calc(100vh - 280px)', minHeight: '400px' }}>
+              <WatcherInbox
+                threads={threads}
+                events={events}
+                silenceThresholdHours={watcher.policy?.silence_threshold_hours || 72}
+                selectedThreadId={selectedThreadId}
+                onSelectThread={handleSelectThread}
+                onCloseThread={handleCloseThread}
+              />
+            </div>
+
+            {/* Ingestion Email Hint */}
+            {threads.length === 0 && (
+              <div className="text-center py-4 text-gray-500 text-sm">
+                Forward emails to <code className="text-xs bg-gray-100 px-1.5 py-0.5 rounded font-mono">{watcher.ingestion_address}</code> to start tracking.
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'messages' && (
+          <div className="panel">
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="font-semibold text-gray-900">All Messages</h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {messages.length > 0
+                      ? <>Showing <span className="font-mono">{messages.length}</span> message{messages.length === 1 ? '' : 's'}{hasMoreMessages ? ' • Load more to see all' : ' • All messages loaded'}</>
+                      : 'All emails received by this watcher with processing decisions'
+                    }
+                  </p>
                 </div>
-                <div className="divide-y divide-gray-100">
-                  {closedThreads.slice(0, 10).map(thread => (
-                    <div key={thread.thread_id} className="p-4 flex items-center justify-between opacity-60 hover:opacity-100 transition-opacity">
-                      <div className="min-w-0 flex-1">
-                        <Link
-                          href={`/watchers/${watcherId}/threads/${thread.thread_id}`}
-                          className="font-medium text-gray-900 hover:text-blue-600 truncate block"
-                        >
-                          {thread.subject || 'No subject'}
-                        </Link>
-                        <p className="text-sm text-gray-500">Closed</p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="badge bg-gray-100 text-gray-600">closed</span>
-                        <Link
-                          href={`/watchers/${watcherId}/threads/${thread.thread_id}`}
-                          className="text-sm text-gray-500 hover:text-gray-700"
-                        >
-                          View
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {messages.length > 0 && (
+                  <button
+                    onClick={() => fetchMessages()}
+                    className="text-xs text-blue-600 hover:text-blue-700"
+                  >
+                    Reload
+                  </button>
+                )}
+              </div>
+            </div>
+            {loadingMessages && messages.length === 0 ? (
+              <div className="p-8 text-center text-gray-500">
+                Loading messages...
+              </div>
+            ) : messages.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Received
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        From
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Subject
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Decision
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {messages.map((message) => {
+                      const data = { ...message.payload, ...message } as Record<string, unknown>;
+                      const sender = String(data.original_sender || data.sender || 'Unknown');
+                      const subject = String(data.subject || 'No subject');
+                      const emailId = String(data.email_id || message.event_id || '');
+                      // Use the email-to-thread mapping (commercial model) or fall back to legacy field
+                      const threadId = emailToThreadMap.get(emailId) || String(data.routed_to_thread_id || '');
+                      const thread = threads.find(t => t.thread_id === threadId);
+                      
+                      return (
+                        <tr key={message.event_id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm text-gray-900 whitespace-nowrap">
+                            {formatFriendlyDate(message.timestamp)}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">
+                            <div className="max-w-xs truncate" title={sender}>
+                              {sender.split('@')[0]}
+                            </div>
+                            <div className="text-xs text-gray-400 truncate">
+                              @{sender.split('@')[1] || ''}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-900">
+                            <div className="max-w-md truncate" title={subject}>
+                              {subject}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            {threadId ? (
+                              thread ? (
+                                <span className="text-gray-600">
+                                  Added to thread
+                                </span>
+                              ) : (
+                                <span className="text-gray-600">Added to conversation</span>
+                              )
+                            ) : (
+                              <span className="text-gray-500">
+                                No action needed
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+                {hasMoreMessages && (
+                  <div className="p-4 border-t border-gray-200">
+                    <button
+                      onClick={handleLoadMoreMessages}
+                      disabled={loadingMessages}
+                      className="btn btn-secondary w-full"
+                    >
+                      {loadingMessages ? 'Loading...' : 'Load more messages'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-8 text-center text-gray-500">
+                No messages yet. Forward emails to <code className="text-xs bg-gray-100 px-1 py-0.5 rounded">{watcher.ingestion_address}</code> to start tracking.
               </div>
             )}
           </div>
@@ -863,10 +1072,10 @@ function WatcherDetailContent() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Ingestion Email</label>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 px-3 py-2 bg-gray-100 rounded text-sm font-mono text-gray-700 truncate">
-                      {watcher.ingest_email}
+                      {watcher.ingestion_address}
                     </code>
                     <button
-                      onClick={() => navigator.clipboard.writeText(watcher.ingest_email)}
+                      onClick={() => navigator.clipboard.writeText(watcher.ingestion_address)}
                       className="btn btn-secondary text-sm"
                     >
                       Copy
@@ -956,7 +1165,7 @@ function WatcherDetailContent() {
                     <div>
                       <h3 className="text-sm font-semibold text-gray-900 mb-1">Timing Thresholds</h3>
                       <p className="text-xs text-gray-500 mb-4">Control when Vigil alerts you based on time elapsed</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
                         <div className="space-y-1">
                           <label className="block text-sm font-medium text-gray-700">Silence Threshold</label>
                           <div className="flex items-center gap-2">
@@ -970,68 +1179,29 @@ function WatcherDetailContent() {
                             />
                             <span className="text-sm text-gray-500">hours</span>
                           </div>
-                          <p className="text-xs text-gray-500">Alert when no activity</p>
-                        </div>
-                        <div className="space-y-1">
-                          <label className="block text-sm font-medium text-gray-700">Warning Before Deadline</label>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              value={policyForm.deadline_warning_hours || 24}
-                              onChange={(e) => setPolicyForm({ ...policyForm, deadline_warning_hours: parseInt(e.target.value) || 24 })}
-                              className="input w-24"
-                              min="1"
-                            />
-                            <span className="text-sm text-gray-500">hours</span>
-                          </div>
-                          <p className="text-xs text-gray-500">Show warning status</p>
-                        </div>
-                        <div className="space-y-1">
-                          <label className="block text-sm font-medium text-gray-700">Critical Before Deadline</label>
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              value={policyForm.deadline_critical_hours || 2}
-                              onChange={(e) => setPolicyForm({ ...policyForm, deadline_critical_hours: parseInt(e.target.value) || 2 })}
-                              className="input w-24"
-                              min="1"
-                            />
-                            <span className="text-sm text-gray-500">hours</span>
-                          </div>
-                          <p className="text-xs text-gray-500">Show critical status</p>
+                          <p className="text-xs text-gray-500">Alert when thread has no activity for this duration</p>
                         </div>
                       </div>
                     </div>
 
-                    {/* Reminder Features */}
+                    {/* Timezone */}
                     <div className="border-t border-gray-200 pt-6">
-                      <h3 className="text-sm font-semibold text-gray-900 mb-1">Reminder Features</h3>
-                      <p className="text-xs text-gray-500 mb-4">Enable additional reminder notifications</p>
-                      <div className="space-y-3">
-                        <label className="flex items-start gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={policyForm.enable_soft_deadline_reminders ?? false}
-                            onChange={(e) => setPolicyForm({ ...policyForm, enable_soft_deadline_reminders: e.target.checked })}
-                            className="mt-0.5 w-4 h-4 rounded border-gray-300 text-vigil-600 focus:ring-vigil-500"
-                          />
-                          <div>
-                            <span className="text-sm font-medium text-gray-900">Soft deadline reminders</span>
-                            <p className="text-xs text-gray-500">Get notified about approximate deadlines mentioned in emails</p>
-                          </div>
-                        </label>
-                        <label className="flex items-start gap-3 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={policyForm.enable_urgency_signal_reminders ?? false}
-                            onChange={(e) => setPolicyForm({ ...policyForm, enable_urgency_signal_reminders: e.target.checked })}
-                            className="mt-0.5 w-4 h-4 rounded border-gray-300 text-vigil-600 focus:ring-vigil-500"
-                          />
-                          <div>
-                            <span className="text-sm font-medium text-gray-900">Urgency signal reminders</span>
-                            <p className="text-xs text-gray-500">Get notified when urgent keywords are detected (ASAP, urgent, etc.)</p>
-                          </div>
-                        </label>
+                      <h3 className="text-sm font-semibold text-gray-900 mb-1">Timezone</h3>
+                      <p className="text-xs text-gray-500 mb-4">Timezone used for report scheduling</p>
+                      <div className="space-y-1">
+                        <label className="block text-sm font-medium text-gray-700">Timezone</label>
+                        <select
+                          value={policyForm.timezone || ''}
+                          onChange={(e) => setPolicyForm({ ...policyForm, timezone: e.target.value || undefined })}
+                          className="input w-full max-w-md"
+                        >
+                          {TIMEZONE_OPTIONS.map(tz => (
+                            <option key={tz.value} value={tz.value}>{tz.label}</option>
+                          ))}
+                        </select>
+                        <p className="text-xs text-gray-500">
+                          Currently: {policyForm.timezone || 'UTC'} • Your browser is using {getUserTimezone()}
+                        </p>
                       </div>
                     </div>
 
@@ -1196,46 +1366,25 @@ function WatcherDetailContent() {
                     {/* Timing Display */}
                     <div>
                       <h3 className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-3">Timing Thresholds</h3>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
                         <div className="p-3 bg-gray-50 rounded-lg">
                           <div className="text-xs text-gray-500 mb-1">Silence Threshold</div>
                           <div className="text-lg font-semibold text-gray-900"><span className="font-mono">{watcher.policy?.silence_threshold_hours || 72}</span>h</div>
-                        </div>
-                        <div className="p-3 bg-gray-50 rounded-lg">
-                          <div className="text-xs text-gray-500 mb-1">Warning Threshold</div>
-                          <div className="text-lg font-semibold text-gray-900"><span className="font-mono">{watcher.policy?.deadline_warning_hours || 24}</span>h</div>
-                        </div>
-                        <div className="p-3 bg-gray-50 rounded-lg">
-                          <div className="text-xs text-gray-500 mb-1">Critical Threshold</div>
-                          <div className="text-lg font-semibold text-gray-900"><span className="font-mono">{watcher.policy?.deadline_critical_hours || 2}</span>h</div>
+                          <p className="text-xs text-gray-500 mt-1">Alert when thread has no activity for this duration</p>
                         </div>
                       </div>
                     </div>
 
-                    {/* Features Display */}
+                    {/* Timezone Display */}
                     <div className="border-t border-gray-200 pt-6">
-                      <h3 className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-3">Reminder Features</h3>
-                      <div className="flex flex-wrap gap-2">
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm ${
-                          watcher.policy?.enable_soft_deadline_reminders 
-                            ? 'bg-green-50 text-green-700' 
-                            : 'bg-gray-100 text-gray-500'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${
-                            watcher.policy?.enable_soft_deadline_reminders ? 'bg-green-500' : 'bg-gray-400'
-                          }`} />
-                          Soft deadlines
-                        </span>
-                        <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm ${
-                          watcher.policy?.enable_urgency_signal_reminders 
-                            ? 'bg-green-50 text-green-700' 
-                            : 'bg-gray-100 text-gray-500'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${
-                            watcher.policy?.enable_urgency_signal_reminders ? 'bg-green-500' : 'bg-gray-400'
-                          }`} />
-                          Urgency signals
-                        </span>
+                      <h3 className="text-xs font-medium uppercase tracking-wider text-gray-500 mb-3">Timezone</h3>
+                      <div className="p-3 bg-gray-50 rounded-lg inline-block">
+                        <div className="text-xs text-gray-500 mb-1">Report Scheduling</div>
+                        <div className="text-sm font-medium text-gray-900">
+                          {watcher.policy?.timezone 
+                            ? TIMEZONE_OPTIONS.find(tz => tz.value === watcher.policy?.timezone)?.label || watcher.policy.timezone
+                            : 'UTC (Default)'}
+                        </div>
                       </div>
                     </div>
 
@@ -1306,6 +1455,280 @@ function WatcherDetailContent() {
               </div>
             </div>
 
+            {/* Developer Tools */}
+            <div className="panel border-purple-200">
+              <div className="p-4 border-b border-purple-200 bg-purple-50">
+                <h2 className="font-semibold text-purple-900">E2E Testing Tools</h2>
+                <p className="text-xs text-purple-600 mt-1">Test the full email pipeline end-to-end</p>
+              </div>
+              <div className="p-6 space-y-6">
+                {/* Test Scenarios - Full E2E */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Simulate Email Ingestion</h3>
+                  <p className="text-xs text-gray-500 mb-4">
+                    Run pre-built scenarios that simulate real emails being forwarded to your watcher.
+                    These test the complete pipeline: ingestion → thread creation → silence tracking.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {/* Action Request */}
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await api.testScenario(watcherId, 'action_request');
+                          if (res.success) {
+                            alert(`Action request scenario sent!\n\nEvents generated: ${res.events_generated}\nTypes: ${res.event_types?.join(', ')}`);
+                          } else {
+                            alert('Failed: ' + (res.error || 'Unknown error'));
+                          }
+                        } catch (err) {
+                          alert('Error: ' + (err instanceof Error ? err.message : 'Failed'));
+                        }
+                      }}
+                      className="flex items-center gap-3 p-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg text-left transition-colors"
+                    >
+                      <div className="p-2 bg-blue-100 rounded-lg flex-shrink-0">
+                        <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900">Action Request</p>
+                        <p className="text-xs text-gray-500 truncate">Email requiring response</p>
+                      </div>
+                    </button>
+
+                    {/* Simple Info */}
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await api.testScenario(watcherId, 'simple_info');
+                          if (res.success) {
+                            alert(`Simple info scenario sent!\n\nEvents generated: ${res.events_generated}\nTypes: ${res.event_types?.join(', ')}`);
+                          } else {
+                            alert('Failed: ' + (res.error || 'Unknown error'));
+                          }
+                        } catch (err) {
+                          alert('Error: ' + (err instanceof Error ? err.message : 'Failed'));
+                        }
+                      }}
+                      className="flex items-center gap-3 p-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-left transition-colors"
+                    >
+                      <div className="p-2 bg-gray-100 rounded-lg flex-shrink-0">
+                        <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900">Simple Info</p>
+                        <p className="text-xs text-gray-500 truncate">FYI, no action needed</p>
+                      </div>
+                    </button>
+
+                    {/* Closure Signal */}
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await api.testScenario(watcherId, 'closure_signal');
+                          if (res.success) {
+                            alert(`Closure signal sent!\n\nEvents generated: ${res.events_generated}\nTypes: ${res.event_types?.join(', ')}`);
+                          } else {
+                            alert('Failed: ' + (res.error || 'Unknown error'));
+                          }
+                        } catch (err) {
+                          alert('Error: ' + (err instanceof Error ? err.message : 'Failed'));
+                        }
+                      }}
+                      className="flex items-center gap-3 p-3 bg-green-50 hover:bg-green-100 border border-green-200 rounded-lg text-left transition-colors"
+                    >
+                      <div className="p-2 bg-green-100 rounded-lg flex-shrink-0">
+                        <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900">Closure Signal</p>
+                        <p className="text-xs text-gray-500 truncate">Issue resolved email</p>
+                      </div>
+                    </button>
+
+                    {/* Follow-up */}
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await api.testScenario(watcherId, 'followup');
+                          if (res.success) {
+                            alert(`Follow-up scenario sent!\n\nEvents generated: ${res.events_generated}\nTypes: ${res.event_types?.join(', ')}`);
+                          } else {
+                            alert('Failed: ' + (res.error || 'Unknown error'));
+                          }
+                        } catch (err) {
+                          alert('Error: ' + (err instanceof Error ? err.message : 'Failed'));
+                        }
+                      }}
+                      className="flex items-center gap-3 p-3 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg text-left transition-colors"
+                    >
+                      <div className="p-2 bg-yellow-100 rounded-lg flex-shrink-0">
+                        <svg className="w-5 h-5 text-yellow-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900">Follow-up</p>
+                        <p className="text-xs text-gray-500 truncate">Reply to existing thread</p>
+                      </div>
+                    </button>
+
+                    {/* Bump */}
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await api.testScenario(watcherId, 'bump');
+                          if (res.success) {
+                            alert(`Bump scenario sent!\n\nEvents generated: ${res.events_generated}\nTypes: ${res.event_types?.join(', ')}`);
+                          } else {
+                            alert('Failed: ' + (res.error || 'Unknown error'));
+                          }
+                        } catch (err) {
+                          alert('Error: ' + (err instanceof Error ? err.message : 'Failed'));
+                        }
+                      }}
+                      className="flex items-center gap-3 p-3 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-lg text-left transition-colors"
+                    >
+                      <div className="p-2 bg-purple-100 rounded-lg flex-shrink-0">
+                        <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900">Bump</p>
+                        <p className="text-xs text-gray-500 truncate">&quot;Any update?&quot; email</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Test Outbound Emails */}
+                <div className="border-t border-gray-200 pt-6">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Test Outbound Emails</h3>
+                  <p className="text-xs text-gray-500 mb-4">
+                    Send test versions of notification emails to{' '}
+                    <span className="font-mono text-purple-700 bg-purple-50 px-1 rounded">{watcher.policy?.notification_channels?.find(c => c.type === 'email')?.destination || 'configured email'}</span>
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await api.sendTestEmail(watcherId, 'alert');
+                          if (res.success) alert('Alert email sent!');
+                          else alert('Failed: ' + (res.error || 'Unknown error'));
+                        } catch (err) {
+                          alert('Error: ' + (err instanceof Error ? err.message : 'Failed to send'));
+                        }
+                      }}
+                      className="p-2 text-xs font-medium bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg transition-colors"
+                    >
+                      Alert
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await api.sendTestEmail(watcherId, 'digest');
+                          if (res.success) alert('Digest email sent!');
+                          else alert('Failed: ' + (res.error || 'Unknown error'));
+                        } catch (err) {
+                          alert('Error: ' + (err instanceof Error ? err.message : 'Failed to send'));
+                        }
+                      }}
+                      className="p-2 text-xs font-medium bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors"
+                    >
+                      Digest
+                    </button>
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await api.sendTestEmail(watcherId, 'report');
+                          if (res.success) alert('Report email sent!');
+                          else alert('Failed: ' + (res.error || 'Unknown error'));
+                        } catch (err) {
+                          alert('Error: ' + (err instanceof Error ? err.message : 'Failed to send'));
+                        }
+                      }}
+                      className="p-2 text-xs font-medium bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors"
+                    >
+                      Report
+                    </button>
+                  </div>
+                </div>
+
+                {/* Custom Test Email */}
+                <div className="border-t border-gray-200 pt-6">
+                  <h3 className="text-sm font-semibold text-gray-900 mb-2">Custom Test Email</h3>
+                  <p className="text-xs text-gray-500 mb-4">
+                    Create a custom test email with specific parameters
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">From Address</label>
+                      <input
+                        type="email"
+                        id="custom-from"
+                        placeholder="sender@example.com"
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        defaultValue="test@example.com"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Subject</label>
+                      <input
+                        type="text"
+                        id="custom-subject"
+                        placeholder="Test email subject"
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        defaultValue="Custom Test Email"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Body</label>
+                      <textarea
+                        id="custom-body"
+                        rows={3}
+                        placeholder="Email body content..."
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        defaultValue="This is a custom test email. Write something that requires a response to test action request detection."
+                      />
+                    </div>
+                    <div className="flex items-end gap-3 sm:col-span-2">
+                      <button
+                        onClick={async () => {
+                          const from = (document.getElementById('custom-from') as HTMLInputElement)?.value;
+                          const subject = (document.getElementById('custom-subject') as HTMLInputElement)?.value;
+                          const body = (document.getElementById('custom-body') as HTMLTextAreaElement)?.value;
+                          
+                          try {
+                            const res = await api.testIngest(watcherId, {
+                              from: from || undefined,
+                              subject: subject || undefined,
+                              body: body || undefined,
+                            });
+                            if (res.success) {
+                              alert(`Custom email ingested!\n\nEvents generated: ${res.events_generated}\nTypes: ${res.event_types?.join(', ')}`);
+                            } else {
+                              alert('Failed: ' + (res.error || 'Unknown error'));
+                            }
+                          } catch (err) {
+                            alert('Error: ' + (err instanceof Error ? err.message : 'Failed'));
+                          }
+                        }}
+                        className="px-4 py-2 text-sm font-medium bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors whitespace-nowrap"
+                      >
+                        Send Custom Email
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Danger Zone */}
             <div className="panel border-red-200">
               <div className="p-4 border-b border-red-200 bg-red-50">
@@ -1365,6 +1788,7 @@ function WatcherDetailContent() {
           </div>
         )}
       </main>
+
     </div>
   );
 }

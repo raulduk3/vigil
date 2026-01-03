@@ -1,8 +1,24 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Development guidance for Claude Code when working with the Vigil frontend.
 
-## Build & Test Commands
+## Product Focus
+
+Vigil delivers **one capability: provable silence tracking for email threads**.
+
+The frontend displays:
+- Watcher status and configuration
+- Thread list with silence duration
+- Alert history
+- Evidence timelines
+
+The frontend **never**:
+- Contains business logic
+- Accesses database directly
+- Emits events
+- Infers deadlines or urgency
+
+## Commands
 
 ```bash
 npm install          # Install dependencies
@@ -16,105 +32,103 @@ npm run lint         # ESLint
 
 ### Display-Only Layer
 
-The frontend is a **read-heavy display layer with no business logic**. All authoritative state lives in backend events.
+The frontend is a **read-heavy display layer with no business logic**.
 
-- **Never** contains business logic or decision-making
-- **Never** accesses database or event store directly
-- **Never** emits events (only backend emits events)
-- **Displays** derived projections from backend API
-- **Submits** user actions via API (which create events in backend)
+- All state from backend API
+- User actions → API → backend emits events
+- No event emission
+- No decision-making
 
 ### Key Directories
 
 ```
 src/
 ├── app/                # Next.js App Router pages
-│   ├── auth/           # Login, register, password reset, OAuth callback
-│   ├── dashboard/      # Main dashboard (protected)
-│   ├── watchers/       # Watcher CRUD and detail pages
+│   ├── auth/           # Login, register, OAuth callback
+│   ├── dashboard/      # Main dashboard
+│   ├── watchers/       # Watcher management
 │   ├── account/        # Profile, security, billing
-│   └── learn/          # Documentation pages
+│   └── learn/          # Documentation
 ├── components/
 │   ├── auth/           # OAuth buttons
+│   ├── events/         # Event display
 │   └── system/         # Connection indicator
 └── lib/
-    ├── api/client.ts   # Singleton API client with auto token refresh
-    ├── auth/context.tsx # Auth React Context + useAuth hook
-    └── stripe/provider.tsx # Stripe Elements provider
+    ├── api/client.ts   # API client
+    ├── auth/context.tsx # Auth context
+    └── stripe/provider.tsx # Stripe provider
 ```
 
-### API Client (`src/lib/api/client.ts`)
+### API Client
 
-Singleton pattern with automatic token management:
+Singleton with automatic token management:
+- `access_token` / `refresh_token` in localStorage
+- Auto refresh on 401
+- Type-safe domain methods
 
-- Stores `access_token` and `refresh_token` in localStorage
-- Automatic token refresh on 401 responses
-- Type-safe methods organized by domain: auth, watchers, threads, events, billing
-
-### Authentication Context (`src/lib/auth/context.tsx`)
+### Authentication
 
 React Context pattern:
+- `AuthProvider` at root
+- `useAuth()` hook
+- `RequireAuth` component
 
-- `AuthProvider` wraps entire app in `providers.tsx`
-- `useAuth()` hook returns user state + login/logout/register methods
-- `RequireAuth` component wraps protected pages
-
-### Protected Routes Pattern
+### Protected Routes
 
 ```typescript
-export default function ProtectedPage() {
+export default function Page() {
   return (
     <RequireAuth>
-      <ProtectedContent />
+      <Content />
     </RequireAuth>
   );
 }
 ```
 
-### State Management
+## UI Guidelines
 
-- **Auth State**: React Context (AuthProvider at root)
-- **UI State**: React useState per component
-- **Server State**: Direct API calls (no React Query caching)
-- **Zustand**: Available but currently unused
+### Thread Display
+
+```typescript
+// Thread shows silence tracking, not deadlines
+type ThreadDisplay = {
+  thread_id: string;
+  status: "open" | "closed";
+  last_activity_at: number;
+  hours_silent: number;
+  threshold_exceeded: boolean;
+  participants: string[];
+};
+// NO: deadline_utc, urgency_level, reminder_ids
+```
+
+### Alert Display
+
+```typescript
+// Alerts for silence threshold only
+type AlertDisplay = {
+  alert_id: string;
+  thread_id: string;
+  hours_silent: number;
+  threshold_hours: number;
+  sent_at: number;
+};
+// NO: urgency_level, deadline alerts
+```
 
 ## Design System
 
-### Tailwind Configuration (`tailwind.config.ts`)
+### Tailwind Config
 
-Custom palette optimized for data presentation:
+Custom palette:
+- **vigil**: Deep teal brand
+- **status**: ok/warning/critical/overdue
+- **surface**: Page hierarchy
 
-- **vigil**: Deep teal brand colors (primary: #0B1F2A)
-- **status**: Muted ok/warning/critical/overdue colors
-- **surface**: Page/raised/sunken hierarchy
-- **shadows**: MacOS-inspired engraved/raised effects
+### Component Classes
 
-### Component Classes (`globals.css`)
+`globals.css`: `.btn`, `.input`, `.panel`, `.badge`, `.table-base`
 
-Pre-built classes: `.btn`, `.btn-primary`, `.input`, `.panel`, `.badge`, `.badge-warning`, `.notice`, `.table-base`, `.spinner`
+### Philosophy
 
-### Design Philosophy
-
-MacOS-inspired (early 2000s), brutalist, minimal, high data density. Eye-safe neutrals. No decorative elements.
-
-## Backend API Contract
-
-Frontend expects backend at `NEXT_PUBLIC_API_URL` (default: http://localhost:3001).
-
-Key endpoints:
-- `POST /api/auth/login` → JWT tokens
-- `GET /api/watchers` → User's watchers
-- `GET /api/watchers/:id/threads` → Threads for watcher
-- `GET /api/watchers/:id/events` → Event log (paginated)
-- `POST /api/billing/checkout` → Stripe checkout session URL
-
-## Environment Variables
-
-```bash
-NEXT_PUBLIC_API_URL=http://localhost:3001
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
-NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED=true
-NEXT_PUBLIC_GITHUB_OAUTH_ENABLED=true
-```
-
-All `NEXT_PUBLIC_*` variables are exposed to browser.
+MacOS-inspired, minimal, high data density. Eye-safe neutrals.

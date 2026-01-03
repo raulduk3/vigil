@@ -43,11 +43,11 @@ export default function EmailIngestionPage() {
 
             <ExampleBox title="Example Address" className="mt-6">
               <code className="text-sm font-mono text-gray-800">
-                finance-a7f3k9@ingest.email.vigil.run
+                finance-a7f3k9@vigil.run
               </code>
               <p className="mt-2">or</p>
               <code className="text-sm font-mono text-gray-800">
-                client-billing-x4p9j2@ingest.email.vigil.run
+                client-billing-x4p9j2@vigil.run
               </code>
             </ExampleBox>
 

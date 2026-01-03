@@ -1,58 +1,133 @@
 /**
  * Thread Detection and Grouping
  *
- * Implements thread grouping algorithm per SDD FR-8.
- * Priority order: Message-ID chain > Conversation-Index > Subject+Participants
+ * Implements thread grouping algorithm.
+ * Priority: Message-ID chain > Conversation-Index > Subject+Participants
  */
 
-import type { ThreadState } from "../watcher/runtime";
-import {
-    normalizeSubject,
-    extractThreadingHeaders,
-} from "../ingestion/validator";
+import type { ThreadState } from "./runtime";
 
-export type ThreadingContext = {
+// ============================================================================
+// Types
+// ============================================================================
+
+export interface ThreadingContext {
     readonly messageId: string;
     readonly from: string;
     readonly subject: string;
     readonly headers: Record<string, string>;
-};
+}
 
-export type ThreadMatch = {
+export interface ThreadMatch {
     readonly threadId: string;
     readonly matchType:
         | "message_id"
         | "conversation_index"
         | "subject_participants";
     readonly confidence: "high" | "medium" | "low";
-};
+}
+
+// ============================================================================
+// Subject Normalization
+// ============================================================================
 
 /**
- * Determine which thread a message belongs to.
- * Per SDD Thread Grouping Algorithm:
- * 1. Message-ID chaining (highest priority)
- * 2. Conversation-Index header
- * 3. Subject + participant overlap
- *
- * @param message - Threading context from incoming message
- * @param existingThreads - Map of existing threads
- * @param messageIdToThreadId - Map of message IDs to thread IDs
- * @returns Thread match or null if no match
+ * Normalize subject for comparison.
+ * Removes Re:, Fwd:, etc. and normalizes whitespace.
+ */
+export function normalizeSubject(subject: string): string {
+    return subject
+        .replace(/^(re|fw|fwd|aw|wg|sv|vs):\s*/gi, "")
+        .replace(/\s+/g, " ")
+        .trim()
+        .toLowerCase();
+}
+
+/**
+ * Check if a subject is too generic for matching.
+ */
+export function isGenericSubject(normalizedSubject: string): boolean {
+    const generic = [
+        "",
+        "hello",
+        "hi",
+        "hey",
+        "question",
+        "request",
+        "follow up",
+        "following up",
+        "checking in",
+        "quick question",
+        "update",
+        "urgent",
+        "important",
+        "fyi",
+        "info",
+        "information",
+    ];
+    return generic.includes(normalizedSubject);
+}
+
+// ============================================================================
+// Header Extraction
+// ============================================================================
+
+export interface ThreadingHeaders {
+    inReplyTo: string | null;
+    references: string[];
+    conversationIndex: string | null;
+    messageId: string | null;
+}
+
+export function extractThreadingHeaders(
+    headers: Record<string, string>
+): ThreadingHeaders {
+    const get = (name: string): string | null => {
+        const key = Object.keys(headers).find(
+            (k) => k.toLowerCase() === name.toLowerCase()
+        );
+        return key ? (headers[key] ?? null) : null;
+    };
+
+    const references = get("references");
+    const refList = references
+        ? references.split(/\s+/).filter((r) => r.length > 0)
+        : [];
+
+    return {
+        inReplyTo: get("in-reply-to"),
+        references: refList,
+        conversationIndex:
+            get("x-ms-exchange-organization-conversationindex") ??
+            get("thread-index"),
+        messageId: get("message-id"),
+    };
+}
+
+function cleanMessageId(id: string): string {
+    return id.replace(/^<|>$/g, "").trim();
+}
+
+// ============================================================================
+// Thread Matching
+// ============================================================================
+
+/**
+ * Find matching thread for a message.
  */
 export function findMatchingThread(
-    message: ThreadingContext,
+    context: ThreadingContext,
     existingThreads: ReadonlyMap<string, ThreadState>,
     messageIdToThreadId: ReadonlyMap<string, string>
 ): ThreadMatch | null {
-    const threadingHeaders = extractThreadingHeaders(message.headers);
+    const threadingHeaders = extractThreadingHeaders(context.headers);
 
-    // Priority 1: Message-ID chain (In-Reply-To or References)
+    // Priority 1: In-Reply-To header
     if (threadingHeaders.inReplyTo) {
         const cleanId = cleanMessageId(threadingHeaders.inReplyTo);
         const threadId = messageIdToThreadId.get(cleanId);
         if (threadId) {
             const thread = existingThreads.get(threadId);
-            // Only match if thread is open (closed threads are terminal)
             if (thread && thread.status === "open") {
                 return {
                     threadId,
@@ -63,7 +138,7 @@ export function findMatchingThread(
         }
     }
 
-    // Check References header
+    // Priority 2: References header
     for (const ref of threadingHeaders.references) {
         const cleanId = cleanMessageId(ref);
         const threadId = messageIdToThreadId.get(cleanId);
@@ -79,24 +154,9 @@ export function findMatchingThread(
         }
     }
 
-    // Priority 2: Conversation-Index (Microsoft Outlook)
-    if (threadingHeaders.conversationIndex) {
-        // Extract base index for potential future conversation tracking
-        extractConversationBase(threadingHeaders.conversationIndex);
-        for (const [_threadId, thread] of existingThreads) {
-            if (thread.status !== "open") continue;
-            // Check if any message in thread has matching conversation index base
-            // This would require additional data structure tracking conversation indices
-            // For now, skip this check if we don't have conversation index mapping
-        }
-    }
+    // Priority 3: Subject + participant matching
+    const normalizedSubject = normalizeSubject(context.subject);
 
-    // Priority 3: Subject + Participant overlap
-    // Note: We match on original conversation participants (sender/recipients),
-    // not the Vigil user who forwarded the email
-    const normalizedSubject = normalizeSubject(message.subject);
-
-    // Don't match on generic subjects alone
     if (isGenericSubject(normalizedSubject)) {
         return null;
     }
@@ -105,113 +165,42 @@ export function findMatchingThread(
         if (thread.status !== "open") continue;
 
         // Check subject match
-        if (thread.normalized_subject === normalizedSubject) {
-            // Check if the message sender is a participant in the original conversation
-            if (hasParticipantOverlap(message.from, thread.participants)) {
-                return {
-                    threadId,
-                    matchType: "subject_participants",
-                    confidence: "medium",
-                };
-            }
+        if (thread.normalized_subject !== normalizedSubject) continue;
+
+        // Check participant overlap
+        const hasOverlap = thread.participants.some(
+            (p) => p.toLowerCase() === context.from.toLowerCase()
+        );
+
+        if (hasOverlap) {
+            return {
+                threadId,
+                matchType: "subject_participants",
+                confidence: "medium",
+            };
         }
     }
 
     return null;
 }
 
-/**
- * Clean message ID by removing angle brackets.
- */
-function cleanMessageId(messageId: string): string {
-    return messageId.replace(/^<|>$/g, "").trim();
-}
+// ============================================================================
+// Thread ID Map Builder
+// ============================================================================
 
 /**
- * Extract base conversation index (first 22 characters for Outlook).
- */
-function extractConversationBase(conversationIndex: string): string {
-    // Conversation-Index is base64 encoded, first 22 chars identify the conversation
-    return conversationIndex.substring(0, 22);
-}
-
-/**
- * Check if subject is too generic for thread matching.
- */
-export function isGenericSubject(normalizedSubject: string): boolean {
-    const genericSubjects = new Set([
-        "question",
-        "update",
-        "fyi",
-        "info",
-        "hi",
-        "hello",
-        "hey",
-        "thanks",
-        "thank you",
-        "request",
-        "help",
-        "issue",
-        "problem",
-        "urgent",
-        "(no subject)",
-        "",
-    ]);
-    return genericSubjects.has(normalizedSubject);
-}
-
-/**
- * Check if sender is a participant in the thread.
- */
-function hasParticipantOverlap(
-    sender: string,
-    participants: readonly string[]
-): boolean {
-    const normalizedSender = sender.toLowerCase().trim();
-    return participants.some(
-        (p) => p.toLowerCase().trim() === normalizedSender
-    );
-}
-
-/**
- * Build message ID to thread ID mapping from threads.
- * Cleans message IDs (removes angle brackets) for consistent lookup.
+ * Build a map of message IDs to thread IDs from existing threads.
  */
 export function buildMessageIdMap(
     threads: ReadonlyMap<string, ThreadState>
 ): Map<string, string> {
     const map = new Map<string, string>();
+
     for (const [threadId, thread] of threads) {
         for (const messageId of thread.message_ids) {
-            // Clean the message ID (remove angle brackets) for consistent lookup
-            const cleanId = messageId.replace(/^<|>$/g, "").trim();
-            map.set(cleanId, threadId);
+            map.set(messageId, threadId);
         }
     }
+
     return map;
-}
-
-/**
- * Check if message should create a new thread (matches closed thread).
- */
-export function matchesClosedThread(
-    message: ThreadingContext,
-    existingThreads: ReadonlyMap<string, ThreadState>,
-    messageIdToThreadId: ReadonlyMap<string, string>
-): boolean {
-    const threadingHeaders = extractThreadingHeaders(message.headers);
-
-    // Check if references point to closed thread
-    if (threadingHeaders.inReplyTo) {
-        const cleanId = cleanMessageId(threadingHeaders.inReplyTo);
-        const threadId = messageIdToThreadId.get(cleanId);
-        if (threadId) {
-            const thread = existingThreads.get(threadId);
-            if (thread && thread.status === "closed") {
-                return true;
-            }
-        }
-    }
-
-    return false;
 }
