@@ -26,3 +26,4 @@ coverage/
 *.tmp
 .DS_Store
 logs/
+vigil.db*

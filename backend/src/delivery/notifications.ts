@@ -6,7 +6,7 @@
  */
 
 import { logger } from "../logger";
-import type { NotificationChannel } from "../events/types";
+import type { NotificationChannel } from "../agent/schema";
 import {
     silenceAlertTemplate,
     silenceAlertSubject,

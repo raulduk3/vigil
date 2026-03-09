@@ -105,3 +105,16 @@ CREATE TABLE IF NOT EXISTS memories (
 
 CREATE INDEX IF NOT EXISTS idx_memories_watcher ON memories(watcher_id, obsolete);
 CREATE INDEX IF NOT EXISTS idx_memories_accessed ON memories(watcher_id, last_accessed);
+
+-- Refresh tokens for JWT auth
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+  id          TEXT PRIMARY KEY,
+  account_id  TEXT NOT NULL REFERENCES accounts(id),
+  token_hash  TEXT NOT NULL UNIQUE,
+  expires_at  TIMESTAMP NOT NULL,
+  revoked     BOOLEAN DEFAULT FALSE,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_account ON refresh_tokens(account_id);
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_hash ON refresh_tokens(token_hash);

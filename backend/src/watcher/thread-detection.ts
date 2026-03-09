@@ -5,11 +5,16 @@
  * Priority: Message-ID chain > Conversation-Index > Subject+Participants
  */
 
-import type { ThreadState } from "./runtime";
+// ============================================================================
+// Types (standalone — no runtime dependency)
+// ============================================================================
 
-// ============================================================================
-// Types
-// ============================================================================
+export interface ThreadState {
+    readonly status: "open" | "closed";
+    readonly participants: string[];
+    readonly normalized_subject: string;
+    readonly message_ids: string[];
+}
 
 export interface ThreadingContext {
     readonly messageId: string;
@@ -164,10 +169,8 @@ export function findMatchingThread(
     for (const [threadId, thread] of existingThreads) {
         if (thread.status !== "open") continue;
 
-        // Check subject match
         if (thread.normalized_subject !== normalizedSubject) continue;
 
-        // Check participant overlap
         const hasOverlap = thread.participants.some(
             (p) => p.toLowerCase() === context.from.toLowerCase()
         );

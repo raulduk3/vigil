@@ -1,28 +1,10 @@
 /**
- * Thread Handlers
+ * Thread Handlers — V2
  */
 
 import type { Context } from "hono";
-import { queryOne, queryMany, query } from "../../db/client";
-import { getEventStore } from "../../events/store";
-import type { ThreadClosedEvent } from "../../events/types";
-
-// ============================================================================
-// Types
-// ============================================================================
-
-interface ThreadRow {
-    thread_id: string;
-    watcher_id: string;
-    status: string;
-    opened_at: number;
-    closed_at: number | null;
-    last_activity_at: number;
-    normalized_subject: string;
-    original_sender: string;
-    message_count: number;
-    silence_alerted: boolean;
-}
+import { queryOne, queryMany, run } from "../../db/client";
+import type { ThreadRow, EmailRow } from "../../agent/schema";
 
 // ============================================================================
 // Handlers
@@ -32,34 +14,26 @@ export const threadHandlers = {
     async list(c: Context) {
         const user = c.get("user");
         const watcherId = c.req.param("watcherId");
-        const status = c.req.query("status"); // open, closed, or all
+        const status = c.req.query("status");
 
-        // Verify watcher ownership
-        const watcher = await queryOne(
-            `SELECT watcher_id FROM watcher_projections 
-             WHERE watcher_id = $1 AND account_id = $2`,
+        const watcher = queryOne(
+            `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
             [watcherId, user.account_id]
         );
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
 
-        if (!watcher) {
-            return c.json({ error: "Watcher not found" }, 404);
-        }
-
-        let sql = `SELECT * FROM thread_projections WHERE watcher_id = $1`;
+        let sql = `SELECT * FROM threads WHERE watcher_id = ?`;
         const params: any[] = [watcherId];
 
-        if (status === "open" || status === "closed") {
-            sql += ` AND status = $2`;
+        if (status) {
+            sql += ` AND status = ?`;
             params.push(status);
         }
 
-        sql += ` ORDER BY last_activity_at DESC`;
+        sql += ` ORDER BY last_activity DESC`;
 
-        const threads = await queryMany<ThreadRow>(sql, params);
-
-        return c.json({
-            threads: threads.map(formatThread),
-        });
+        const threads = queryMany<ThreadRow>(sql, params);
+        return c.json({ threads: threads.map(formatThread) });
     },
 
     async get(c: Context) {
@@ -67,80 +41,65 @@ export const threadHandlers = {
         const watcherId = c.req.param("watcherId");
         const threadId = c.req.param("threadId");
 
-        // Verify watcher ownership
-        const watcher = await queryOne(
-            `SELECT watcher_id FROM watcher_projections 
-             WHERE watcher_id = $1 AND account_id = $2`,
+        const watcher = queryOne(
+            `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
             [watcherId, user.account_id]
         );
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
 
-        if (!watcher) {
-            return c.json({ error: "Watcher not found" }, 404);
-        }
-
-        const thread = await queryOne<ThreadRow>(
-            `SELECT * FROM thread_projections WHERE thread_id = $1 AND watcher_id = $2`,
+        const thread = queryOne<ThreadRow>(
+            `SELECT * FROM threads WHERE id = ? AND watcher_id = ?`,
             [threadId, watcherId]
         );
+        if (!thread) return c.json({ error: "Thread not found" }, 404);
 
-        if (!thread) {
-            return c.json({ error: "Thread not found" }, 404);
-        }
+        // Load email metadata for this thread (no body — just analysis + metadata)
+        const emails = queryMany<EmailRow>(
+            `SELECT id, message_id, from_addr, to_addr, subject, received_at, analysis, processed, created_at
+             FROM emails WHERE thread_id = ? ORDER BY received_at ASC`,
+            [threadId]
+        );
 
-        return c.json({ thread: formatThread(thread) });
+        // Load agent actions for this thread
+        const actions = queryMany(
+            `SELECT * FROM actions WHERE thread_id = ? ORDER BY created_at DESC LIMIT 20`,
+            [threadId]
+        );
+
+        return c.json({
+            thread: formatThread(thread),
+            emails: emails.map(formatEmail),
+            actions,
+        });
     },
 
     async close(c: Context) {
         const user = c.get("user");
         const watcherId = c.req.param("watcherId");
         const threadId = c.req.param("threadId");
-        const { reason } = await c.req.json().catch(() => ({}));
 
-        // Verify watcher ownership
-        const watcher = await queryOne(
-            `SELECT watcher_id FROM watcher_projections 
-             WHERE watcher_id = $1 AND account_id = $2`,
+        const watcher = queryOne(
+            `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
             [watcherId, user.account_id]
         );
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
 
-        if (!watcher) {
-            return c.json({ error: "Watcher not found" }, 404);
-        }
-
-        const thread = await queryOne<ThreadRow>(
-            `SELECT * FROM thread_projections WHERE thread_id = $1 AND watcher_id = $2`,
+        const thread = queryOne<ThreadRow>(
+            `SELECT * FROM threads WHERE id = ? AND watcher_id = ?`,
             [threadId, watcherId]
         );
+        if (!thread) return c.json({ error: "Thread not found" }, 404);
 
-        if (!thread) {
-            return c.json({ error: "Thread not found" }, 404);
-        }
-
-        if (thread.status === "closed") {
+        if (thread.status === "resolved" || thread.status === "ignored") {
             return c.json({ error: "Thread already closed" }, 400);
         }
 
-        const now = Date.now();
-
-        const event: ThreadClosedEvent = {
-            event_id: crypto.randomUUID(),
-            timestamp: now,
-            watcher_id: watcherId,
-            type: "THREAD_CLOSED",
-            thread_id: threadId,
-            closed_at: now,
-            closed_by: "user_action",
-            reason,
-        };
-
-        await getEventStore().append(event);
-
-        await query(
-            `UPDATE thread_projections SET status = 'closed', closed_at = $1 WHERE thread_id = $2`,
-            [now, threadId]
+        run(
+            `UPDATE threads SET status = 'resolved', last_activity = CURRENT_TIMESTAMP WHERE id = ?`,
+            [threadId]
         );
 
-        return c.json({ closed: true, thread_id: threadId, closed_at: now });
+        return c.json({ closed: true, thread_id: threadId });
     },
 };
 
@@ -149,16 +108,38 @@ export const threadHandlers = {
 // ============================================================================
 
 function formatThread(row: ThreadRow) {
+    let participants: string[] = [];
+    let flags: Record<string, any> = {};
+    try { participants = JSON.parse(row.participants); } catch {}
+    try { if (row.flags) flags = JSON.parse(row.flags); } catch {}
+
     return {
-        thread_id: row.thread_id,
+        id: row.id,
         watcher_id: row.watcher_id,
+        subject: row.subject,
+        participants,
         status: row.status,
-        opened_at: row.opened_at,
-        closed_at: row.closed_at,
-        last_activity_at: row.last_activity_at,
-        normalized_subject: row.normalized_subject,
-        original_sender: row.original_sender,
-        message_count: row.message_count,
-        silence_alerted: row.silence_alerted,
+        first_seen: row.first_seen,
+        last_activity: row.last_activity,
+        email_count: row.email_count,
+        summary: row.summary,
+        flags,
+        created_at: row.created_at,
+    };
+}
+
+function formatEmail(row: EmailRow) {
+    let analysis: any = null;
+    try { if (row.analysis) analysis = JSON.parse(row.analysis); } catch {}
+
+    return {
+        id: row.id,
+        message_id: row.message_id,
+        from_addr: row.from_addr,
+        to_addr: row.to_addr,
+        subject: row.subject,
+        received_at: row.received_at,
+        analysis,
+        processed: Boolean(row.processed),
     };
 }

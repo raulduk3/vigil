@@ -1,34 +1,12 @@
 /**
- * Watcher Handlers
+ * Watcher Handlers — V2
+ *
+ * CRUD for watchers. Uses SQLite watchers table directly.
  */
 
 import type { Context } from "hono";
-import { queryOne, queryMany, query } from "../../db/client";
-import { getEventStore } from "../../events/store";
-import type {
-    WatcherCreatedEvent,
-    WatcherActivatedEvent,
-    WatcherPausedEvent,
-    WatcherResumedEvent,
-    WatcherDeletedEvent,
-    PolicyUpdatedEvent,
-    WatcherPolicy,
-} from "../../events/types";
-import { canCreateWatcher, incrementWatcherCount } from "../../billing/usage";
-
-// ============================================================================
-// Types
-// ============================================================================
-
-interface WatcherRow {
-    watcher_id: string;
-    account_id: string;
-    name: string;
-    ingest_token: string;
-    status: string;
-    policy: WatcherPolicy;
-    created_at: number;
-}
+import { queryOne, queryMany, run } from "../../db/client";
+import type { WatcherRow } from "../../agent/schema";
 
 // ============================================================================
 // Handlers
@@ -38,373 +16,201 @@ export const watcherHandlers = {
     async list(c: Context) {
         const user = c.get("user");
 
-        const watchers = await queryMany<WatcherRow>(
-            `SELECT * FROM watcher_projections 
-             WHERE account_id = $1 AND deleted_at IS NULL
+        const watchers = queryMany<WatcherRow>(
+            `SELECT * FROM watchers
+             WHERE account_id = ? AND status != 'deleted'
              ORDER BY created_at DESC`,
             [user.account_id]
         );
 
-        return c.json({
-            watchers: watchers.map(formatWatcher),
-        });
+        return c.json({ watchers: watchers.map(formatWatcher) });
     },
 
     async get(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
+        const id = c.req.param("id");
 
-        const watcher = await queryOne<WatcherRow>(
-            `SELECT * FROM watcher_projections 
-             WHERE watcher_id = $1 AND account_id = $2`,
-            [watcherId, user.account_id]
+        const watcher = queryOne<WatcherRow>(
+            `SELECT * FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
+            [id, user.account_id]
         );
 
-        if (!watcher) {
-            return c.json({ error: "Watcher not found" }, 404);
-        }
-
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
         return c.json({ watcher: formatWatcher(watcher) });
     },
 
     async create(c: Context) {
         const user = c.get("user");
-        const { name, policy } = await c.req.json();
+        const body = await c.req.json();
 
-        if (!name) {
-            return c.json({ error: "Name required" }, 400);
-        }
-
-        // Check plan limits
-        const account = await queryOne<{ plan: string }>(
-            "SELECT plan FROM accounts WHERE account_id = $1",
-            [user.account_id]
-        );
-        const canCreate = await canCreateWatcher(
-            user.account_id,
-            (account?.plan ?? "free") as any
-        );
-        if (!canCreate) {
-            return c.json(
-                { error: "Watcher limit reached for your plan" },
-                403
-            );
-        }
-
-        const watcherId = crypto.randomUUID();
-        const ingestToken = generateIngestToken();
-        const now = Date.now();
-
-        const defaultPolicy: WatcherPolicy = {
-            allowed_senders: [],
-            silence_threshold_hours: 72,
-            notification_channels: [],
-            ...policy,
-        };
-
-        // Emit event
-        const event: WatcherCreatedEvent = {
-            event_id: crypto.randomUUID(),
-            timestamp: now,
-            watcher_id: watcherId,
-            type: "WATCHER_CREATED",
-            account_id: user.account_id,
+        const {
             name,
-            ingest_token: ingestToken,
-            created_by: user.user_id,
-        };
+            system_prompt,
+            tools = ["send_alert"],
+            silence_hours = 48,
+            tick_interval = 60,
+            template_id,
+        } = body;
 
-        await getEventStore().append(event);
+        if (!name) return c.json({ error: "name required" }, 400);
+        if (!system_prompt)
+            return c.json({ error: "system_prompt required" }, 400);
 
-        // Update projection
-        await query(
-            `INSERT INTO watcher_projections 
-             (watcher_id, account_id, name, ingest_token, status, policy, created_at, created_by)
-             VALUES ($1, $2, $3, $4, 'created', $5, $6, $7)`,
+        const id = crypto.randomUUID();
+        const ingestToken = generateIngestToken();
+
+        run(
+            `INSERT INTO watchers
+             (id, account_id, name, ingest_token, system_prompt, tools, silence_hours, tick_interval, status, template_id, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
             [
-                watcherId,
+                id,
                 user.account_id,
                 name,
                 ingestToken,
-                JSON.stringify(defaultPolicy),
-                now,
-                user.user_id,
+                system_prompt,
+                JSON.stringify(tools),
+                silence_hours,
+                tick_interval,
+                template_id ?? null,
             ]
         );
 
-        // Update usage
-        await incrementWatcherCount(user.account_id);
-
-        return c.json(
-            {
-                watcher: {
-                    watcher_id: watcherId,
-                    name,
-                    ingest_token: ingestToken,
-                    ingestion_address: `${slugify(name)}-${ingestToken}@vigil.run`,
-                    status: "created",
-                    policy: defaultPolicy,
-                    created_at: now,
-                },
-            },
-            201
-        );
+        const watcher = queryOne<WatcherRow>(`SELECT * FROM watchers WHERE id = ?`, [id]);
+        return c.json({ watcher: formatWatcher(watcher!) }, 201);
     },
 
     async update(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
-        const { name, policy } = await c.req.json();
+        const id = c.req.param("id");
+        const body = await c.req.json();
 
-        const watcher = await queryOne<WatcherRow>(
-            `SELECT * FROM watcher_projections 
-             WHERE watcher_id = $1 AND account_id = $2`,
-            [watcherId, user.account_id]
+        const watcher = queryOne<WatcherRow>(
+            `SELECT * FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
+            [id, user.account_id]
         );
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
 
-        if (!watcher) {
-            return c.json({ error: "Watcher not found" }, 404);
-        }
-
-        const now = Date.now();
         const updates: string[] = [];
-        const params: any[] = [];
-        let paramIndex = 1;
+        const vals: any[] = [];
 
-        if (name) {
-            updates.push(`name = $${paramIndex++}`);
-            params.push(name);
+        const allowed = [
+            "name",
+            "system_prompt",
+            "tools",
+            "silence_hours",
+            "tick_interval",
+            "status",
+        ] as const;
+
+        for (const key of allowed) {
+            if (body[key] !== undefined) {
+                updates.push(`${key} = ?`);
+                vals.push(
+                    key === "tools" ? JSON.stringify(body[key]) : body[key]
+                );
+            }
         }
 
-        if (policy) {
-            const mergedPolicy = { ...watcher.policy, ...policy };
-            updates.push(`policy = $${paramIndex++}`);
-            params.push(JSON.stringify(mergedPolicy));
+        if (updates.length === 0) return c.json({ error: "Nothing to update" }, 400);
 
-            // Emit policy update event
-            const event: PolicyUpdatedEvent = {
-                event_id: crypto.randomUUID(),
-                timestamp: now,
-                watcher_id: watcherId,
-                type: "POLICY_UPDATED",
-                policy: mergedPolicy,
-                updated_by: user.user_id,
-            };
-            await getEventStore().append(event);
-        }
+        updates.push("updated_at = CURRENT_TIMESTAMP");
+        vals.push(id);
 
-        if (updates.length > 0) {
-            params.push(watcherId);
-            await query(
-                `UPDATE watcher_projections SET ${updates.join(", ")} WHERE watcher_id = $${paramIndex}`,
-                params
-            );
-        }
-
-        // Fetch and return updated watcher
-        const updated = await queryOne<WatcherRow>(
-            `SELECT * FROM watcher_projections WHERE watcher_id = $1`,
-            [watcherId]
+        run(
+            `UPDATE watchers SET ${updates.join(", ")} WHERE id = ?`,
+            vals
         );
 
+        const updated = queryOne<WatcherRow>(`SELECT * FROM watchers WHERE id = ?`, [id]);
         return c.json({ watcher: formatWatcher(updated!) });
-    },
-
-    async updatePolicy(c: Context) {
-        const user = c.get("user");
-        const watcherId = c.req.param("id");
-        const policyUpdates = await c.req.json();
-
-        const watcher = await queryOne<WatcherRow>(
-            `SELECT * FROM watcher_projections 
-             WHERE watcher_id = $1 AND account_id = $2`,
-            [watcherId, user.account_id]
-        );
-
-        if (!watcher) {
-            return c.json({ error: "Watcher not found" }, 404);
-        }
-
-        const now = Date.now();
-        const mergedPolicy = { ...watcher.policy, ...policyUpdates };
-
-        // Emit policy update event
-        const event: PolicyUpdatedEvent = {
-            event_id: crypto.randomUUID(),
-            timestamp: now,
-            watcher_id: watcherId,
-            type: "POLICY_UPDATED",
-            policy: mergedPolicy,
-            updated_by: user.user_id,
-        };
-        await getEventStore().append(event);
-
-        await query(
-            `UPDATE watcher_projections SET policy = $1 WHERE watcher_id = $2`,
-            [JSON.stringify(mergedPolicy), watcherId]
-        );
-
-        return c.json({ updated: true, policy: mergedPolicy });
     },
 
     async delete_(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
+        const id = c.req.param("id");
 
-        const watcher = await queryOne<WatcherRow>(
-            `SELECT * FROM watcher_projections 
-             WHERE watcher_id = $1 AND account_id = $2`,
-            [watcherId, user.account_id]
+        const watcher = queryOne<WatcherRow>(
+            `SELECT * FROM watchers WHERE id = ? AND account_id = ?`,
+            [id, user.account_id]
+        );
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
+
+        run(
+            `UPDATE watchers SET status = 'deleted', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            [id]
         );
 
-        if (!watcher) {
-            return c.json({ error: "Watcher not found" }, 404);
-        }
-
-        const now = Date.now();
-
-        const event: WatcherDeletedEvent = {
-            event_id: crypto.randomUUID(),
-            timestamp: now,
-            watcher_id: watcherId,
-            type: "WATCHER_DELETED",
-            deleted_by: user.user_id,
-        };
-
-        await getEventStore().append(event);
-
-        await query(
-            `UPDATE watcher_projections SET status = 'deleted', deleted_at = $1 WHERE watcher_id = $2`,
-            [now, watcherId]
-        );
-
-        return c.json({ deleted: true, watcher_id: watcherId });
+        return c.json({ deleted: true, id });
     },
 
-    async activate(c: Context) {
+    async invoke(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
+        const id = c.req.param("id");
+        const body = await c.req.json().catch(() => ({}));
 
-        const watcher = await queryOne<WatcherRow>(
-            `SELECT * FROM watcher_projections 
-             WHERE watcher_id = $1 AND account_id = $2`,
-            [watcherId, user.account_id]
+        const watcher = queryOne<WatcherRow>(
+            `SELECT * FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
+            [id, user.account_id]
         );
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
 
-        if (!watcher) {
-            return c.json({ error: "Watcher not found" }, 404);
-        }
+        const { invokeAgent } = await import("../../agent/engine");
+        await invokeAgent(id, {
+            type: "user_query",
+            query: body.query ?? "Manual invocation — review active threads.",
+        });
 
-        if (watcher.status === "active") {
-            return c.json({ error: "Watcher already active" }, 400);
-        }
-
-        const now = Date.now();
-
-        const event: WatcherActivatedEvent = {
-            event_id: crypto.randomUUID(),
-            timestamp: now,
-            watcher_id: watcherId,
-            type: "WATCHER_ACTIVATED",
-            activated_by: user.user_id,
-        };
-
-        await getEventStore().append(event);
-
-        await query(
-            `UPDATE watcher_projections SET status = 'active' WHERE watcher_id = $1`,
-            [watcherId]
-        );
-
-        // Fetch and return updated watcher
-        const updated = await queryOne<WatcherRow>(
-            `SELECT * FROM watcher_projections WHERE watcher_id = $1`,
-            [watcherId]
-        );
-
-        return c.json({ watcher: formatWatcher(updated!) });
+        return c.json({ invoked: true, watcher_id: id });
     },
 
-    async pause(c: Context) {
+    async getMemory(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
-        const { reason } = await c.req.json().catch(() => ({}));
+        const id = c.req.param("id");
 
-        const watcher = await queryOne<WatcherRow>(
-            `SELECT * FROM watcher_projections 
-             WHERE watcher_id = $1 AND account_id = $2`,
-            [watcherId, user.account_id]
+        const watcher = queryOne(
+            `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
+            [id, user.account_id]
+        );
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
+
+        const memories = queryMany(
+            `SELECT id, content, importance, last_accessed, created_at
+             FROM memories WHERE watcher_id = ? AND obsolete = FALSE
+             ORDER BY importance DESC, created_at DESC`,
+            [id]
         );
 
-        if (!watcher) {
-            return c.json({ error: "Watcher not found" }, 404);
-        }
-
-        const now = Date.now();
-
-        const event: WatcherPausedEvent = {
-            event_id: crypto.randomUUID(),
-            timestamp: now,
-            watcher_id: watcherId,
-            type: "WATCHER_PAUSED",
-            paused_by: user.user_id,
-            reason,
-        };
-
-        await getEventStore().append(event);
-
-        await query(
-            `UPDATE watcher_projections SET status = 'paused' WHERE watcher_id = $1`,
-            [watcherId]
-        );
-
-        // Fetch and return updated watcher
-        const updated = await queryOne<WatcherRow>(
-            `SELECT * FROM watcher_projections WHERE watcher_id = $1`,
-            [watcherId]
-        );
-
-        return c.json({ watcher: formatWatcher(updated!) });
+        return c.json({ memories });
     },
 
-    async resume(c: Context) {
+    async getActions(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
+        const id = c.req.param("id");
+        const limit = parseInt(c.req.query("limit") ?? "50", 10);
 
-        const watcher = await queryOne<WatcherRow>(
-            `SELECT * FROM watcher_projections 
-             WHERE watcher_id = $1 AND account_id = $2`,
-            [watcherId, user.account_id]
+        const watcher = queryOne(
+            `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
+            [id, user.account_id]
+        );
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
+
+        const actions = queryMany(
+            `SELECT * FROM actions WHERE watcher_id = ? ORDER BY created_at DESC LIMIT ?`,
+            [id, limit]
         );
 
-        if (!watcher) {
-            return c.json({ error: "Watcher not found" }, 404);
-        }
+        return c.json({ actions });
+    },
+};
 
-        const now = Date.now();
+// ============================================================================
+// Templates
+// ============================================================================
 
-        const event: WatcherResumedEvent = {
-            event_id: crypto.randomUUID(),
-            timestamp: now,
-            watcher_id: watcherId,
-            type: "WATCHER_RESUMED",
-            resumed_by: user.user_id,
-        };
-
-        await getEventStore().append(event);
-
-        await query(
-            `UPDATE watcher_projections SET status = 'active' WHERE watcher_id = $1`,
-            [watcherId]
-        );
-
-        // Fetch and return updated watcher
-        const updated = await queryOne<WatcherRow>(
-            `SELECT * FROM watcher_projections WHERE watcher_id = $1`,
-            [watcherId]
-        );
-
-        return c.json({ watcher: formatWatcher(updated!) });
+export const templateHandlers = {
+    list(c: Context) {
+        return c.json({ templates: TEMPLATES });
     },
 };
 
@@ -415,7 +221,7 @@ export const watcherHandlers = {
 function generateIngestToken(): string {
     const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
     let token = "";
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 8; i++) {
         token += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return token;
@@ -430,13 +236,69 @@ function slugify(text: string): string {
 }
 
 function formatWatcher(row: WatcherRow) {
+    let tools: string[] = [];
+    try {
+        tools = JSON.parse(row.tools);
+    } catch {}
+
     return {
-        watcher_id: row.watcher_id,
+        id: row.id,
         name: row.name,
         ingest_token: row.ingest_token,
         ingestion_address: `${slugify(row.name)}-${row.ingest_token}@vigil.run`,
+        system_prompt: row.system_prompt,
+        tools,
+        silence_hours: row.silence_hours,
+        tick_interval: row.tick_interval,
         status: row.status,
-        policy: row.policy,
+        template_id: row.template_id,
+        last_tick_at: row.last_tick_at,
         created_at: row.created_at,
+        updated_at: row.updated_at,
     };
 }
+
+const TEMPLATES = [
+    {
+        id: "vendor-followup",
+        name: "Vendor Follow-up",
+        description: "Watch vendor/supplier emails. Alert when requests go unanswered.",
+        system_prompt: `You monitor vendor communications. Track invoices, POs, and requests.
+Alert the user when a vendor asks for something and hasn't received a response.
+Note payment amounts and due dates when you see them.`,
+        tools: ["send_alert", "update_thread", "ignore_thread"],
+        silence_hours: 48,
+        tick_interval: 60,
+    },
+    {
+        id: "client-comms",
+        name: "Client Communications",
+        description: "Track client threads. Flag cold conversations.",
+        system_prompt: `You monitor client communications. Track project discussions and requests.
+Alert when a client thread goes cold or when action items surface.
+Summarize long threads concisely.`,
+        tools: ["send_alert", "update_thread", "ignore_thread", "webhook"],
+        silence_hours: 72,
+        tick_interval: 120,
+    },
+    {
+        id: "recruiter-filter",
+        name: "Recruiter Filter",
+        description: "Filter recruiter emails. Only surface relevant opportunities.",
+        system_prompt: `You filter recruiter/hiring emails. Most are noise.
+Only alert the user for roles that match their criteria (they'll tell you in preferences).
+Ignore mass outreach and generic pitches.`,
+        tools: ["send_alert", "ignore_thread"],
+        silence_hours: 0,
+        tick_interval: 0,
+    },
+    {
+        id: "blank",
+        name: "Custom Watcher",
+        description: "Start from scratch. Define your own prompt and tools.",
+        system_prompt: `You are an email monitoring agent. The user will configure your behavior.`,
+        tools: ["send_alert", "update_thread", "ignore_thread"],
+        silence_hours: 48,
+        tick_interval: 60,
+    },
+];

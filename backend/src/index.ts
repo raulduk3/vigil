@@ -1,8 +1,8 @@
 /**
- * Vigil Backend Entry Point
+ * Vigil Backend Entry Point — V2
  *
- * Event-sourced silence tracking for email threads.
- * Single capability: provable silence tracking.
+ * Agent-based email monitoring.
+ * SQLite storage, Anthropic Claude for reasoning.
  */
 
 import { Hono } from "hono";
@@ -10,14 +10,13 @@ import { cors } from "hono/cors";
 
 import { createRouter } from "./api/router";
 import { initializeDatabase } from "./db/client";
-import { startScheduler } from "./scheduler/scheduler";
-import { startAlertWorker } from "./delivery/worker";
-import { startWeeklyReportScheduler } from "./scheduler/weekly-report";
 import { logger } from "./logger";
+import { invokeAgent } from "./agent/engine";
+import { queryMany } from "./db/client";
+import type { WatcherRow } from "./agent/schema";
 
 const app = new Hono();
 
-// CORS configuration
 const corsOrigins = process.env.CORS_ORIGINS?.split(",") ?? [
     "http://localhost:3000",
 ];
@@ -30,33 +29,68 @@ app.use(
     })
 );
 
-// Mount API routes
 app.route("/api", createRouter());
 
-// Health check (outside /api for load balancer)
 app.get("/health", (c) => c.json({ status: "ok", timestamp: Date.now() }));
 
-// Start server
+// ============================================================================
+// Scheduled Ticks
+// ============================================================================
+
+function startScheduledTicks(): void {
+    // Run every 5 minutes. Each watcher has its own tick_interval check.
+    const CHECK_INTERVAL_MS = 5 * 60 * 1000;
+
+    setInterval(async () => {
+        try {
+            await runScheduledTicks();
+        } catch (err) {
+            logger.error("Scheduled tick error", { err });
+        }
+    }, CHECK_INTERVAL_MS);
+
+    logger.info("Scheduled tick runner started", {
+        checkIntervalMinutes: 5,
+    });
+}
+
+async function runScheduledTicks(): Promise<void> {
+    const watchers = queryMany<WatcherRow>(
+        `SELECT * FROM watchers WHERE status = 'active' AND tick_interval > 0`,
+        []
+    );
+
+    const now = Date.now();
+
+    for (const watcher of watchers) {
+        const lastTickMs = watcher.last_tick_at
+            ? new Date(watcher.last_tick_at).getTime()
+            : 0;
+        const msSinceLastTick = now - lastTickMs;
+        const intervalMs = watcher.tick_interval * 60 * 1000;
+
+        if (msSinceLastTick >= intervalMs) {
+            logger.debug("Running scheduled tick", { watcherId: watcher.id });
+            invokeAgent(watcher.id, { type: "scheduled_tick", timestamp: now }).catch(
+                (err) => logger.error("Tick invocation failed", { watcherId: watcher.id, err })
+            );
+        }
+    }
+}
+
+// ============================================================================
+// Startup
+// ============================================================================
+
 async function main() {
     const port = parseInt(process.env.PORT ?? "4000", 10);
 
-    // Initialize database connection
     await initializeDatabase();
     logger.info("Database initialized");
 
-    // Start background scheduler (TIME_TICK for silence tracking)
-    startScheduler();
-    logger.info("Silence scheduler started");
+    startScheduledTicks();
 
-    // Start alert delivery worker
-    startAlertWorker();
-    logger.info("Alert delivery worker started");
-
-    // Start weekly report scheduler
-    startWeeklyReportScheduler();
-    logger.info("Weekly report scheduler started");
-
-    logger.info(`Vigil backend starting on port ${port}`);
+    logger.info(`Vigil V2 starting on port ${port}`);
 
     Bun.serve({
         port,
@@ -69,5 +103,4 @@ main().catch((err) => {
     process.exit(1);
 });
 
-// Export for testing (not as default to avoid bun --hot auto-serve conflict)
 export { app };
