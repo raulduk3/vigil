@@ -29,8 +29,8 @@ async function sendAlertHandler(
     ctx: WatcherContext
 ): Promise<ToolResult> {
     // Be flexible: accept {subject, body} or just {message}
-    const subject = params.subject ?? "Alert";
     const body = params.body ?? params.message ?? "";
+    const subject = params.subject || (body.length > 80 ? body.substring(0, 77) + "..." : body) || "Alert";
     const urgency = params.urgency ?? "normal";
 
     if (!body) {
