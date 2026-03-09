@@ -25,13 +25,17 @@ export interface Tool {
 // ============================================================================
 
 async function sendAlertHandler(
-    params: { subject: string; body: string; urgency?: string },
+    params: { subject?: string; body?: string; message?: string; urgency?: string },
     ctx: WatcherContext
 ): Promise<ToolResult> {
-    const { subject, body, urgency = "normal" } = params;
+    // Be flexible: accept {subject, body} or just {message}
+    const subject = params.subject ?? "Alert";
+    const body = params.body ?? params.message ?? "";
+    const urgency = params.urgency ?? "normal";
 
-    if (!subject || !body) {
-        return { success: false, error: "send_alert requires subject and body" };
+    if (!body) {
+        logger.warn("send_alert: no body or message provided", { rawParams: JSON.stringify(params) });
+        return { success: false, error: "send_alert requires body or message" };
     }
 
     const apiKey = process.env.RESEND_API_KEY;
@@ -40,8 +44,8 @@ async function sendAlertHandler(
         return { success: false, error: "RESEND_API_KEY not configured" };
     }
 
-    const from =
-        process.env.RESEND_FROM_EMAIL ?? "Vigil <alerts@vigil.run>";
+    const rawFrom = process.env.RESEND_FROM_EMAIL ?? "alerts@vigil.run";
+    const from = rawFrom.includes("<") ? rawFrom : `Vigil <${rawFrom}>`;
 
     // Get email channels from watcher channels
     const channels = ctx.channels.filter(
@@ -55,6 +59,12 @@ async function sendAlertHandler(
             ...channels.map((c) => c.destination),
         ]),
     ].filter(Boolean);
+
+    logger.info("send_alert destinations", { destinations, accountEmail: ctx.accountEmail, channelCount: channels.length, from });
+
+    if (destinations.length === 0) {
+        return { success: false, error: "No alert destinations configured" };
+    }
 
     let allSucceeded = true;
     for (const destination of destinations) {
@@ -75,10 +85,11 @@ async function sendAlertHandler(
 
             if (!resp.ok) {
                 const err = await resp.text();
-                logger.error("Resend error", { status: resp.status, err, destination });
+                logger.error("Resend error", { status: resp.status, err, destination, from });
                 allSucceeded = false;
             } else {
-                logger.info("Alert sent", { destination, subject });
+                const resendResp = await resp.json() as { id: string };
+                logger.info("Alert sent", { destination, subject, resendId: resendResp.id, from });
             }
         } catch (err) {
             logger.error("Alert send failed", { err, destination });
