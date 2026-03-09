@@ -1,28 +1,16 @@
-# CLAUDE.md
+# CLAUDE.md — Frontend
 
 Development guidance for Claude Code when working with the Vigil frontend.
 
-## Product Focus
+## Product
 
-Vigil delivers **one capability: provable silence tracking for email threads**.
-
-The frontend displays:
-- Watcher status and configuration
-- Thread list with silence duration
-- Alert history
-- Evidence timelines
-
-The frontend **never**:
-- Contains business logic
-- Accesses database directly
-- Emits events
-- Infers deadlines or urgency
+Vigil's frontend is a Next.js dashboard for managing email watchers, viewing threads, and reviewing agent activity. It is a display layer with no business logic. All state comes from the backend API.
 
 ## Commands
 
 ```bash
 npm install          # Install dependencies
-npm run dev          # Development server (http://localhost:3000)
+npm run dev          # Dev server (http://localhost:3000)
 npm run build        # Production build
 npm run typecheck    # TypeScript checking
 npm run lint         # ESLint
@@ -32,103 +20,190 @@ npm run lint         # ESLint
 
 ### Display-Only Layer
 
-The frontend is a **read-heavy display layer with no business logic**.
-
 - All state from backend API
-- User actions → API → backend emits events
-- No event emission
-- No decision-making
+- User actions → API → backend processes
+- No event emission, no decision-making
+- No direct database access
 
-### Key Directories
+### Stack
+
+Next.js 14 (App Router), Tailwind CSS, React Query for server state, JWT auth (localStorage).
+
+### Directory Structure
 
 ```
 src/
-├── app/                # Next.js App Router pages
+├── app/
 │   ├── auth/           # Login, register, OAuth callback
 │   ├── dashboard/      # Main dashboard
-│   ├── watchers/       # Watcher management
+│   ├── watchers/       # Watcher management + detail views
 │   ├── account/        # Profile, security, billing
-│   └── learn/          # Documentation
+│   └── learn/          # Documentation pages
 ├── components/
 │   ├── auth/           # OAuth buttons
-│   ├── events/         # Event display
-│   └── system/         # Connection indicator
+│   └── ui/             # Base components
 └── lib/
-    ├── api/client.ts   # API client
-    ├── auth/context.tsx # Auth context
-    └── stripe/provider.tsx # Stripe provider
+    ├── api/client.ts   # API client (auto token refresh)
+    ├── auth/context.tsx # Auth context + hooks
+    └── stripe/         # Stripe provider (stub)
 ```
 
-### API Client
+### Backend API Endpoints (V2)
 
-Singleton with automatic token management:
-- `access_token` / `refresh_token` in localStorage
-- Auto refresh on 401
-- Type-safe domain methods
+```
+# Auth (public)
+POST   /api/auth/register
+POST   /api/auth/login
+POST   /api/auth/refresh
 
-### Authentication
+# Templates (public)
+GET    /api/templates
 
-React Context pattern:
-- `AuthProvider` at root
-- `useAuth()` hook
-- `RequireAuth` component
+# Watchers (authenticated)
+GET    /api/watchers
+POST   /api/watchers
+GET    /api/watchers/:id
+PUT    /api/watchers/:id
+DELETE /api/watchers/:id
+POST   /api/watchers/:id/invoke
+GET    /api/watchers/:id/memory
+GET    /api/watchers/:id/actions
 
-### Protected Routes
+# Threads (authenticated)
+GET    /api/watchers/:watcherId/threads
+GET    /api/watchers/:watcherId/threads/:threadId
+POST   /api/watchers/:watcherId/threads/:threadId/close
+
+# Ingestion (token auth)
+POST   /api/ingest/:token
+POST   /ingest/:token
+```
+
+## Key Pages
+
+### Dashboard
+Overview of all watchers: status, thread count, last activity, recent alerts.
+
+### Watcher Detail
+- **Threads tab** — active/watching/resolved threads with summaries, silence duration, email count
+- **Activity tab** — agent action log (trigger, tool called, result, cost, duration)
+- **Memory tab** — what the agent has learned about this email stream
+- **Settings tab** — system prompt, tools, silence threshold, tick interval, notification channels
+
+### Watcher Creation
+Choose a template (general, or custom), set name, configure alert email. Backend generates ingest token and ingestion address.
+
+### Setup Flow
+After creating a watcher, show the user:
+1. Their ingestion address (e.g. `your-watcher-abc123@vigil.run`)
+2. Instructions to set up email forwarding in Gmail/Outlook/etc.
+3. A test button to send a sample email
+
+## Data Types
 
 ```typescript
-export default function Page() {
-  return (
-    <RequireAuth>
-      <Content />
-    </RequireAuth>
-  );
+// Thread display
+interface Thread {
+  id: string;
+  subject: string;
+  status: "active" | "watching" | "resolved" | "ignored";
+  participants: string[];
+  email_count: number;
+  summary: string | null;
+  last_activity: string;
+  created_at: string;
+}
+
+// Action log entry
+interface Action {
+  id: string;
+  trigger_type: "email_received" | "scheduled_tick";
+  tool: string | null;
+  tool_params: string | null;  // JSON
+  result: "success" | "failed";
+  context_tokens: number;
+  cost_usd: number;
+  duration_ms: number;
+  created_at: string;
+}
+
+// Watcher config
+interface Watcher {
+  id: string;
+  name: string;
+  ingest_token: string;
+  ingestion_address: string;
+  system_prompt: string;
+  tools: string[];
+  silence_hours: number;
+  tick_interval: number;
+  status: "active" | "paused" | "deleted";
+  template_id: string | null;
+  last_tick_at: string | null;
+}
+
+// Memory entry
+interface Memory {
+  id: string;
+  content: string;
+  importance: number;
+  created_at: string;
 }
 ```
 
 ## UI Guidelines
 
-### Thread Display
+### Design System
+Tailwind with custom palette:
+- **vigil** — deep teal brand
+- **status** — ok (green), warning (amber), critical (red)
+- **surface** — page hierarchy neutrals
+
+MacOS-inspired. Minimal. High data density. Eye-safe neutrals.
+
+### Constraints
+- No email bodies displayed (never stored)
+- Thread summaries are agent-generated, not raw email content
+- Cost/token usage shown per action for transparency
+- Silence duration prominently displayed on active threads
+
+## Auth Pattern
 
 ```typescript
-// Thread shows silence tracking, not deadlines
-type ThreadDisplay = {
-  thread_id: string;
-  status: "open" | "closed";
-  last_activity_at: number;
-  hours_silent: number;
-  threshold_exceeded: boolean;
-  participants: string[];
-};
-// NO: deadline_utc, urgency_level, reminder_ids
+// Auth context
+const { user, loading, login, logout } = useAuth();
+
+// Protected route
+<RequireAuth>
+  <DashboardContent />
+</RequireAuth>
+
+// API client with auto-refresh
+const api = new ApiClient(process.env.NEXT_PUBLIC_API_URL);
+// Handles 401 → refresh → retry automatically
 ```
 
-### Alert Display
+## Environment
 
-```typescript
-// Alerts for silence threshold only
-type AlertDisplay = {
-  alert_id: string;
-  thread_id: string;
-  hours_silent: number;
-  threshold_hours: number;
-  sent_at: number;
-};
-// NO: urgency_level, deadline alerts
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:3001
+NEXT_PUBLIC_APP_NAME=Vigil
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Optional
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+NEXT_PUBLIC_GOOGLE_OAUTH_ENABLED=false
+NEXT_PUBLIC_GITHUB_OAUTH_ENABLED=false
 ```
 
-## Design System
+## What Does NOT Exist in V2
 
-### Tailwind Config
-
-Custom palette:
-- **vigil**: Deep teal brand
-- **status**: ok/warning/critical/overdue
-- **surface**: Page hierarchy
-
-### Component Classes
-
-`globals.css`: `.btn`, `.input`, `.panel`, `.badge`, `.table-base`
-
-### Philosophy
-
-MacOS-inspired, minimal, high data density. Eye-safe neutrals.
+These V1 concepts are removed:
+- ❌ Event sourcing / event replay
+- ❌ Reminders / deadline extraction
+- ❌ Urgency levels or escalation
+- ❌ Conflict resolution
+- ❌ Multi-thread email assignment
+- ❌ Response time metrics
+- ❌ Report generation
+- ❌ WebSocket real-time updates
