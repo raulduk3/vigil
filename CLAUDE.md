@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-Development guidance for Claude Code when working with the Vigil codebase.
+Development guidance for working with the Vigil codebase.
 
 ## Product
 
-Vigil is an email oversight agent. Forward emails to Vigil. It reads them, tracks conversations, remembers context, and alerts you when something needs attention. No inbox access. No email bodies stored.
+Vigil is an email oversight agent. Forward emails to a `@vigil.run` address. An AI agent reads them, tracks conversations, remembers context, and alerts you when something needs attention. No inbox access. No email bodies stored.
 
 ## Commands
 
@@ -12,118 +12,82 @@ Vigil is an email oversight agent. Forward emails to Vigil. It reads them, track
 # Backend
 cd backend
 bun install
-bun run src/index.ts          # Start server (port 3001)
-bun run scripts/test-e2e.ts   # End-to-end test
+bun run dev              # Dev server (port 3001)
+bun run scripts/test-e2e.ts  # E2E test
 
 # Frontend
 cd frontend
 npm install
-npm run dev                    # Dev server (port 3000)
-npm run build                  # Production build
+npm run dev              # Dev server (port 3000)
+npm run build
+npm run typecheck
+npm run lint
+
+# Cloudflare Worker
+cd cloudflare-worker
+npx wrangler deploy
 ```
 
 ## Architecture
 
-### V2 (Current — branch: v2-agent-architecture)
+### Backend (Bun + Hono + SQLite)
 
-Single-process Bun + Hono server with SQLite. LLM agent processes each email and decides what to do.
+Agent-based. Each watcher has its own LLM agent with memory, tools, and configurable behavior.
 
-**Stack:** Bun, Hono, SQLite, OpenAI (gpt-4.1-mini), Resend, Cloudflare Workers, Next.js 14
-
-### Data Flow
-
-```
-Email sender → *@vigil.run
-  → Cloudflare Email Routing → Worker (raw MIME)
-  → POST /ingest/:token (backend parses with postal-mime)
-  → Agent engine (8-step loop)
-  → Tools: send_alert, update_thread, ignore_thread, webhook
-  → Resend → User's inbox
-```
-
-### Key Modules (backend/src/)
+**Data flow:** Email → Cloudflare Worker → Backend `/ingest/:token` → Agent Engine → Tools (alert, thread update, memory store)
 
 | Module | Purpose |
 |--------|---------|
-| `agent/engine.ts` | 8-step agent invocation loop |
-| `agent/tools.ts` | Tool registry (send_alert, update_thread, ignore_thread, webhook) |
-| `agent/memory.ts` | Per-watcher memory with FTS5 retrieval |
+| `agent/engine.ts` | 8-step invocation loop (load → memory → threads → email → prompt → LLM → tools → log) |
+| `agent/tools.ts` | Built-in tools: send_alert, update_thread, ignore_thread, webhook |
+| `agent/memory.ts` | Per-watcher memory with FTS5 search, BM25 ranking, time decay |
 | `agent/prompts.ts` | System + trigger prompt construction |
-| `agent/templates/` | Watcher templates (general, etc.) |
+| `agent/templates/` | Watcher templates (general, extensible) |
 | `ingestion/` | Email pipeline orchestration |
 | `watcher/` | Thread detection (In-Reply-To, subject normalization) |
-| `api/` | Hono routes + handlers (auth, watchers, threads, ingestion) |
-| `auth/` | JWT + OAuth scaffolding |
-| `db/` | SQLite client + schema |
-| `delivery/` | Notification templates |
-| `billing/` | Stripe stubs (not wired) |
+| `api/` | Hono REST handlers (auth, watchers, threads, ingestion) |
+| `auth/` | JWT with access/refresh tokens |
+| `db/` | SQLite via bun:sqlite, schema in schema.sql |
 
-### Database (SQLite)
+**Tables:** accounts, watchers, threads, emails, actions, channels, memories (+ memories_fts), refresh_tokens
 
-| Table | Purpose |
-|-------|---------|
-| `accounts` | Users (email/password, OAuth) |
-| `watchers` | Core object: system prompt, ingest token, tools, thresholds |
-| `threads` | Conversation threads (status, participants, summary) |
-| `emails` | Ingested emails (metadata only, body hash, analysis JSON) |
-| `actions` | Audit log (trigger, tool, params, result, cost, duration) |
-| `memories` | Per-watcher memory with FTS5 full-text search |
-| `channels` | Notification destinations (email, webhook) |
-| `refresh_tokens` | JWT refresh tokens |
+**Two triggers:**
+- `email_received` — immediate, on ingest
+- `scheduled_tick` — every 5 min, checks silence thresholds
 
-### Agent Loop (engine.ts)
+**LLM:** OpenAI API (gpt-4.1-mini default), JSON mode forced. Agent responds with `{actions, memory_append, thread_updates, email_analysis}`.
 
-1. Load watcher config
-2. Retrieve memories (FTS5 ranked if 20+, else all)
-3. Load active threads
-4. If email: insert record, detect/create thread, load history
-5. Build prompt (system + watcher config + memory + threads)
-6. Call OpenAI (JSON mode)
-7. Execute tools, persist state, store memories
-8. Log invocation
+### Cloudflare Worker
 
-### Triggers
+Receives raw MIME from Cloudflare Email Routing. Forwards to backend `/ingest/:token`. Backend parses MIME via `postal-mime`.
 
-- **email_received** — immediate, on ingest
-- **scheduled_tick** — every 5 min, checks silence thresholds
+### Frontend (Next.js 14)
 
-### Tools
-
-- **send_alert** — email via Resend to account owner
-- **update_thread** — change status/summary
-- **ignore_thread** — mark as noise
-- **webhook** — POST with HMAC signature
+Display layer. All state from backend API. No business logic.
 
 ## Constraints
 
-1. **Email bodies never stored** — processed in memory, only hash persisted
-2. **Agent decides everything** — alert/ignore/remember decisions are LLM-driven
-3. **No file > 1000 lines** — prefer < 400
-4. **Frontend is display-only** — no business logic, all state from backend API
+1. Email bodies are never persisted — processed in memory, only SHA-256 hash stored
+2. Agent decides what to remember via `memory_append`
+3. Tools are the only way the agent affects the outside world
+4. No file > 1000 lines
+5. Frontend is read-only display — all mutations go through backend API
 
 ## Environment
 
 ```bash
-# Required
-OPENAI_API_KEY          # LLM for agent
-JWT_SECRET              # Auth
-JWT_REFRESH_SECRET      # Auth
+# Backend (.env)
+PORT=3001
+SQLITE_PATH=./data/vigil.db
+JWT_SECRET, JWT_REFRESH_SECRET
+OPENAI_API_KEY
+RESEND_API_KEY
+RESEND_FROM_EMAIL=notifications@vigil.run
 
-# Required for alerts
-RESEND_API_KEY          # Email delivery
-RESEND_FROM_EMAIL       # e.g. notifications@vigil.run
-
-# Optional
-VIGIL_MODEL             # Override LLM model (default: gpt-4.1-mini)
-PORT                    # Server port (default: 3001)
-CORS_ORIGINS            # Comma-separated origins
-SQLITE_PATH             # Database file (default: ./data/vigil.db)
-WEBHOOK_SIGNING_SECRET  # HMAC key for webhooks
+# Frontend (.env.local)
+NEXT_PUBLIC_API_URL=http://localhost:3001
 ```
 
-## Documentation
+## Branch
 
-| Document | Purpose |
-|----------|---------|
-| `docs/V2_ARCHITECTURE.md` | Technical architecture |
-| `docs/SDD.md` | Original requirements (V1, partially outdated) |
+V2 development on `v2-agent-architecture`. Main is V1 (deprecated).
