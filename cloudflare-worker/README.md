@@ -1,77 +1,76 @@
 # Vigil Email Ingestion Worker
 
-Cloudflare Worker that receives emails from Cloudflare Email Routing and forwards them to the Vigil backend.
+Cloudflare Worker that receives inbound email via Cloudflare Email Routing and forwards raw MIME to the Vigil backend.
+
+## How It Works
+
+1. User's Gmail/Outlook forwards to `*@vigil.run`
+2. Cloudflare Email Routing catches all `@vigil.run` mail via MX records
+3. Worker receives raw MIME email
+4. Worker POSTs raw email to `{VIGIL_API_URL}/ingest/{local-part}`
+5. Backend parses MIME (via `postal-mime`), extracts token from local part, invokes agent
+
+## Email Address Format
+
+Watcher addresses look like: `name-TOKEN@vigil.run`
+
+Example: `ricky-personal-watch-9uw05nk7@vigil.run`
+
+The backend extracts the token suffix (`9uw05nk7`) from the full local part.
 
 ## Setup
 
-### 1. Install Dependencies
+### 1. Deploy Worker
 
 ```bash
 cd cloudflare-worker
 npm install
-```
-
-### 2. Configure Wrangler
-
-Login to Cloudflare:
-```bash
 npx wrangler login
+npx wrangler deploy
 ```
 
-### 3. Deploy
+### 2. Configure Email Routing
 
-```bash
-npm run deploy
+1. Cloudflare Dashboard → your domain → Email → Email Routing
+2. Enable Email Routing (auto-adds MX records)
+3. Routing rules → Catch-all → Send to Worker → `vigil-email-ingest`
+
+### 3. Set Environment Variable
+
+In `wrangler.toml` or Cloudflare Dashboard:
+
+```
+VIGIL_API_URL = "https://api.vigil.run"
 ```
 
-### 4. Configure Email Routing
+## Endpoints
 
-1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com)
-2. Select your domain
-3. Go to **Email** → **Email Routing**
-4. Enable Email Routing (adds MX records automatically)
-5. Go to **Routing rules** → **Catch-all address**
-6. Configure:
-   - **Action**: Send to a Worker
-   - **Destination**: `vigil-email-ingest`
-
-### 5. Test
-
-Send an email to `{your-watcher-token}@ingest.email.yourdomain.com`
-
-Check worker logs:
-```bash
-npm run tail
-```
+| Path | Method | Purpose |
+|------|--------|---------|
+| `/health` | GET | Health check (returns API URL config) |
+| `/test?token=TOKEN` | POST | Simulate email ingestion (forwards body as raw MIME) |
+| `/` | GET | Service info |
 
 ## Development
 
-Run locally (HTTP only, no email):
 ```bash
-npm run dev
+npm run dev     # Local HTTP server (port 8787, no email handler)
+npm run tail    # Stream live worker logs
 ```
 
-Test the HTTP endpoint:
-```bash
-curl http://localhost:8787/health
+## What the Worker Sends
+
+```
+POST {VIGIL_API_URL}/ingest/{full-local-part}
+Content-Type: text/plain; charset=utf-8
+X-Cloudflare-Email-From: sender@example.com
+X-Cloudflare-Email-To: name-token@vigil.run
+X-Cloudflare-Email-Size: 1234
+User-Agent: Vigil-Cloudflare-Worker/1.0
+
+<raw RFC 822 MIME email>
 ```
 
-## Environment Variables
+## Error Handling
 
-Set in `wrangler.toml` or via Cloudflare Dashboard:
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `VIGIL_API_URL` | Backend API URL | `https://api.vigil.run` |
-
-## Email Address Format
-
-Users forward emails to:
-```
-{ingest_token}@vigil.run
-```
-
-The worker extracts the token from the local part and POSTs the raw email to:
-```
-POST {VIGIL_API_URL}/ingest/{token}
-```
+Worker never rejects emails (avoids bounces). On failure, it logs the error and accepts silently. Backend errors are logged but don't bounce back to the original sender.

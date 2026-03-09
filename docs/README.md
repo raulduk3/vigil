@@ -2,7 +2,8 @@
 
 | Document | Purpose |
 |----------|---------|
-| `V2_ARCHITECTURE.md` | Current architecture (agent-based, SQLite, implemented) |
-| `RESEND_INTEGRATION.md` | Resend email delivery setup |
-| `v1-archive/SDD.md` | V1 Software Design Document (deprecated) |
-| `v1-archive/SYSTEM_DESIGN.md` | V1 System Design (deprecated) |
+| `SDD.md` | Software Design Document — product requirements, data model, API, status |
+| `SYSTEM_DESIGN.md` | Technical architecture — runtime, pipelines, memory, security |
+| `V2_ARCHITECTURE.md` | V2 overview — stack, file structure, what's left |
+| `RESEND_INTEGRATION.md` | Resend email delivery setup and configuration |
+| `v1-archive/` | Deprecated V1 docs (event-sourced architecture) |
