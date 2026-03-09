@@ -565,3 +565,75 @@ Memory section drops from 2,000 tokens (full file) to ~500 tokens (top 8 relevan
 ### Embedding Cost
 
 text-embedding-3-small: $0.02 per 1M tokens. One memory chunk is ~50 tokens. 1,000 memories = 50K tokens = $0.001 to embed. Retrieval query is one embedding call per invocation. Negligible.
+
+## Addendum: Product Vision Expansion (2026-03-09 04:41)
+
+### Core Reframe
+
+Vigil is not an email tracker. It's a configurable autonomous agent whose input channel is email forwarding. The email is the trigger. The agent is the brain. The tools are the hands.
+
+### DMARC Resolution
+
+Cloudflare Email Routing receives email at the DNS/MX level. Vigil's domain (vigil.run) is the destination, not a forwarder. DMARC checks happen between the original sender and the user's email provider, not between the user and Vigil. When a user sets up a forwarding rule in Gmail, Gmail handles the forwarding and Cloudflare receives it as a new inbound message to vigil.run's MX records. This sidesteps the DMARC alignment problem that plagues traditional forwarding. Validate with real emails during MVP testing.
+
+### Unit Economics
+
+| Metric | Value |
+|--------|-------|
+| Cost per invocation (GPT-4o-mini) | ~$0.001 |
+| Cost per embedding | ~$0.00001 |
+| Cost per user/month (200 emails) | ~$0.20 |
+| Cost per user/month (1000 emails) | ~$1.00 |
+| Price point | $9/mo |
+| Gross margin (200 emails) | 97.8% |
+| Gross margin (1000 emails) | 88.9% |
+| Infrastructure (Cloudflare free + $5 VPS) | $5/mo |
+| Break-even | 1 paying user |
+
+### Expanded Tool Vision (post-MVP)
+
+Phase 1 (MVP):
+- send_alert — notify user via email
+- update_thread — track conversation state
+- ignore_thread — filter noise
+
+Phase 2 (after validation):
+- draft_reply — write a response, queue for user approval
+- create_event — parse meeting requests, create calendar entries
+- create_task — push to Todoist/Linear/webhook
+- log_to_sheet — append data to a spreadsheet (invoice amounts, etc.)
+
+Phase 3 (power users):
+- custom_webhook — user-defined actions via HTTP
+- approve/reject flow — agent queues actions, user approves via email reply
+- multi-watcher coordination — agents that share context across watchers
+
+### Market Position
+
+Not competing with SaneBox (inbox sorting), Shortwave (inbox replacement), or sales tools (Instantly, Outreach). Vigil is the only email agent that works without inbox access. Privacy by architecture. The forwarding model is the moat — it's a feature, not a limitation.
+
+### Build Plan (updated)
+
+Week 1: MVP
+- [ ] Agent engine (engine.ts) — full invocation flow
+- [ ] Memory (memory.ts) — simple mode first (load all under 50 entries)
+- [ ] Tools (tools.ts) — send_alert only
+- [ ] SQLite database (replace pg)
+- [ ] Rewire ingestion orchestrator
+- [ ] Test end-to-end: forward email → agent processes → alert sent
+
+Week 2: Polish + dogfood
+- [ ] Use on own L7/freelance emails
+- [ ] Update frontend for new data model
+- [ ] Template watchers (at least vendor-followup + blank)
+- [ ] Fix any DMARC/deliverability issues
+
+Week 3: Beta
+- [ ] Give to 5 people
+- [ ] Add semantic memory retrieval
+- [ ] Iterate based on feedback
+
+Week 4: Launch
+- [ ] Pricing page
+- [ ] Stripe integration
+- [ ] HN post + Product Hunt
