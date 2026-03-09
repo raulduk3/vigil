@@ -90,3 +90,18 @@ CREATE INDEX IF NOT EXISTS idx_emails_thread ON emails(thread_id);
 CREATE INDEX IF NOT EXISTS idx_actions_watcher ON actions(watcher_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_watchers_account ON watchers(account_id);
 CREATE INDEX IF NOT EXISTS idx_watchers_token ON watchers(ingest_token);
+
+-- Semantic memory store (per watcher)
+CREATE TABLE IF NOT EXISTS memories (
+  id              TEXT PRIMARY KEY,
+  watcher_id      TEXT NOT NULL REFERENCES watchers(id),
+  content         TEXT NOT NULL,
+  embedding       BLOB,
+  importance      INTEGER DEFAULT 3,
+  last_accessed   TIMESTAMP,
+  obsolete        BOOLEAN DEFAULT FALSE,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_memories_watcher ON memories(watcher_id, obsolete);
+CREATE INDEX IF NOT EXISTS idx_memories_accessed ON memories(watcher_id, last_accessed);

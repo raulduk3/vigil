@@ -507,3 +507,61 @@ vigil/
     ├── SDD.md                  # UPDATE
     └── SYSTEM_DESIGN.md        # SUPERSEDED by this doc
 ```
+
+## Addendum: Semantic Memory (added 2026-03-09 04:28)
+
+### Why
+
+Loading full memory into context doesn't scale. A watcher running for months accumulates hundreds of entries. Most are irrelevant to any given email. Dumping everything wastes tokens, increases cost, and dilutes agent attention.
+
+### Design
+
+Embed memory chunks at write time. Retrieve by similarity at read time. Only relevant memories enter the context window.
+
+### Memory Table (replaces memory.md for scaled watchers)
+
+```sql
+CREATE TABLE IF NOT EXISTS memories (
+  id              TEXT PRIMARY KEY,
+  watcher_id      TEXT NOT NULL REFERENCES watchers(id),
+  content         TEXT NOT NULL,
+  embedding       BLOB,
+  importance      INTEGER DEFAULT 3,  -- agent self-rates 1-5
+  last_accessed   TIMESTAMP,
+  obsolete        BOOLEAN DEFAULT FALSE,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_memories_watcher ON memories(watcher_id, obsolete);
+```
+
+### Write Path
+
+1. Agent returns `memory_append` string
+2. Split into chunks (one per bullet/paragraph)
+3. Embed each chunk (text-embedding-3-small)
+4. INSERT into memories table with vector
+
+### Read Path
+
+1. New email arrives (or tick fires)
+2. Embed: email subject + sender + first 200 chars of body
+3. Vector similarity search against watcher's non-obsolete memories
+4. Return top K results (default K=8) sorted by score
+5. Weight by: similarity * importance * recency_decay
+6. Format for context: "[score] memory content"
+
+### Context Budget
+
+Memory section drops from 2,000 tokens (full file) to ~500 tokens (top 8 relevant chunks). Total context budget drops to ~5,850 tokens worst case.
+
+### Scaling Strategy
+
+- Under 50 memory entries: load all (simple, no embeddings needed)
+- Over 50 entries: semantic retrieval
+- Pruning: drop obsolete + low-importance + never-accessed entries older than 90 days
+- Agent can mark memories obsolete: "this is no longer true"
+
+### Embedding Cost
+
+text-embedding-3-small: $0.02 per 1M tokens. One memory chunk is ~50 tokens. 1,000 memories = 50K tokens = $0.001 to embed. Retrieval query is one embedding call per invocation. Negligible.
