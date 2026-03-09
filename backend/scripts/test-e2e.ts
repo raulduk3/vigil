@@ -9,20 +9,20 @@
  *   bun run scripts/test-e2e.ts
  *
  * Requirements:
- *   - ANTHROPIC_API_KEY env var set
+ *   - OPENAI_API_KEY env var set
  *   - Server running (default: http://localhost:4000)
  *   - Optional: BASE_URL=http://localhost:4000 to override
  */
 
-const BASE_URL = process.env.BASE_URL ?? "http://localhost:4000";
+const BASE_URL = process.env.BASE_URL ?? "http://localhost:3001";
 const API = `${BASE_URL}/api`;
 
 // ============================================================================
 // Env check
 // ============================================================================
 
-if (!process.env.ANTHROPIC_API_KEY) {
-    console.error("❌  ANTHROPIC_API_KEY is required");
+if (!process.env.OPENAI_API_KEY) {
+    console.error("❌  OPENAI_API_KEY is required");
     process.exit(1);
 }
 
@@ -70,7 +70,7 @@ async function main() {
     console.log("");
     sep("Vigil V2 — E2E Test");
     console.log(`  Server : ${BASE_URL}`);
-    console.log(`  Model  : ${process.env.VIGIL_MODEL ?? "claude-haiku-4-5-20251001"}`);
+    console.log(`  Model  : ${process.env.VIGIL_MODEL ?? "gpt-4.1-mini"}`);
     console.log("");
 
     // ── Health check ─────────────────────────────────────────────────────────
@@ -286,7 +286,7 @@ When you store memories, be concrete. "Client prefers Tuesday meetings" is usefu
     } else if (memories2.length > 0) {
         console.log("  ~  Memory present (count unchanged — agent may not have added new chunks)");
     } else {
-        console.warn("  ⚠  No memories stored — check agent response + ANTHROPIC_API_KEY");
+        console.warn("  ⚠  No memories stored — check agent response + OPENAI_API_KEY");
     }
 
     memories2.slice(0, 5).forEach((m: any) => {
