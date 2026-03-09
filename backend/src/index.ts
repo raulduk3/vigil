@@ -31,6 +31,10 @@ app.use(
 
 app.route("/api", createRouter());
 
+// Mirror ingestion route at top level (Cloudflare worker hits /ingest/:token directly)
+import { ingestionHandlers } from "./api/handlers/ingestion";
+app.post("/ingest/:token", ingestionHandlers.ingestByToken);
+
 app.get("/health", (c) => c.json({ status: "ok", timestamp: Date.now() }));
 
 // ============================================================================

@@ -23,6 +23,7 @@ export interface IngestEmailInput {
     subject: string;
     body: string;
     headers: Record<string, string>;
+    inReplyTo?: string;
     receivedAt: number;
 }
 
