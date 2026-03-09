@@ -3,9 +3,18 @@
 \usepackage{amsmath,amsfonts,graphicx,hyperref}
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{enumitem}
 \setlength{\parskip}{6pt}
 \setlength{\parindent}{0pt}
 \pagenumbering{gobble}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=black,
+  urlcolor=blue!60!black,
+  citecolor=black
+}
 
 \lstset{
   basicstyle=\ttfamily\footnotesize,
@@ -16,64 +25,323 @@
 
 \begin{document}
 
-{\bfseries\large Vigil: Provable Silence Tracking for Email Threads}
+{\bfseries\Large Vigil: An Autonomous Email Oversight Agent}
+
+\medskip
+{\small Richard \'Alvarez \hfill March 2026 \hfill v2.0}
+
+\bigskip
 
 \textbf{Abstract.}
-Vigil is a deterministic, event-sourced system for provable silence tracking in email communication. Users forward emails to a dedicated address; Vigil detects actionable requests, organizes messages into threads, and emits immutable events when silence exceeds configured thresholds. The system produces replayable audit trails proving what was observed and when. Vigil never accesses inboxes, owns deadlines, creates reminders, infers urgency, or automates responses. All behavior is explainable by replaying immutable events.
+Vigil is an AI-powered email oversight agent that monitors forwarded email without inbox access.
+Users create watchers---autonomous agents with persistent memory, configurable tools, and custom behavior---that
+read forwarded emails, track conversations, build context over time, and alert when something needs attention.
+Email bodies are processed in memory and never stored. The privacy model is architectural: Vigil cannot see
+what you do not forward. This document describes the product, its technical architecture, market positioning,
+unit economics, and competitive landscape.
 
-\textbf{Problem.}
-Email is where obligations live, yet email clients are designed for reading and replying—not for tracking which conversations await response. Quiet failures occur when requests go unanswered and no one notices the silence. Vigil provides \textbf{confidence through observation}: the assurance that silence is not going unnoticed.
+\bigskip
 
-\textbf{Product Capability.}
-Vigil delivers one and only one capability: \textbf{provable silence tracking for email threads}. The system:
-\begin{itemize}
-\item Organizes forwarded emails into conversation threads
-\item Detects explicit actionable requests via bounded LLM extraction
-\item Tracks elapsed time since last thread activity
-\item Emits alerts when silence crosses policy thresholds
-\item Produces immutable, replayable evidence timelines
+% ============================================================================
+\section*{1. Problem}
+
+Email is where obligations live, yet email clients are designed for reading and replying---not for tracking
+which conversations need follow-up, which requests are going unanswered, or which threads have gone cold.
+
+The failure mode is quiet: a deadline buried in a reply chain, a vendor invoice that slipped past, an important
+thread that went silent. These failures compound. By the time they surface, the cost is already real---a missed
+deadline, a strained relationship, a lost contract.
+
+Existing solutions address this by asking for full inbox access (OAuth, IMAP) and replacing the email client entirely.
+This creates a new problem: privacy. Users must trust a third party with their entire email history.
+
+Vigil solves both problems. It watches only what you forward. It needs no inbox access. The privacy model is not a
+feature---it is the architecture.
+
+% ============================================================================
+\section*{2. Product}
+
+Vigil delivers one capability: \textbf{autonomous email oversight through AI agents}.
+
+\begin{itemize}[nosep]
+  \item Users forward emails to a unique \texttt{@vigil.run} address
+  \item An AI agent reads each email, analyzes intent and urgency, and extracts key entities
+  \item Emails are grouped into conversation threads automatically
+  \item The agent builds persistent memory across emails (sender patterns, recurring topics, preferences)
+  \item When something needs attention, the agent sends an alert to the user's inbox
+  \item The agent reviews active threads on a schedule, detecting silence violations
+  \item Email bodies are processed in memory and \textbf{never stored}---only metadata, analysis, and agent memory persist
 \end{itemize}
 
-\textbf{Non-Goals.}
-Vigil does not own deadlines, create reminders or tasks, infer urgency or importance, tell users what to do, or automate responses. Humans retain full responsibility.
-
-\textbf{Core Abstraction: Watchers.}
-A \emph{watcher} is an isolated monitoring scope with a unique ingestion email address (e.g., \texttt{finance-a7f3k9@vigil.run}) and policy configuration. Each watcher owns its threads, alerts, and notification settings. Users forward relevant emails to create tracked conversations.
-
-\textbf{Thread Model.}
-Threads represent communication context only—not obligations. A thread opens when \texttt{ACTION\_REQUEST\_OBSERVED} is emitted, updates activity on every \texttt{THREAD\_EMAIL\_ADDED}, and closes only via explicit closure signal or user action. Threads do not own deadlines and cannot auto-close from time or silence.
-
-\textbf{Bounded LLM Extraction.}
-The LLM answers exactly one question: \emph{Does this message contain an explicit request that reasonably expects a response?} If yes, emit \texttt{ACTION\_REQUEST\_OBSERVED} with the minimal verbatim source span and request type (confirmation, approval, response, review, or unknown). The LLM never extracts deadlines, infers urgency, or influences control flow.
-
-\textbf{Silence Tracking.}
-On each \texttt{TIME\_TICK} (every 15 minutes), the runtime computes silence duration for open threads. When \texttt{hours\_since\_activity} crosses \texttt{silence\_threshold\_hours}, an immutable \texttt{SILENCE\_THRESHOLD\_EXCEEDED} event is emitted and an alert is queued. Alerts fire only on threshold transitions, never repeatedly.
-
-\textbf{Event-Sourced Architecture.}
-The PostgreSQL event store is the sole source of truth. Events are append-only and never modified. State is always derived by replaying events. Active event types:
-\begin{itemize}
-\item \texttt{EMAIL\_RECEIVED}, \texttt{THREAD\_EMAIL\_ADDED}
-\item \texttt{THREAD\_OPENED}, \texttt{THREAD\_CLOSED}
-\item \texttt{ACTION\_REQUEST\_OBSERVED}, \texttt{CLOSURE\_SIGNAL\_OBSERVED}
-\item \texttt{SILENCE\_THRESHOLD\_EXCEEDED}
-\item \texttt{ALERT\_QUEUED}, \texttt{ALERT\_SENT}
-\item \texttt{TIME\_TICK}, \texttt{WATCHER\_*}, \texttt{POLICY\_UPDATED}
+\subsection*{2.1 Watchers}
+A \emph{watcher} is Vigil's core abstraction. Each watcher is an independent AI agent with:
+\begin{itemize}[nosep]
+  \item A unique ingestion address (e.g., \texttt{work-a7f3k9@vigil.run})
+  \item A configurable system prompt defining the agent's behavior
+  \item Selectable tools (\texttt{send\_alert}, \texttt{update\_thread}, \texttt{ignore\_thread}, \texttt{webhook})
+  \item Persistent memory that grows with each processed email
+  \item Configurable silence threshold and tick interval
+  \item Independent thread tracking and notification channels
 \end{itemize}
-Legacy events (\texttt{HARD\_DEADLINE\_EXTRACTED}, \texttt{REMINDER\_*}, etc.) remain replayable for backward compatibility but produce no runtime behavior.
 
-\textbf{Policy Model.}
-\texttt{WatcherPolicy} contains: \texttt{allowed\_senders}, \texttt{silence\_threshold\_hours}, and \texttt{notification\_channels}. No deadline or urgency fields.
+Users create multiple watchers for different purposes: one for vendor follow-up, one for client communications,
+one for billing. Each learns independently.
 
-\textbf{Infrastructure.}
-Backend: TypeScript/Bun with Hono. Event Store: PostgreSQL. LLM: OpenAI API (GPT-4o-mini). Inbound Email: Cloudflare Email Routing. Outbound Email: Resend API. Frontend: Next.js 14. Auth: JWT with Google/GitHub OAuth. Billing: Stripe (4 tiers).
+\subsection*{2.2 Agent Behavior}
+The agent is invoked on two triggers:
+\begin{enumerate}[nosep]
+  \item \textbf{Email received}---immediately when a forwarded email arrives
+  \item \textbf{Scheduled tick}---periodically (configurable, default 60 minutes) to review active threads
+\end{enumerate}
 
-\textbf{Security.}
-Vigil never accesses inboxes. Only allowlisted senders create threads. PII is sanitized before storage. Email bodies are discarded after extraction. Rate limiting and HMAC-SHA256 webhook signatures prevent abuse.
+For each email, the agent produces a structured analysis (summary, intent, urgency, key entities),
+decides whether to alert, updates thread status, and appends relevant observations to its memory.
+The agent's decisions are governed by the watcher's system prompt and informed by its accumulated memory.
 
-\textbf{Business Model.}
-Usage-based SaaS pricing with email ingestion volume as the primary billable unit. Tiers: Community (free, capped), Paid (per-email), Enterprise (contract with SLA and exports).
+\subsection*{2.3 Privacy Model}
+\begin{itemize}[nosep]
+  \item No inbox access (no OAuth, no IMAP, no API tokens)
+  \item Email bodies processed in memory, never written to disk
+  \item Only metadata stored: sender, recipient, subject, date, message-id, SHA-256 body hash
+  \item Agent analysis stored: summary, intent, urgency, entities
+  \item Agent memory: short factual observations, not email content
+  \item Full audit trail: every agent decision logged with reasoning, tool calls, cost, and duration
+\end{itemize}
 
-\textbf{Design Philosophy.}
-Determinism over intelligence. Transparency over automation. Restraint over completeness. All behavior must be explainable by replaying events. The system can defend ``nothing happened'' with immutable evidence.
+% ============================================================================
+\section*{3. Architecture}
+
+\subsection*{3.1 Data Flow}
+\begin{lstlisting}
+User's Gmail forwarding rule
+    |
+    v
+Cloudflare Email Routing (MX for vigil.run)
+    |
+    v
+Cloudflare Worker (raw MIME -> POST /ingest/:token)
+    |
+    v
+Backend (Bun + Hono) -> postal-mime parsing -> watcher lookup
+    |
+    v
+Agent Engine (8-step loop)
+    |
+    +---> send_alert -> Resend -> User's inbox
+    +---> update_thread -> SQLite
+    +---> store memory -> SQLite + FTS5
+    +---> log action -> SQLite (audit trail)
+\end{lstlisting}
+
+\subsection*{3.2 Agent Engine}
+The engine runs an 8-step invocation loop:
+\begin{enumerate}[nosep]
+  \item Load watcher configuration from SQLite
+  \item Retrieve relevant memories (FTS5 ranked if 20+ entries, otherwise all)
+  \item Load active threads for context (top 20 by last activity)
+  \item If email trigger: parse email, detect/create thread, load last 5 thread emails
+  \item Build prompt: system prompt (config + memory + threads) + trigger-specific user prompt
+  \item Call LLM (GPT-4.1-mini, JSON response mode)
+  \item Execute tool calls, persist thread updates, store new memories
+  \item Log invocation to actions table (trigger, tool, params, result, cost, duration)
+\end{enumerate}
+
+\subsection*{3.3 Memory System}
+Per-watcher persistent memory stored in SQLite with FTS5 full-text index.
+\begin{itemize}[nosep]
+  \item \textbf{Write:} Agent returns memory notes after processing each email. Each note stored as an individual chunk with importance rating (1--5).
+  \item \textbf{Read ($<$20 entries):} Load all, sort by importance.
+  \item \textbf{Read ($\geq$20 entries):} FTS5 query from email context $\rightarrow$ BM25 $\times$ importance $\times$ time\_decay $\rightarrow$ top 8.
+  \item Time decay: $<$7 days = 1.0, $<$30 = 0.8, $<$90 = 0.6, else 0.4.
+\end{itemize}
+
+\subsection*{3.4 Thread Detection}
+Emails are grouped by In-Reply-To/References headers, with fallback to normalized subject matching
+(strip Re:/Fwd:/[tags], lowercase, trim). Threads track status (active, watching, resolved, ignored),
+participant list, email count, and agent-written summary.
+
+\subsection*{3.5 Stack}
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+\textbf{Layer} & \textbf{Technology} \\
+\midrule
+Runtime & Bun \\
+HTTP & Hono \\
+Database & SQLite (bun:sqlite) + FTS5 \\
+LLM & OpenAI API (GPT-4.1-mini) \\
+Email parsing & postal-mime \\
+Email ingestion & Cloudflare Email Routing + Worker \\
+Alert delivery & Resend \\
+Auth & JWT (access + refresh tokens) \\
+Frontend & Next.js 14 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+% ============================================================================
+\section*{4. Market Analysis}
+
+\subsection*{4.1 Market Size}
+The email management software market is projected at \$5.64B in 2026 (11\% CAGR). Adjacent markets:
+email security (\$5.7B), email collaboration (\$10.6B), employee monitoring (\$4.6B). The broader
+SaaS market reaches \$465B in 2026. Vigil sits at the intersection of email management and AI-powered
+productivity---a category being actively created by venture-funded incumbents.
+
+\subsection*{4.2 Competitive Landscape}
+
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Product} & \textbf{Price} & \textbf{Inbox Access} & \textbf{AI Agent} & \textbf{Privacy} \\
+\midrule
+Superhuman & \$30--40/mo & Full OAuth & Write/summarize & Low \\
+Shortwave & \$7--100/mo & Full OAuth & Write/search/draft & Low \\
+SaneBox & \$3.50--37/mo & IMAP/OAuth & Filter/sort & Medium \\
+Spike & Free--\$12/mo & Full OAuth & Chat/summarize & Low \\
+\textbf{Vigil} & \textbf{\$9/mo} & \textbf{None} & \textbf{Full agent} & \textbf{High} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Key differentiator:} Every competitor requires full inbox access. Vigil is the only product
+that operates entirely through forwarding. This is not a limitation---it is the product.
+
+\subsection*{4.3 Positioning}
+Vigil does not compete with email clients. It does not replace Gmail, Outlook, or Superhuman.
+It sits alongside them. Users keep their email client and add Vigil for oversight.
+
+The competitive moat is architectural: the forwarding model creates a fundamentally different
+privacy posture that cannot be replicated by products built on OAuth/IMAP access patterns.
+
+\subsection*{4.4 Target Segments}
+\begin{itemize}[nosep]
+  \item \textbf{Freelancers and solopreneurs} managing multiple client relationships
+  \item \textbf{Small business operators} tracking vendor invoices and renewals
+  \item \textbf{Project managers} monitoring deliverable threads across teams
+  \item \textbf{Legal and compliance professionals} needing auditable correspondence tracking
+  \item \textbf{Privacy-conscious professionals} who refuse to grant inbox access to third parties
+\end{itemize}
+
+% ============================================================================
+\section*{5. Unit Economics}
+
+\begin{center}
+\begin{tabular}{lr}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Cost per agent invocation (GPT-4.1-mini) & \$0.001 \\
+Cost per user/month (200 emails) & \$0.20 \\
+Cost per user/month (1,000 emails) & \$1.00 \\
+Target price point & \$9/mo \\
+Gross margin (200 emails/mo) & 97.8\% \\
+Gross margin (1,000 emails/mo) & 88.9\% \\
+Infrastructure (Cloudflare free + VPS) & $\sim$\$10/mo \\
+Break-even & 2 paying users \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Memory retrieval uses SQLite FTS5 (no embedding API calls). Alert delivery via Resend is included
+in their free tier (100 emails/day). The cost structure is dominated by LLM inference, which decreases
+with every model generation.
+
+\subsection*{5.1 Pricing Tiers}
+\begin{itemize}[nosep]
+  \item \textbf{Free:} 2 watchers, 50 emails/week, email alerts, full audit trail
+  \item \textbf{Pro (\$9/mo):} Unlimited watchers, 500 emails/week, webhooks, priority support
+  \item \textbf{Team (\$19/mo per seat):} Shared watchers, team dashboards, API access
+  \item \textbf{Enterprise:} Custom pricing, SLA, SSO, dedicated infrastructure
+\end{itemize}
+
+% ============================================================================
+\section*{6. Go-to-Market}
+
+\subsection*{6.1 Launch Strategy}
+\begin{enumerate}[nosep]
+  \item Deploy backend, verify full email pipeline (Cloudflare Worker $\rightarrow$ backend $\rightarrow$ agent $\rightarrow$ alert)
+  \item Ship minimal dashboard (login, watcher management, thread viewer, activity log)
+  \item Dogfood on personal and work email for 2 weeks
+  \item Soft launch: Hacker News Show HN, r/SideProject, IndieHackers
+  \item Content: ``Why I built an email agent that can't see your inbox'' blog post
+  \item Product Hunt launch
+\end{enumerate}
+
+\subsection*{6.2 Growth Channels}
+\begin{itemize}[nosep]
+  \item \textbf{Privacy angle:} Target users burned by email tracking scandals (Superhuman pixel tracking controversy, 2019)
+  \item \textbf{Developer community:} Open-source the agent engine, let developers build custom watchers
+  \item \textbf{Content marketing:} Technical blog posts on agent architecture, FTS5 memory, email parsing
+  \item \textbf{Integration partnerships:} Webhook-first design enables Zapier/n8n/Make integrations
+  \item \textbf{Word of mouth:} The forwarding model means every forwarded email is implicit product usage
+\end{itemize}
+
+% ============================================================================
+\section*{7. Viability Assessment}
+
+\subsection*{7.1 Strengths}
+\begin{itemize}[nosep]
+  \item \textbf{Architectural moat:} Forwarding model cannot be replicated by OAuth-based competitors without abandoning their core value proposition
+  \item \textbf{Cost structure:} 88--98\% gross margins at \$0.001/invocation; costs decrease with model improvements
+  \item \textbf{No cold start:} Agent begins learning from first email; no training period required
+  \item \textbf{Privacy narrative:} Increasingly resonant as email surveillance awareness grows
+  \item \textbf{Low infrastructure:} Single-process Bun + SQLite. No Kubernetes, no Redis, no message queues.
+  \item \textbf{Underpriced vs. market:} \$9/mo vs. Superhuman's \$30/mo and Shortwave's \$7--100/mo
+\end{itemize}
+
+\subsection*{7.2 Risks}
+\begin{itemize}[nosep]
+  \item \textbf{Forwarding friction:} Setting up email forwarding rules is more work than clicking ``Connect Gmail.'' Conversion funnel risk.
+  \item \textbf{Gmail forwarding limits:} Gmail limits forwarding to 20 addresses per account. Power users may hit this.
+  \item \textbf{LLM dependency:} Agent quality depends on OpenAI API availability and pricing. Mitigated by model-agnostic design.
+  \item \textbf{Feature gap:} No email writing, no search across inbox, no calendar integration. Vigil is oversight-only by design.
+  \item \textbf{Discovery:} New category. Users don't search for ``email forwarding agent.'' Requires education.
+  \item \textbf{Single founder:} Bus factor of one. Mitigated by simple architecture and comprehensive documentation.
+\end{itemize}
+
+\subsection*{7.3 Market Timing}
+Three trends favor Vigil in 2026:
+\begin{enumerate}[nosep]
+  \item \textbf{AI agent adoption:} The market is shifting from AI assistants (copilots that help you write) to AI agents (autonomous systems that act). Vigil is agent-native.
+  \item \textbf{Privacy regulation:} GDPR, state privacy laws, and corporate security policies increasingly restrict third-party inbox access. Forwarding bypasses these restrictions.
+  \item \textbf{LLM cost collapse:} GPT-4.1-mini is 100x cheaper than GPT-4 was at launch. The economics of per-email AI processing are now viable for a \$9/mo product.
+\end{enumerate}
+
+% ============================================================================
+\section*{8. Design Philosophy}
+
+\begin{itemize}[nosep]
+  \item \textbf{Privacy by architecture}, not by policy. The data is not there.
+  \item \textbf{Transparency over automation.} Every decision logged, every action traceable.
+  \item \textbf{Agent-native.} Not a rules engine with AI bolted on. The agent is the product.
+  \item \textbf{Simplicity over completeness.} One process, one database, one file. Ship fast, iterate fast.
+  \item \textbf{Restraint.} Vigil does not write emails, does not read your inbox, does not replace your email client. It watches what you tell it to watch.
+\end{itemize}
+
+% ============================================================================
+\section*{9. Status}
+
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+\textbf{Component} & \textbf{Status} \\
+\midrule
+Agent engine (8-step loop, 4 tools, memory, threads) & Complete \\
+Cloudflare Worker (deployed, raw MIME forwarding) & Complete \\
+Backend API (auth, watchers, threads, ingestion) & Complete \\
+Resend alert delivery (domain verified) & Complete \\
+Raw MIME parsing (postal-mime) & Complete \\
+End-to-end test suite & Complete \\
+Documentation (SDD, system design, all READMEs) & Complete \\
+Frontend rebrand and redocumentation & Complete \\
+Backend deployment (public server) & In progress \\
+Real email pipeline test (Cloudflare $\rightarrow$ backend) & Pending \\
+Frontend dashboard rebuild (V2 API) & Pending \\
+Stripe billing integration & Planned \\
+OAuth providers (Google, GitHub) & Planned \\
+\bottomrule
+\end{tabular}
+\end{center}
 
 \end{document}
