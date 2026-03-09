@@ -6,9 +6,15 @@
  * Scaling: semantic retrieval kicks in over 50 entries.
  */
 
-import { queryMany, run } from "../db/client";
+import { queryMany, queryOne, run } from "../db/client";
 import { logger } from "../logger";
 import type { MemoryRow } from "./schema";
+
+export interface EmailContext {
+    from?: string;
+    subject?: string;
+    body?: string;
+}
 
 export interface MemoryChunk {
     id: string;
@@ -22,15 +28,68 @@ export interface MemoryChunk {
 // Retrieval
 // ============================================================================
 
-export function retrieveMemories(watcherId: string): MemoryRow[] {
-    // MVP: load all non-obsolete memories, ordered by importance then recency
-    return queryMany<MemoryRow>(
-        `SELECT * FROM memories
-         WHERE watcher_id = ? AND obsolete = FALSE
-         ORDER BY importance DESC, created_at DESC
-         LIMIT 50`,
+export function retrieveMemories(
+    watcherId: string,
+    context?: EmailContext
+): MemoryRow[] {
+    // Count non-obsolete memories for this watcher
+    const countRow = queryOne<{ count: number }>(
+        `SELECT COUNT(*) as count FROM memories WHERE watcher_id = ? AND obsolete = FALSE`,
         [watcherId]
     );
+    const total = countRow?.count ?? 0;
+
+    // Under 20 memories: load all, simple sort
+    if (total < 20 || !context) {
+        return queryMany<MemoryRow>(
+            `SELECT * FROM memories
+             WHERE watcher_id = ? AND obsolete = FALSE
+             ORDER BY importance DESC, created_at DESC`,
+            [watcherId]
+        );
+    }
+
+    // 20+ memories with context: use FTS5 with weighted ranking
+    const ftsQuery = buildFtsQuery(context);
+    if (!ftsQuery) {
+        return queryMany<MemoryRow>(
+            `SELECT * FROM memories
+             WHERE watcher_id = ? AND obsolete = FALSE
+             ORDER BY importance DESC, created_at DESC
+             LIMIT 8`,
+            [watcherId]
+        );
+    }
+
+    try {
+        return queryMany<MemoryRow>(
+            `SELECT m.*,
+               (-bm25(memories_fts)) * m.importance *
+                 CASE
+                   WHEN (julianday('now') - julianday(m.created_at)) < 7  THEN 1.0
+                   WHEN (julianday('now') - julianday(m.created_at)) < 30 THEN 0.8
+                   WHEN (julianday('now') - julianday(m.created_at)) < 90 THEN 0.6
+                   ELSE 0.4
+                 END AS combined_score
+             FROM memories_fts
+             JOIN memories m ON memories_fts.rowid = m.rowid
+             WHERE memories_fts MATCH ?
+               AND m.watcher_id = ?
+               AND m.obsolete = FALSE
+             ORDER BY combined_score DESC
+             LIMIT 8`,
+            [ftsQuery, watcherId]
+        );
+    } catch (err) {
+        logger.warn("FTS5 query failed, falling back to simple retrieval", { watcherId, err });
+        return queryMany<MemoryRow>(
+            `SELECT * FROM memories
+             WHERE watcher_id = ? AND obsolete = FALSE
+             ORDER BY importance DESC, created_at DESC
+             LIMIT 8`,
+            [watcherId]
+        );
+    }
 }
 
 // ============================================================================
@@ -128,4 +187,57 @@ export async function pruneMemories(
 function daysSince(timestamp: string): number {
     const ms = Date.now() - new Date(timestamp).getTime();
     return Math.floor(ms / (1000 * 60 * 60 * 24));
+}
+
+const STOPWORDS = new Set([
+    "a", "an", "and", "are", "as", "at", "be", "been", "being", "but", "by",
+    "can", "could", "did", "do", "does", "for", "from", "had", "has", "have",
+    "he", "her", "him", "his", "how", "i", "if", "in", "into", "is", "it",
+    "its", "just", "may", "me", "might", "my", "not", "now", "of", "on", "or",
+    "our", "out", "re", "she", "should", "so", "some", "that", "the", "their",
+    "them", "then", "there", "these", "they", "this", "those", "to", "was",
+    "we", "were", "what", "when", "which", "who", "will", "with", "would",
+    "you", "your",
+]);
+
+/**
+ * Build an FTS5 MATCH query string from email context.
+ * Extracts meaningful terms from sender, subject, and body.
+ */
+function buildFtsQuery(context: EmailContext): string {
+    const terms = new Set<string>();
+
+    // From address — split on @, ., and whitespace
+    if (context.from) {
+        const stripped = context.from.replace(/<[^>]+>/g, "").replace(/[^a-zA-Z0-9@.\s]/g, " ");
+        stripped.split(/[@.\s]+/).forEach((p) => {
+            const w = p.toLowerCase();
+            if (w.length > 2 && !STOPWORDS.has(w)) terms.add(w);
+        });
+    }
+
+    // Subject words
+    if (context.subject) {
+        context.subject
+            .replace(/[^a-zA-Z0-9\s]/g, " ")
+            .split(/\s+/)
+            .forEach((p) => {
+                const w = p.toLowerCase();
+                if (w.length > 2 && !STOPWORDS.has(w)) terms.add(w);
+            });
+    }
+
+    // Body key terms (first 200 chars)
+    if (context.body) {
+        context.body
+            .slice(0, 200)
+            .replace(/[^a-zA-Z0-9\s]/g, " ")
+            .split(/\s+/)
+            .forEach((p) => {
+                const w = p.toLowerCase();
+                if (w.length > 3 && !STOPWORDS.has(w)) terms.add(w);
+            });
+    }
+
+    return [...terms].slice(0, 15).join(" OR ");
 }

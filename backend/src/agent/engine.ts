@@ -77,8 +77,12 @@ export async function invokeAgent(
         accountEmail: account?.email ?? "",
     };
 
-    // 2. Load memory
-    const memories = retrieveMemories(watcherId);
+    // 2. Load memory (pass email context for FTS5 retrieval when > 20 memories)
+    const emailContext =
+        trigger.type === "email_received"
+            ? { from: trigger.email.from, subject: trigger.email.subject, body: trigger.email.body }
+            : undefined;
+    const memories = retrieveMemories(watcherId, emailContext);
     const memoryContext = formatMemoriesForContext(memories);
 
     // 3. Load active threads
