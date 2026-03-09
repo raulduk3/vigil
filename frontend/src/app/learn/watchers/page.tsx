@@ -1,152 +1,62 @@
-import Link from 'next/link';
-import { InfoCard } from '@/components/learn/InfoCard';
-import { FeatureGrid } from '@/components/learn/FeatureGrid';
-import { StatusList } from '@/components/learn/StatusList';
-import { ExampleBox } from '@/components/learn/ExampleBox';
-
 export default function WatchersPage() {
   return (
-    <article className="py-8 lg:py-12">
-      <div className="mx-auto px-6 lg:px-8">
-        {/* Breadcrumb */}
-        <nav className="mb-6 text-sm">
-          <Link href="/" className="text-gray-500 hover:text-gray-700">Home</Link>
-          <span className="mx-2 text-gray-400">/</span>
-          <Link href="/#learn-more" className="text-gray-500 hover:text-gray-700">Documentation</Link>
-          <span className="mx-2 text-gray-400">/</span>
-          <span className="text-gray-900">Watchers</span>
-        </nav>
+    <article className="prose prose-gray py-12">
+      <h1>Watchers</h1>
+      <p className="text-lg text-gray-600">
+        A watcher is Vigil's core object. Each watcher is an independent AI agent with its own
+        prompt, memory, tools, and email address. Create one for work, one for billing, one for
+        client communications. Each learns independently.
+      </p>
 
-        {/* Header */}
-        <header className="mb-10">
-          <p className="text-sm font-medium text-vigil-700 uppercase tracking-wider mb-3">
-            Core Concepts
-          </p>
-          <h1 className="text-3xl font-display font-semibold text-gray-900 tracking-tight mb-4">
-            Watchers
-          </h1>
-          <p className="text-lg text-gray-600 leading-relaxed max-w-2xl">
-            A watcher monitors emails for a specific project or category. It tracks conversations and alerts you when something needs attention.
-          </p>
-        </header>
+      <h2 id="creating">Creating a watcher</h2>
+      <p>
+        When you create a watcher, you get a unique email address like <code>work-a7f3k9@vigil.run</code>.
+        Set up a forwarding rule in your email client to send relevant emails to this address.
+        The watcher's agent processes every email that arrives.
+      </p>
+      <p>
+        You can start from a template (vendor follow-up, client communications, general) or write
+        a custom prompt from scratch. Templates provide a starting system prompt and sensible defaults.
+      </p>
 
-        {/* Content */}
-        <div className="space-y-14 lg:space-y-16">
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-5">What is a watcher?</h2>
-            <p className="text-gray-600 leading-relaxed mb-6 text-[15px]">
-              Think of a watcher like a folder for tracking important conversations. Each watcher has its own email address, and when you forward messages to that address, Vigil starts monitoring them.
-            </p>
+      <h2 id="configuration">Configuration</h2>
+      <p>Each watcher has:</p>
+      <ul>
+        <li><strong>System prompt</strong> — tells the agent what to watch for, what to ignore, and how to behave</li>
+        <li><strong>Tools</strong> — which actions the agent can take (send_alert, update_thread, ignore_thread, webhook)</li>
+        <li><strong>Silence threshold</strong> — hours of thread inactivity before the agent flags it (default: 48)</li>
+        <li><strong>Tick interval</strong> — how often the agent reviews active threads (default: 60 minutes)</li>
+        <li><strong>Alert channels</strong> — where notifications go (email, webhook)</li>
+      </ul>
 
-            <ExampleBox title="Example">
-              <p>You might create watchers for:</p>
-              <ul className="list-disc pl-5 mt-3 space-y-2">
-                <li>Client projects</li>
-                <li>Personal bills and invoices</li>
-                <li>Legal correspondence</li>
-                <li>Team coordination</li>
-              </ul>
-            </ExampleBox>
-          </section>
+      <h2 id="how-it-works">How the agent works</h2>
+      <p>
+        When an email arrives, the agent runs an 8-step process: load config, retrieve relevant
+        memories, check active threads, analyze the email, build a prompt, call the AI model,
+        execute any tool calls, and log everything.
+      </p>
+      <p>
+        The agent also runs on a schedule (the tick interval). During scheduled checks, it reviews
+        active threads for silence violations and takes action if needed.
+      </p>
 
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-5">How watchers track conversations</h2>
-            <StatusList
-              items={[
-                {
-                  label: 'Active',
-                  description: 'Conversations where you\'re waiting for a response or something needs to be done.',
-                  status: 'ok'
-                },
-                {
-                  label: 'Needs attention',
-                  description: 'Conversations with approaching deadlines or important updates.',
-                  status: 'warning'
-                },
-                {
-                  label: 'Urgent',
-                  description: 'Conversations that require immediate action or have passed their deadline.',
-                  status: 'critical'
-                },
-                {
-                  label: 'Complete',
-                  description: 'Conversations that are resolved or no longer need tracking.',
-                  status: 'neutral'
-                }
-              ]}
-            />
-          </section>
+      <h2 id="templates">Templates</h2>
+      <p>
+        Templates give you a head start. Each template includes a system prompt, default tools,
+        and recommended thresholds. You can customize everything after creation.
+      </p>
+      <ul>
+        <li><strong>General</strong> — broad monitoring with smart alerting</li>
+        <li><strong>Vendor follow-up</strong> — track invoices, payments, and unanswered requests</li>
+        <li><strong>Client communications</strong> — monitor project threads and flag cold conversations</li>
+        <li><strong>Custom</strong> — blank slate, write your own prompt</li>
+      </ul>
 
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-5">Key features</h2>
-            <FeatureGrid
-              features={[
-                {
-                  title: 'Unique email address',
-                  description: 'Each watcher gets its own forwarding address. Set up forwarding rules in your email to automatically monitor specific conversations.'
-                },
-                {
-                  title: 'Independent settings',
-                  description: 'Customize notification preferences, urgency rules, and timing for each watcher separately.'
-                },
-                {
-                  title: 'Thread grouping',
-                  description: 'Related emails are automatically grouped together so you see the full conversation history.'
-                },
-                {
-                  title: 'Smart notifications',
-                  description: 'Get notified only when action is needed—not for every email received.'
-                }
-              ]}
-            />
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-5">What gets tracked</h2>
-            <div className="space-y-4">
-              <InfoCard
-                title="Deadlines"
-                description="When someone mentions a due date or response timeframe, Vigil tracks it and reminds you before it's too late."
-                variant="primary"
-              />
-              <InfoCard
-                title="Urgency signals"
-                description="Keywords like 'urgent', 'ASAP', or 'time-sensitive' automatically increase the priority of that conversation."
-                variant="warning"
-              />
-              <InfoCard
-                title="Conversation status"
-                description="Vigil detects when conversations are resolved (like 'thanks, all set') and stops sending notifications."
-                variant="success"
-              />
-            </div>
-          </section>
-
-          <section>
-            <h2 className="text-xl font-semibold text-gray-900 mb-5">Setting up a watcher</h2>
-            <ExampleBox>
-              <p className="font-semibold mb-3">Creating a watcher named "Client Work":</p>
-              <ol className="list-decimal pl-5 space-y-3">
-                <li>Click "New Watcher" in your dashboard</li>
-                <li>Name it "Client Work"</li>
-                <li>Copy the unique email address (e.g., <code className="text-sm bg-gray-100 px-1.5 py-0.5 rounded">client-work-a7f3k9@vigil.run</code>)</li>
-                <li>Set up a forwarding rule in Gmail or Outlook to forward client emails to this address</li>
-                <li>Vigil starts monitoring those conversations automatically</li>
-              </ol>
-            </ExampleBox>
-          </section>
-        </div>
-
-        {/* Navigation */}
-        <div className="mt-12 pt-8 border-t border-gray-200 flex justify-between">
-          <Link href="/" className="text-sm text-gray-500 hover:text-gray-700">
-            ← Back to home
-          </Link>
-          <Link href="/learn/email-ingestion" className="text-sm link">
-            Email ingestion →
-          </Link>
-        </div>
-      </div>
+      <h2 id="lifecycle">Lifecycle</h2>
+      <p>
+        Watchers can be <strong>active</strong> (monitoring), <strong>paused</strong> (email accepted but not processed),
+        or <strong>deleted</strong> (permanently stopped). Pausing a watcher preserves its memory and threads.
+      </p>
     </article>
   );
 }
