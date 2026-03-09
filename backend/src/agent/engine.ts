@@ -196,7 +196,7 @@ export async function invokeAgent(
     let costUsd = 0;
 
     try {
-        const result = await callClaude(systemPrompt, userPrompt);
+        const result = await callLLM(systemPrompt, userPrompt);
         agentResponse = result.response;
         contextTokens = result.inputTokens + result.outputTokens;
         // Claude Haiku: ~$0.00025/1K input + $0.00125/1K output
@@ -283,50 +283,52 @@ export async function invokeAgent(
 }
 
 // ============================================================================
-// Claude API
+// OpenAI API
 // ============================================================================
 
-async function callClaude(
+async function callLLM(
     systemPrompt: string,
     userPrompt: string
 ): Promise<{ response: AgentResponse; inputTokens: number; outputTokens: number }> {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
 
-    const model = process.env.VIGIL_MODEL ?? "claude-haiku-4-5-20251001";
+    const model = process.env.VIGIL_MODEL ?? "gpt-4.1-mini";
 
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
-            "x-api-key": apiKey,
-            "anthropic-version": "2023-06-01",
+            "Authorization": `Bearer ${apiKey}`,
             "content-type": "application/json",
         },
         body: JSON.stringify({
             model,
             max_tokens: 1024,
-            system: systemPrompt,
-            messages: [{ role: "user", content: userPrompt }],
+            messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt },
+            ],
+            response_format: { type: "json_object" },
         }),
     });
 
     if (!resp.ok) {
         const err = await resp.text();
-        throw new Error(`Anthropic API error ${resp.status}: ${err}`);
+        throw new Error(`OpenAI API error ${resp.status}: ${err}`);
     }
 
     const data = (await resp.json()) as {
-        content: Array<{ type: string; text: string }>;
-        usage: { input_tokens: number; output_tokens: number };
+        choices: Array<{ message: { content: string } }>;
+        usage: { prompt_tokens: number; completion_tokens: number };
     };
 
-    const text = data.content.find((c) => c.type === "text")?.text ?? "";
+    const text = data.choices[0]?.message?.content ?? "";
     const response = parseAgentResponse(text);
 
     return {
         response,
-        inputTokens: data.usage.input_tokens,
-        outputTokens: data.usage.output_tokens,
+        inputTokens: data.usage.prompt_tokens,
+        outputTokens: data.usage.completion_tokens,
     };
 }
 
