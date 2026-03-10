@@ -184,6 +184,102 @@ export const watcherHandlers = {
         return c.json({ memories });
     },
 
+    async updateMemory(c: Context) {
+        const user = c.get("user");
+        const watcherId = c.req.param("id");
+        const memoryId = c.req.param("memoryId");
+
+        const watcher = queryOne(
+            `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
+            [watcherId, user.account_id]
+        );
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
+
+        const memory = queryOne(
+            `SELECT * FROM memories WHERE id = ? AND watcher_id = ?`,
+            [memoryId, watcherId]
+        );
+        if (!memory) return c.json({ error: "Memory not found" }, 404);
+
+        const body = await c.req.json().catch(() => ({}));
+        const sets: string[] = [];
+        const vals: any[] = [];
+
+        if (body.content !== undefined) {
+            sets.push("content = ?");
+            vals.push(body.content.trim());
+        }
+        if (body.importance !== undefined) {
+            sets.push("importance = ?");
+            vals.push(Math.max(1, Math.min(5, body.importance)));
+        }
+        if (body.obsolete !== undefined) {
+            sets.push("obsolete = ?");
+            vals.push(body.obsolete ? 1 : 0);
+        }
+
+        if (sets.length === 0) return c.json({ error: "Nothing to update" }, 400);
+
+        vals.push(memoryId);
+        run(`UPDATE memories SET ${sets.join(", ")} WHERE id = ?`, vals);
+
+        const updated = queryOne(
+            `SELECT id, content, importance, obsolete, last_accessed, created_at FROM memories WHERE id = ?`,
+            [memoryId]
+        );
+        return c.json({ memory: updated });
+    },
+
+    async deleteMemory(c: Context) {
+        const user = c.get("user");
+        const watcherId = c.req.param("id");
+        const memoryId = c.req.param("memoryId");
+
+        const watcher = queryOne(
+            `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
+            [watcherId, user.account_id]
+        );
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
+
+        const memory = queryOne(
+            `SELECT id FROM memories WHERE id = ? AND watcher_id = ?`,
+            [memoryId, watcherId]
+        );
+        if (!memory) return c.json({ error: "Memory not found" }, 404);
+
+        run(`DELETE FROM memories WHERE id = ?`, [memoryId]);
+        return c.json({ deleted: true, memory_id: memoryId });
+    },
+
+    async createMemory(c: Context) {
+        const user = c.get("user");
+        const watcherId = c.req.param("id");
+
+        const watcher = queryOne(
+            `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
+            [watcherId, user.account_id]
+        );
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
+
+        const body = await c.req.json().catch(() => ({}));
+        if (!body.content?.trim()) return c.json({ error: "content is required" }, 400);
+
+        const id = crypto.randomUUID();
+        const importance = Math.max(1, Math.min(5, body.importance ?? 3));
+
+        run(
+            `INSERT INTO memories (id, watcher_id, content, importance, created_at)
+             VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+            [id, watcherId, body.content.trim(), importance]
+        );
+
+        const created = queryOne(
+            `SELECT id, content, importance, obsolete, last_accessed, created_at FROM memories WHERE id = ?`,
+            [id]
+        );
+        return c.json({ memory: created }, 201);
+    },
+
     async getActions(c: Context) {
         const user = c.get("user");
         const id = c.req.param("id");

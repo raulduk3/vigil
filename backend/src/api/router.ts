@@ -52,10 +52,19 @@ export function createRouter(): Hono {
     protected_.get("/watchers/:id/memory", watcherHandlers.getMemory);
     protected_.get("/watchers/:id/actions", watcherHandlers.getActions);
 
+    // Memory CRUD
+    protected_.post("/watchers/:id/memory", watcherHandlers.createMemory);
+    protected_.put("/watchers/:id/memory/:memoryId", watcherHandlers.updateMemory);
+    protected_.patch("/watchers/:id/memory/:memoryId", watcherHandlers.updateMemory);
+    protected_.delete("/watchers/:id/memory/:memoryId", watcherHandlers.deleteMemory);
+
     // Threads
     protected_.get("/watchers/:watcherId/threads", threadHandlers.list);
     protected_.get("/watchers/:watcherId/threads/:threadId", threadHandlers.get);
+    protected_.put("/watchers/:watcherId/threads/:threadId", threadHandlers.update);
+    protected_.patch("/watchers/:watcherId/threads/:threadId", threadHandlers.update);
     protected_.post("/watchers/:watcherId/threads/:threadId/close", threadHandlers.close);
+    protected_.delete("/watchers/:watcherId/threads/:threadId", threadHandlers.delete_);
 
     api.route("/", protected_);
 

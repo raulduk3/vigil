@@ -25,7 +25,7 @@ export function TableOfContents() {
               className="group flex items-center justify-between rounded-md px-2.5 py-2 hover:bg-gray-100 hover:text-gray-900 transition-colors"
             >
               <span>{link.label}</span>
-              <span aria-hidden className="text-gray-400 group-hover:text-vigil-700 transition-colors">{'->'}</span>
+              <span aria-hidden className="text-gray-400 group-hover:text-vigil-700 transition-colors">{'→'}</span>
             </Link>
           ))}
         </nav>

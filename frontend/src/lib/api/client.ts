@@ -268,13 +268,42 @@ export const api = {
     return request(`/api/watchers/${watcherId}/threads/${threadId}`);
   },
 
+  async updateThread(watcherId: string, threadId: string, data: Partial<Thread>): Promise<{ thread: Thread }> {
+    return request(`/api/watchers/${watcherId}/threads/${threadId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
   async closeThread(watcherId: string, threadId: string): Promise<void> {
     return request(`/api/watchers/${watcherId}/threads/${threadId}/close`, { method: 'POST' });
+  },
+
+  async deleteThread(watcherId: string, threadId: string): Promise<void> {
+    return request(`/api/watchers/${watcherId}/threads/${threadId}`, { method: 'DELETE' });
   },
 
   // Memory
   async getMemories(watcherId: string): Promise<{ memories: Memory[] }> {
     return request(`/api/watchers/${watcherId}/memory`);
+  },
+
+  async createMemory(watcherId: string, data: { content: string; importance?: number }): Promise<{ memory: Memory }> {
+    return request(`/api/watchers/${watcherId}/memory`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateMemory(watcherId: string, memoryId: string, data: Partial<Memory>): Promise<{ memory: Memory }> {
+    return request(`/api/watchers/${watcherId}/memory/${memoryId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteMemory(watcherId: string, memoryId: string): Promise<void> {
+    return request(`/api/watchers/${watcherId}/memory/${memoryId}`, { method: 'DELETE' });
   },
 
   // Actions

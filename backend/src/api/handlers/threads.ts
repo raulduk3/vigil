@@ -73,6 +73,57 @@ export const threadHandlers = {
         });
     },
 
+    async update(c: Context) {
+        const user = c.get("user");
+        const watcherId = c.req.param("watcherId");
+        const threadId = c.req.param("threadId");
+
+        const watcher = queryOne(
+            `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
+            [watcherId, user.account_id]
+        );
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
+
+        const thread = queryOne<ThreadRow>(
+            `SELECT * FROM threads WHERE id = ? AND watcher_id = ?`,
+            [threadId, watcherId]
+        );
+        if (!thread) return c.json({ error: "Thread not found" }, 404);
+
+        const body = await c.req.json().catch(() => ({}));
+        const sets: string[] = [];
+        const vals: any[] = [];
+
+        if (body.status && ["active", "watching", "resolved", "ignored"].includes(body.status)) {
+            sets.push("status = ?");
+            vals.push(body.status);
+        }
+        if (body.summary !== undefined) {
+            sets.push("summary = ?");
+            vals.push(body.summary);
+        }
+        if (body.flags !== undefined) {
+            sets.push("flags = ?");
+            vals.push(JSON.stringify(body.flags));
+        }
+
+        if (sets.length === 0) {
+            return c.json({ error: "Nothing to update" }, 400);
+        }
+
+        sets.push("last_activity = CURRENT_TIMESTAMP");
+        vals.push(threadId);
+
+        run(`UPDATE threads SET ${sets.join(", ")} WHERE id = ?`, vals);
+
+        const updated = queryOne<ThreadRow>(
+            `SELECT * FROM threads WHERE id = ?`,
+            [threadId]
+        );
+
+        return c.json({ thread: updated ? formatThread(updated) : null });
+    },
+
     async close(c: Context) {
         const user = c.get("user");
         const watcherId = c.req.param("watcherId");
@@ -100,6 +151,31 @@ export const threadHandlers = {
         );
 
         return c.json({ closed: true, thread_id: threadId });
+    },
+
+    async delete_(c: Context) {
+        const user = c.get("user");
+        const watcherId = c.req.param("watcherId");
+        const threadId = c.req.param("threadId");
+
+        const watcher = queryOne(
+            `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
+            [watcherId, user.account_id]
+        );
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
+
+        const thread = queryOne<ThreadRow>(
+            `SELECT * FROM threads WHERE id = ? AND watcher_id = ?`,
+            [threadId, watcherId]
+        );
+        if (!thread) return c.json({ error: "Thread not found" }, 404);
+
+        // Delete associated actions and emails first
+        run(`DELETE FROM actions WHERE thread_id = ?`, [threadId]);
+        run(`DELETE FROM emails WHERE thread_id = ?`, [threadId]);
+        run(`DELETE FROM threads WHERE id = ?`, [threadId]);
+
+        return c.json({ deleted: true, thread_id: threadId });
     },
 };
 
