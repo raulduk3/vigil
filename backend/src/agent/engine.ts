@@ -301,7 +301,7 @@ export async function invokeAgent(
 
     // Save memory
     if (agentResponse.memory_append) {
-        storeMemories(watcherId, agentResponse.memory_append);
+        storeMemories(watcherId, agentResponse.memory_append, threadId);
     }
 
     // Mark obsolete memories

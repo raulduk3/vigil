@@ -420,6 +420,10 @@ html {
     @apply px-3 py-1.5 text-sm;
   }
 
+  .btn-xs {
+    @apply px-2 py-1 text-xs;
+  }
+
   .btn-lg {
     @apply px-5 py-2.5 text-lg;
   }

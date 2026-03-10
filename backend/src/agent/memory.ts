@@ -101,13 +101,30 @@ export function storeMemory(
     content: string,
     importance: number = 3,
     sourceQuote?: string,
-    confidence: number = 5
+    confidence: number = 5,
+    threadId?: string | null
 ): void {
+    // Dedup: if a memory with very similar content already exists for this thread, update instead of insert
+    if (threadId) {
+        const existing = queryOne<{ id: string; content: string }>(
+            `SELECT id, content FROM memories WHERE watcher_id = ? AND thread_id = ? AND obsolete = FALSE ORDER BY created_at DESC LIMIT 1`,
+            [watcherId, threadId]
+        );
+        if (existing) {
+            // If the new content is substantially similar or supersedes the old, update in place
+            run(
+                `UPDATE memories SET content = ?, importance = ?, source_quote = ?, confidence = ?, last_accessed = CURRENT_TIMESTAMP WHERE id = ?`,
+                [content.trim(), importance, sourceQuote?.trim() ?? null, Math.max(1, Math.min(5, confidence)), existing.id]
+            );
+            return;
+        }
+    }
+
     const id = crypto.randomUUID();
     run(
-        `INSERT INTO memories (id, watcher_id, content, importance, source_quote, confidence, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-        [id, watcherId, content.trim(), importance, sourceQuote?.trim() ?? null, Math.max(1, Math.min(5, confidence))]
+        `INSERT INTO memories (id, watcher_id, content, importance, source_quote, confidence, thread_id, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        [id, watcherId, content.trim(), importance, sourceQuote?.trim() ?? null, Math.max(1, Math.min(5, confidence)), threadId ?? null]
     );
 }
 
@@ -119,7 +136,8 @@ export function storeMemory(
  */
 export function storeMemories(
     watcherId: string,
-    memoryAppend: string | Array<{ content: string; importance?: number; source_quote?: string; confidence?: number }>
+    memoryAppend: string | Array<{ content: string; importance?: number; source_quote?: string; confidence?: number }>,
+    threadId?: string | null
 ): void {
     if (!memoryAppend) return;
 
@@ -130,7 +148,7 @@ export function storeMemories(
             if (!content || content.length < 10) continue;
             const importance = Math.max(1, Math.min(5, entry.importance ?? 3));
             const confidence = Math.max(1, Math.min(5, entry.confidence ?? 5));
-            storeMemory(watcherId, content, importance, entry.source_quote, confidence);
+            storeMemory(watcherId, content, importance, entry.source_quote, confidence, threadId);
         }
         logger.debug("Stored memory chunks", { watcherId, count: memoryAppend.length });
         return;
@@ -163,7 +181,8 @@ export function formatMemoriesForContext(memories: MemoryRow[]): string {
     const lines = memories.map((m: any) => {
         const age = m.created_at ? `(${daysSince(m.created_at)}d ago)` : "";
         const conf = m.confidence && m.confidence < 5 ? ` [confidence:${m.confidence}/5]` : "";
-        return `- [id:${m.id}] [importance:${m.importance}]${conf} ${m.content} ${age}`;
+        const thread = m.thread_id ? ` [thread:${m.thread_id.substring(0, 8)}]` : "";
+        return `- [id:${m.id}] [importance:${m.importance}]${conf}${thread} ${m.content} ${age}`;
     });
 
     return lines.join("\n");
@@ -193,6 +212,8 @@ export async function pruneMemories(
     const cutoff = new Date(
         Date.now() - pruneAfterDays * 24 * 60 * 60 * 1000
     ).toISOString();
+
+    // Prune obsolete + low-importance + old + never-accessed
     run(
         `DELETE FROM memories
          WHERE watcher_id = ? AND obsolete = TRUE
@@ -201,7 +222,18 @@ export async function pruneMemories(
            AND created_at < ?`,
         [watcherId, cutoff]
     );
-    return 0; // SQLite run doesn't return count easily, not critical for MVP
+
+    // Auto-mark memories as obsolete when their associated thread is resolved or ignored
+    // Low-importance memories (<=3) tied to closed threads are noise
+    run(
+        `UPDATE memories SET obsolete = TRUE
+         WHERE watcher_id = ? AND obsolete = FALSE AND importance <= 3
+           AND thread_id IS NOT NULL
+           AND thread_id IN (SELECT id FROM threads WHERE status IN ('resolved', 'ignored'))`,
+        [watcherId]
+    );
+
+    return 0;
 }
 
 // ============================================================================

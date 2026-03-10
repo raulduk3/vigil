@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS memories (
   confidence      INTEGER DEFAULT 5,
   source_quote    TEXT,
   access_count    INTEGER DEFAULT 0,
+  thread_id       TEXT REFERENCES threads(id),
   last_accessed   TIMESTAMP,
   obsolete        BOOLEAN DEFAULT FALSE,
   created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP

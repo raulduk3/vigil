@@ -542,16 +542,16 @@ function WatcherDetailContent() {
                       <td className="table-cell text-right tabular-nums font-mono">{thread.email_count}</td>
                       <td className="table-cell text-right text-sm text-gray-500 tabular-nums">{formatRelative(thread.last_activity)}</td>
                       <td className="table-cell text-right">
-                        <div className="flex gap-1 justify-end">
-                          <button onClick={() => openThread(thread.id)} className="btn btn-ghost btn-sm">View</button>
-                          <button onClick={() => setDeleteThreadId(deleteThreadId === thread.id ? null : thread.id)} className="btn btn-danger-subtle btn-sm">Delete</button>
+                        <div className="flex gap-1 justify-end flex-wrap">
+                          <button onClick={() => openThread(thread.id)} className="btn btn-ghost btn-xs">View</button>
+                          <button onClick={() => setDeleteThreadId(deleteThreadId === thread.id ? null : thread.id)} className="btn btn-danger-subtle btn-xs">Delete</button>
                         </div>
                         {deleteThreadId === thread.id && (
                           <div className="mt-2 text-left">
                             <p className="text-xs text-red-600 mb-1">Delete thread + emails + actions?</p>
-                            <div className="flex gap-1">
-                              <button onClick={() => setDeleteThreadId(null)} className="btn btn-secondary btn-sm">Cancel</button>
-                              <button onClick={() => handleDeleteThread(thread.id)} className="btn btn-danger btn-sm">Confirm</button>
+                            <div className="flex gap-1 flex-wrap">
+                              <button onClick={() => setDeleteThreadId(null)} className="btn btn-secondary btn-xs">Cancel</button>
+                              <button onClick={() => handleDeleteThread(thread.id)} className="btn btn-danger btn-xs">Confirm</button>
                             </div>
                           </div>
                         )}
