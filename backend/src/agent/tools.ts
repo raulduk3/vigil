@@ -76,8 +76,7 @@ async function sendAlertHandler(
         emailSubject = params.subject;
     } else if (threadSubject) {
         // Reference the original thread
-        const urgencyPrefix = urgency === "high" ? "⚠️ " : "";
-        emailSubject = `${urgencyPrefix}Re: ${threadSubject}`;
+        emailSubject = `Re: ${threadSubject}`;
     } else {
         // Derive a clean subject from the body (first sentence or first 60 chars)
         const firstSentence = (alertBody.split(/[.!?\n]/)[0] ?? "").trim();
@@ -388,10 +387,10 @@ function buildAlertHtml(
     threadEmailCount: number,
     threadId: string | null = null
 ): string {
-    const urgencyConfig: Record<string, { color: string; bg: string; label: string; icon: string }> = {
-        high: { color: "#dc2626", bg: "#fef2f2", label: "Urgent", icon: "⚠️" },
-        normal: { color: "#2563eb", bg: "#eff6ff", label: "Info", icon: "📬" },
-        low: { color: "#6b7280", bg: "#f9fafb", label: "FYI", icon: "📋" },
+    const urgencyConfig: Record<string, { color: string; bg: string; label: string }> = {
+        high: { color: "#dc2626", bg: "#fef2f2", label: "Urgent" },
+        normal: { color: "#2563eb", bg: "#eff6ff", label: "Info" },
+        low: { color: "#6b7280", bg: "#f9fafb", label: "FYI" },
     };
     const u = urgencyConfig[urgency] ?? urgencyConfig["normal"]!;
 
@@ -409,9 +408,9 @@ function buildAlertHtml(
         const snoozeToken = generateThreadActionToken(threadId, "snooze");
         const watchingToken = generateThreadActionToken(threadId, "watching");
         actionLinks = `<div style="padding:16px 24px;border-top:1px solid #f1f5f9;text-align:center;">
-            <a href="${apiUrl}/api/threads/${handledToken}/action" style="display:inline-block;padding:6px 16px;margin:0 4px;background:#059669;color:white;text-decoration:none;border-radius:6px;font-size:12px;font-weight:600;">✓ Handled</a>
-            <a href="${apiUrl}/api/threads/${snoozeToken}/action" style="display:inline-block;padding:6px 16px;margin:0 4px;background:#d97706;color:white;text-decoration:none;border-radius:6px;font-size:12px;font-weight:600;">⏰ Snooze 24h</a>
-            <a href="${apiUrl}/api/threads/${watchingToken}/action" style="display:inline-block;padding:6px 16px;margin:0 4px;background:#6b7280;color:white;text-decoration:none;border-radius:6px;font-size:12px;font-weight:600;">👁 Watch Only</a>
+            <a href="${apiUrl}/api/threads/${handledToken}/action" style="display:inline-block;padding:6px 16px;margin:0 4px;background:#059669;color:white;text-decoration:none;border-radius:6px;font-size:12px;font-weight:600;">Handled</a>
+            <a href="${apiUrl}/api/threads/${snoozeToken}/action" style="display:inline-block;padding:6px 16px;margin:0 4px;background:#d97706;color:white;text-decoration:none;border-radius:6px;font-size:12px;font-weight:600;">Snooze 24h</a>
+            <a href="${apiUrl}/api/threads/${watchingToken}/action" style="display:inline-block;padding:6px 16px;margin:0 4px;background:#6b7280;color:white;text-decoration:none;border-radius:6px;font-size:12px;font-weight:600;">Watch Only</a>
         </div>`;
     }
 
@@ -435,7 +434,6 @@ function buildAlertHtml(
     <!-- Header -->
     <div style="padding:20px 24px 16px;">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-        <span style="font-size:16px;">${u.icon}</span>
         <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:${u.color};background:${u.bg};padding:3px 8px;border-radius:4px;">${u.label}</span>
         <span style="font-size:12px;color:#94a3b8;margin-left:auto;">${escapeHtml(watcherName)}</span>
       </div>
