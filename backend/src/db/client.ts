@@ -64,7 +64,8 @@ export function queryOne<T = Record<string, unknown>>(
     sql: string,
     params: unknown[] = []
 ): T | null {
-    return (getDb().prepare(toSqlite(sql)).get(...(params as any[])) as T) ?? null;
+    const row = getDb().prepare(toSqlite(sql)).get(...(params as any[])) as T | null;
+    return row ? normalizeTimestamps(row) : null;
 }
 
 /** Return all rows */
@@ -72,7 +73,27 @@ export function queryMany<T = Record<string, unknown>>(
     sql: string,
     params: unknown[] = []
 ): T[] {
-    return getDb().prepare(toSqlite(sql)).all(...(params as any[])) as T[];
+    const rows = getDb().prepare(toSqlite(sql)).all(...(params as any[])) as T[];
+    return rows.map(normalizeTimestamps);
+}
+
+/**
+ * Normalize bare SQLite timestamps to ISO 8601 UTC.
+ * "2026-03-10 00:33:29" → "2026-03-10T00:33:29Z"
+ * Already-ISO strings (with T and Z) are left alone.
+ */
+const BARE_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/;
+
+function normalizeTimestamps<T>(row: T): T {
+    if (!row || typeof row !== "object") return row;
+    const out = { ...row } as Record<string, unknown>;
+    for (const key of Object.keys(out)) {
+        const val = out[key];
+        if (typeof val === "string" && BARE_TIMESTAMP_RE.test(val)) {
+            out[key] = val.replace(" ", "T") + "Z";
+        }
+    }
+    return out as T;
 }
 
 /** Legacy compat: wraps queryMany in { rows } */
