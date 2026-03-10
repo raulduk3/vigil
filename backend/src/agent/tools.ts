@@ -245,6 +245,33 @@ async function webhookHandler(
 // Registry
 // ============================================================================
 
+/**
+ * Alias handler: watching_thread → update_thread with status "watching"
+ * Models sometimes hallucinate this tool name instead of using update_thread.
+ */
+async function watchingThreadHandler(
+    params: { thread_id: string; reason?: string; summary?: string },
+    ctx: WatcherContext
+): Promise<ToolResult> {
+    return updateThreadHandler(
+        { thread_id: params.thread_id, status: "watching", summary: params.summary ?? params.reason },
+        ctx
+    );
+}
+
+/**
+ * Alias handler: resolve_thread → update_thread with status "resolved"
+ */
+async function resolveThreadHandler(
+    params: { thread_id: string; reason?: string; summary?: string },
+    ctx: WatcherContext
+): Promise<ToolResult> {
+    return updateThreadHandler(
+        { thread_id: params.thread_id, status: "resolved", summary: params.summary ?? params.reason },
+        ctx
+    );
+}
+
 export const BUILTIN_TOOLS: Tool[] = [
     {
         name: "send_alert",
@@ -290,7 +317,14 @@ export const BUILTIN_TOOLS: Tool[] = [
     },
 ];
 
-export const TOOL_MAP = new Map(BUILTIN_TOOLS.map((t) => [t.name, t]));
+// Alias tools — not in BUILTIN_TOOLS (so they don't show in UI) but registered in TOOL_MAP
+const ALIAS_TOOLS: Tool[] = [
+    { name: "watching_thread", description: "Alias for update_thread with status watching", parameters: { thread_id: "string" }, handler: watchingThreadHandler },
+    { name: "resolve_thread", description: "Alias for update_thread with status resolved", parameters: { thread_id: "string" }, handler: resolveThreadHandler },
+    { name: "watch_thread", description: "Alias for update_thread with status watching", parameters: { thread_id: "string" }, handler: watchingThreadHandler },
+];
+
+export const TOOL_MAP = new Map([...BUILTIN_TOOLS, ...ALIAS_TOOLS].map((t) => [t.name, t]));
 
 export function getAvailableTools(enabledNames: string[]): Tool[] {
     return enabledNames
