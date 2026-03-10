@@ -40,6 +40,14 @@ export async function initializeDatabase(): Promise<void> {
     const schemaPath = join(import.meta.dir, "schema.sql");
     const schema = readFileSync(schemaPath, "utf-8");
     database.exec(schema);
+
+    // Rebuild FTS5 index to keep it in sync (handles schema changes, manual data wipes)
+    try {
+        database.exec(`INSERT INTO memories_fts(memories_fts) VALUES('rebuild')`);
+    } catch {
+        // FTS5 table may not exist yet on first run
+    }
+
     logger.info("SQLite database initialized");
 }
 
