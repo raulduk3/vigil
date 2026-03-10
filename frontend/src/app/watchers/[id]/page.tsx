@@ -559,11 +559,13 @@ function WatcherDetailContent() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Silence Threshold (hours)</label>
-                      <input type="number" value={editSilenceHours} onChange={(e) => setEditSilenceHours(parseInt(e.target.value) || 48)} min={1} max={720} className="input w-full" />
+                      <input type="number" value={editSilenceHours} onChange={(e) => setEditSilenceHours(Math.max(24, parseInt(e.target.value) || 48))} min={24} max={720} step={12} className="input w-full" />
+                      <p className="text-xs text-gray-500 mt-1">Flag threads with no activity for this long. Checked on each tick.</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Tick Interval (minutes)</label>
-                      <input type="number" value={editTickInterval} onChange={(e) => setEditTickInterval(parseInt(e.target.value) || 60)} min={5} max={1440} className="input w-full" />
+                      <input type="number" value={editTickInterval} onChange={(e) => setEditTickInterval(Math.max(60, parseInt(e.target.value) || 120))} min={60} max={1440} step={30} className="input w-full" />
+                      <p className="text-xs text-gray-500 mt-1">How often the agent wakes up to review threads.</p>
                     </div>
                   </div>
                 </div>

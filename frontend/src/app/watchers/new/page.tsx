@@ -22,7 +22,7 @@ function NewWatcherContent() {
   );
   const [tools, setTools] = useState(['send_alert', 'update_thread', 'ignore_thread']);
   const [silenceHours, setSilenceHours] = useState(48);
-  const [tickInterval, setTickInterval] = useState(60);
+  const [tickInterval, setTickInterval] = useState(120);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -120,18 +120,18 @@ function NewWatcherContent() {
               <div>
                 <label htmlFor="silence" className="block text-sm font-medium text-gray-700 mb-1">Silence Threshold (hours)</label>
                 <input
-                  id="silence" type="number" value={silenceHours} onChange={(e) => setSilenceHours(parseInt(e.target.value) || 48)}
-                  min={1} max={720} className="input w-full"
+                  id="silence" type="number" value={silenceHours} onChange={(e) => setSilenceHours(Math.max(24, parseInt(e.target.value) || 48))}
+                  min={24} max={720} step={12} className="input w-full"
                 />
-                <p className="text-xs text-gray-500 mt-1">Alert when a thread goes silent for this long</p>
+                <p className="text-xs text-gray-500 mt-1">Flag threads with no activity for this long. On each tick, the agent checks all active threads and alerts on any that have been silent past this threshold.</p>
               </div>
               <div>
                 <label htmlFor="tick" className="block text-sm font-medium text-gray-700 mb-1">Tick Interval (minutes)</label>
                 <input
-                  id="tick" type="number" value={tickInterval} onChange={(e) => setTickInterval(parseInt(e.target.value) || 60)}
-                  min={5} max={1440} className="input w-full"
+                  id="tick" type="number" value={tickInterval} onChange={(e) => setTickInterval(Math.max(60, parseInt(e.target.value) || 120))}
+                  min={60} max={1440} step={30} className="input w-full"
                 />
-                <p className="text-xs text-gray-500 mt-1">How often the agent reviews active threads</p>
+                <p className="text-xs text-gray-500 mt-1">How often the agent wakes up to review threads and check for silence violations</p>
               </div>
             </div>
           </div>
