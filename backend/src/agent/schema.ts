@@ -111,7 +111,7 @@ export interface AgentResponse {
         params: Record<string, any>;
         reasoning: string;
     }>;
-    memory_append: string | null;
+    memory_append: string | Array<{ content: string; importance?: number }> | null;
     thread_updates: Array<{
         thread_id: string;
         status?: "active" | "watching" | "resolved" | "ignored";

@@ -56,7 +56,9 @@ Schema:
       "reasoning": "<why you are taking this action>"
     }
   ],
-  "memory_append": "<markdown notes to add to memory, or null>",
+  "memory_append": [
+    { "content": "<what to remember>", "importance": 1-5 }
+  ],
   "thread_updates": [
     {
       "thread_id": "<id>",
@@ -75,10 +77,16 @@ Schema:
 ## Rules
 - actions can be an empty array if no action is needed
 - thread_updates and email_analysis can be null if not applicable
+- memory_append can be null or an empty array. Each memory needs an importance score:
+  - 5: Critical — deadlines, money amounts, action items, commitments
+  - 4: High — meeting details, key decisions, contact preferences
+  - 3: Medium — general context, routine observations
+  - 2: Low — minor details, FYI items
+  - 1: Trivial — noise, marketing content, auto-generated content (usually don't store these)
 - Only use tools from the available tools list
 - Only call send_alert when the user genuinely needs to know something
 - Keep thread summaries concise and actionable (1-2 sentences)
-- Store important patterns and preferences in memory_append
+- Be selective about what to store in memory — don't store routine/obvious information
 - Email bodies are never persisted — extract what matters now
 - For silence alerts: check if last_activity is older than the threshold`;
 }

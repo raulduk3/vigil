@@ -110,11 +110,31 @@ export function storeMemory(
 }
 
 /**
- * Parse agent's memory_append string into chunks and store each.
- * Splits on newlines, strips bullet markers.
+ * Parse agent's memory_append and store each chunk.
+ * Accepts either:
+ * - Array of { content, importance } objects (V2 format)
+ * - Plain string with newlines (legacy fallback)
  */
-export function storeMemories(watcherId: string, memoryAppend: string): void {
-    if (!memoryAppend?.trim()) return;
+export function storeMemories(
+    watcherId: string,
+    memoryAppend: string | Array<{ content: string; importance?: number }>
+): void {
+    if (!memoryAppend) return;
+
+    // Handle array format (V2)
+    if (Array.isArray(memoryAppend)) {
+        for (const entry of memoryAppend) {
+            const content = entry.content?.trim();
+            if (!content || content.length < 10) continue;
+            const importance = Math.max(1, Math.min(5, entry.importance ?? 3));
+            storeMemory(watcherId, content, importance);
+        }
+        logger.debug("Stored memory chunks", { watcherId, count: memoryAppend.length });
+        return;
+    }
+
+    // Legacy string fallback
+    if (typeof memoryAppend !== "string" || !memoryAppend.trim()) return;
 
     const chunks = memoryAppend
         .split(/\n+/)
@@ -125,7 +145,7 @@ export function storeMemories(watcherId: string, memoryAppend: string): void {
         storeMemory(watcherId, chunk);
     }
 
-    logger.debug("Stored memory chunks", { watcherId, count: chunks.length });
+    logger.debug("Stored memory chunks (legacy)", { watcherId, count: chunks.length });
 }
 
 // ============================================================================

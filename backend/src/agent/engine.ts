@@ -269,7 +269,11 @@ export async function invokeAgent(
         toolResults.every((r) => r.result.success) ? "success" : "failed",
         null,
         startMs,
-        agentResponse.memory_append,
+        agentResponse.memory_append
+            ? (typeof agentResponse.memory_append === "string"
+                ? agentResponse.memory_append
+                : JSON.stringify(agentResponse.memory_append))
+            : null,
         contextTokens,
         costUsd
     );
