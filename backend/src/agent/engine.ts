@@ -173,7 +173,8 @@ export async function invokeAgent(
                 body: email.body,
                 receivedAt: email.receivedAt,
             },
-            threadHistory
+            threadHistory,
+            threadId!
         );
     }
 

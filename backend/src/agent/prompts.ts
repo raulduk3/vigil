@@ -90,7 +90,12 @@ Schema:
 - Email bodies are never persisted — extract what matters now
 - For silence alerts: only "active" threads are checked. "watching" threads are visible but won't trigger silence alerts.
 - Use "watching" for threads you want to track but that don't need silence monitoring (routine billing, newsletters you kept, low-priority FYIs)
-- Use "active" for threads where a stalled conversation matters (work requests, deadlines, pending responses)`;
+- Use "active" for threads where a stalled conversation matters (work requests, deadlines, pending responses)
+- IMPORTANT: Always set thread status on the first email. Don't leave everything as "active" by default. Triage immediately:
+  - Marketing, newsletters, order confirmations → "ignored" (with ignore_thread tool) or "watching"
+  - Routine bills with auto-pay, FYI notifications → "watching"
+  - Work emails needing response, deadlines, money matters → "active"
+  - Spam, unsolicited → "ignored"`;
 }
 
 // ============================================================================
@@ -105,7 +110,8 @@ export function buildEmailTriggerPrompt(
         receivedAt: number;
         to: string;
     },
-    threadHistory: EmailRow[]
+    threadHistory: EmailRow[],
+    threadId: string
 ): string {
     const timestamp = new Date(email.receivedAt).toISOString();
     const historySection =
@@ -121,6 +127,7 @@ export function buildEmailTriggerPrompt(
 
     return `## New Email Received
 
+Thread ID: ${threadId}
 From: ${email.from}
 To: ${email.to}
 Subject: ${email.subject}
@@ -130,7 +137,8 @@ Received: ${timestamp}
 ${email.body}
 ---${historySection}
 
-Process this email. Analyze content, update thread state, and take action if warranted.`;
+Process this email. Analyze content, update thread state, and take action if warranted.
+Use the Thread ID above when calling tools like update_thread, ignore_thread, etc.`;
 }
 
 export function buildTickTriggerPrompt(

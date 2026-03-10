@@ -5,7 +5,7 @@
  * Each tool has a handler that executes when the agent calls it.
  */
 
-import { run } from "../db/client";
+import { run, queryOne } from "../db/client";
 import { logger } from "../logger";
 import type { ToolResult, WatcherContext } from "./schema";
 
@@ -154,6 +154,13 @@ async function updateThreadHandler(
         return { success: false, error: "Nothing to update" };
     }
 
+    // Verify thread exists
+    const thread = queryOne<{ id: string }>(`SELECT id FROM threads WHERE id = ?`, [thread_id]);
+    if (!thread) {
+        logger.warn("update_thread: thread not found", { thread_id });
+        return { success: false, error: `Thread ${thread_id} not found` };
+    }
+
     updates.push("last_activity = CURRENT_TIMESTAMP");
     vals.push(thread_id);
 
@@ -174,6 +181,13 @@ async function ignoreThreadHandler(
 
     if (!thread_id) {
         return { success: false, error: "ignore_thread requires thread_id" };
+    }
+
+    // Verify thread exists
+    const thread = queryOne<{ id: string }>(`SELECT id FROM threads WHERE id = ?`, [thread_id]);
+    if (!thread) {
+        logger.warn("ignore_thread: thread not found", { thread_id });
+        return { success: false, error: `Thread ${thread_id} not found` };
     }
 
     run(
