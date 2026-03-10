@@ -62,7 +62,7 @@ Schema:
   "thread_updates": [
     {
       "thread_id": "<id>",
-      "status": "active|watching|resolved|ignored",
+      "status": "active (tracked + silence alerts) | watching (tracked, no silence alerts) | resolved (closed, handled) | ignored (closed, noise)",
       "summary": "<concise updated summary>"
     }
   ],
@@ -88,7 +88,9 @@ Schema:
 - Keep thread summaries concise and actionable (1-2 sentences)
 - Be selective about what to store in memory — don't store routine/obvious information
 - Email bodies are never persisted — extract what matters now
-- For silence alerts: check if last_activity is older than the threshold`;
+- For silence alerts: only "active" threads are checked. "watching" threads are visible but won't trigger silence alerts.
+- Use "watching" for threads you want to track but that don't need silence monitoring (routine billing, newsletters you kept, low-priority FYIs)
+- Use "active" for threads where a stalled conversation matters (work requests, deadlines, pending responses)`;
 }
 
 // ============================================================================
@@ -138,7 +140,9 @@ export function buildTickTriggerPrompt(
 ): string {
     const now = new Date(timestamp).toISOString();
 
+    // Only "active" threads get silence-checked. "watching" threads are monitored but excluded from silence alerts.
     const overdueThreads = activeThreads.filter((t) => {
+        if (t.status !== "active") return false;
         if (!t.last_activity) return false;
         const lastActivity = new Date(t.last_activity).getTime();
         const hoursSilent = (timestamp - lastActivity) / (1000 * 60 * 60);
@@ -164,15 +168,19 @@ export function buildTickTriggerPrompt(
                   .join("\n")
             : "No threads currently exceed the silence threshold.";
 
+    const watchingCount = activeThreads.filter((t) => t.status === "watching").length;
+
     return `## Scheduled Check — ${now}
 
 Review active threads for silence violations (threshold: ${silenceHours}h).
+Note: only "active" threads are checked for silence. ${watchingCount} "watching" thread(s) are excluded.
 
 Threads exceeding threshold (${overdueThreads.length}):
 ${threadList}
 
 For each overdue thread, decide: send alert, update status, or take no action.
-If a thread has already been alerted recently, do not alert again.`;
+If a thread has already been alerted recently, do not alert again.
+Consider downgrading resolved conversations to "watching" or "resolved" to reduce noise.`;
 }
 
 export function buildUserQueryPrompt(queryText: string): string {

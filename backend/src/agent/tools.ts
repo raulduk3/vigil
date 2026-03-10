@@ -246,7 +246,7 @@ export const BUILTIN_TOOLS: Tool[] = [
     {
         name: "update_thread",
         description:
-            "Update thread status or summary. Use to track conversation state.",
+            "Update thread status or summary. active = tracked with silence alerts, watching = tracked without silence alerts, resolved = closed/handled, ignored = closed/noise.",
         parameters: {
             thread_id: "string — thread id",
             status: "active|watching|resolved|ignored — new status (optional)",
