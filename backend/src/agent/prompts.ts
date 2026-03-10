@@ -92,7 +92,17 @@ Schema:
   - source_quote: the EXACT phrase from the email this memory is based on. Required for importance >= 4.
   - confidence (1-5): 5=directly stated, 4=strongly implied, 3=inferred, 2=guessed, 1=uncertain.
 - Only use tools from the available tools list
-- Only call send_alert when the user genuinely needs to know something
+- send_alert is an INTERRUPTION. Only use it when the user needs to act TODAY or will lose something if they don't see this RIGHT NOW. Examples that warrant an alert:
+  - Security: unauthorized access, fraud, account lockout
+  - Money at risk: margin calls, payment failures, overdue invoices
+  - Deadline within 48 hours that requires preparation
+  - Someone is waiting on the user and explicitly said it's urgent
+  Examples that do NOT warrant an alert:
+  - Scheduling changes (exam moved, meeting rescheduled) — store memory, update thread
+  - FYI information, even if important — store memory, update thread
+  - Deadlines more than 48 hours away — the scheduled tick will catch these
+  - Contract discussions, proposals, non-urgent requests — track as active thread
+  The scheduled tick system exists specifically to surface approaching deadlines. Trust it. Don't front-load alerts on things that aren't time-critical today.
 - For silence alerts: frame as questions, not statements. The user may have replied directly without forwarding their reply. Say "This thread has been quiet for 3 days — have you already handled this?" not "Vendor hasn't replied in 3 days."
 - Keep thread summaries concise and actionable (1-2 sentences)
 - Be extremely selective about memory. Most emails need zero memories. The thread summary captures the conversation. Memory is for facts that matter ACROSS threads or for future ticks: dates, amounts, deadlines, commitments.
