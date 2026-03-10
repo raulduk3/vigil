@@ -280,6 +280,72 @@ export const watcherHandlers = {
         return c.json({ memory: created }, 201);
     },
 
+    // Channels (alert destinations)
+    async getChannels(c: Context) {
+        const user = c.get("user");
+        const watcherId = c.req.param("id");
+        const watcher = queryOne(`SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`, [watcherId, user.account_id]);
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
+
+        const channels = queryMany(`SELECT * FROM channels WHERE watcher_id = ?`, [watcherId]);
+        return c.json({ channels });
+    },
+
+    async createChannel(c: Context) {
+        const user = c.get("user");
+        const watcherId = c.req.param("id");
+        const watcher = queryOne(`SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`, [watcherId, user.account_id]);
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
+
+        const body = await c.req.json().catch(() => ({}));
+        if (!body.type || !body.destination) return c.json({ error: "type and destination required" }, 400);
+        if (!['email', 'webhook'].includes(body.type)) return c.json({ error: "type must be email or webhook" }, 400);
+
+        const id = crypto.randomUUID();
+        run(`INSERT INTO channels (id, watcher_id, type, destination, enabled) VALUES (?, ?, ?, ?, TRUE)`,
+            [id, watcherId, body.type, body.destination]);
+
+        const channel = queryOne(`SELECT * FROM channels WHERE id = ?`, [id]);
+        return c.json({ channel }, 201);
+    },
+
+    async updateChannel(c: Context) {
+        const user = c.get("user");
+        const watcherId = c.req.param("id");
+        const channelId = c.req.param("channelId");
+        const watcher = queryOne(`SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`, [watcherId, user.account_id]);
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
+
+        const channel = queryOne(`SELECT * FROM channels WHERE id = ? AND watcher_id = ?`, [channelId, watcherId]);
+        if (!channel) return c.json({ error: "Channel not found" }, 404);
+
+        const body = await c.req.json().catch(() => ({}));
+        const sets: string[] = [];
+        const vals: any[] = [];
+        if (body.destination !== undefined) { sets.push("destination = ?"); vals.push(body.destination); }
+        if (body.enabled !== undefined) { sets.push("enabled = ?"); vals.push(body.enabled ? 1 : 0); }
+        if (sets.length === 0) return c.json({ error: "Nothing to update" }, 400);
+
+        vals.push(channelId);
+        run(`UPDATE channels SET ${sets.join(", ")} WHERE id = ?`, vals);
+        const updated = queryOne(`SELECT * FROM channels WHERE id = ?`, [channelId]);
+        return c.json({ channel: updated });
+    },
+
+    async deleteChannel(c: Context) {
+        const user = c.get("user");
+        const watcherId = c.req.param("id");
+        const channelId = c.req.param("channelId");
+        const watcher = queryOne(`SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`, [watcherId, user.account_id]);
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
+
+        const channel = queryOne(`SELECT id FROM channels WHERE id = ? AND watcher_id = ?`, [channelId, watcherId]);
+        if (!channel) return c.json({ error: "Channel not found" }, 404);
+
+        run(`DELETE FROM channels WHERE id = ?`, [channelId]);
+        return c.json({ deleted: true });
+    },
+
     async getActions(c: Context) {
         const user = c.get("user");
         const id = c.req.param("id");

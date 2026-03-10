@@ -52,6 +52,12 @@ export function createRouter(): Hono {
     protected_.get("/watchers/:id/memory", watcherHandlers.getMemory);
     protected_.get("/watchers/:id/actions", watcherHandlers.getActions);
 
+    // Channels (alert destinations)
+    protected_.get("/watchers/:id/channels", watcherHandlers.getChannels);
+    protected_.post("/watchers/:id/channels", watcherHandlers.createChannel);
+    protected_.put("/watchers/:id/channels/:channelId", watcherHandlers.updateChannel);
+    protected_.delete("/watchers/:id/channels/:channelId", watcherHandlers.deleteChannel);
+
     // Memory CRUD
     protected_.post("/watchers/:id/memory", watcherHandlers.createMemory);
     protected_.put("/watchers/:id/memory/:memoryId", watcherHandlers.updateMemory);

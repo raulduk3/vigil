@@ -86,6 +86,14 @@ export interface Memory {
   created_at: string;
 }
 
+export interface Channel {
+  id: string;
+  watcher_id: string;
+  type: 'email' | 'webhook';
+  destination: string;
+  enabled: boolean;
+}
+
 // ============================================================================
 // Token Management
 // ============================================================================
@@ -304,6 +312,29 @@ export const api = {
 
   async deleteMemory(watcherId: string, memoryId: string): Promise<void> {
     return request(`/api/watchers/${watcherId}/memory/${memoryId}`, { method: 'DELETE' });
+  },
+
+  // Channels (alert destinations)
+  async getChannels(watcherId: string): Promise<{ channels: Channel[] }> {
+    return request(`/api/watchers/${watcherId}/channels`);
+  },
+
+  async createChannel(watcherId: string, data: { type: string; destination: string }): Promise<{ channel: Channel }> {
+    return request(`/api/watchers/${watcherId}/channels`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateChannel(watcherId: string, channelId: string, data: Partial<Channel>): Promise<{ channel: Channel }> {
+    return request(`/api/watchers/${watcherId}/channels/${channelId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteChannel(watcherId: string, channelId: string): Promise<void> {
+    return request(`/api/watchers/${watcherId}/channels/${channelId}`, { method: 'DELETE' });
   },
 
   // Actions

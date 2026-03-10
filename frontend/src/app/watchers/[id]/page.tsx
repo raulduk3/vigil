@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { RequireAuth } from '@/lib/auth';
 import { AppHeader } from '@/components/layout';
-import { api, type Watcher, type Thread, type Action, type Memory } from '@/lib/api';
+import { api, type Watcher, type Thread, type Action, type Memory, type Channel } from '@/lib/api';
 
 function formatRelative(isoDate: string): string {
   const diff = Date.now() - new Date(isoDate).getTime();
@@ -92,6 +92,12 @@ function WatcherDetailContent() {
   const [editingThreadSummary, setEditingThreadSummary] = useState(false);
   const [editSummary, setEditSummary] = useState('');
 
+  // Channels
+  const [channels, setChannels] = useState<Channel[]>([]);
+  const [newChannelType, setNewChannelType] = useState<'email' | 'webhook'>('email');
+  const [newChannelDest, setNewChannelDest] = useState('');
+  const [showNewChannel, setShowNewChannel] = useState(false);
+
   // Delete confirmations
   const [showDeleteWatcher, setShowDeleteWatcher] = useState(false);
   const [deleteThreadId, setDeleteThreadId] = useState<string | null>(null);
@@ -101,16 +107,18 @@ function WatcherDetailContent() {
 
   const load = useCallback(async () => {
     try {
-      const [w, t, a, m] = await Promise.all([
+      const [w, t, a, m, ch] = await Promise.all([
         api.getWatcher(watcherId),
         api.getThreads(watcherId),
         api.getActions(watcherId).catch(() => ({ actions: [] })),
         api.getMemories(watcherId).catch(() => ({ memories: [] })),
+        api.getChannels(watcherId).catch(() => ({ channels: [] })),
       ]);
       setWatcher(w.watcher);
       setThreads(t.threads || []);
       setActions(a.actions || []);
       setMemories(m.memories || []);
+      setChannels(ch.channels || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load watcher');
     } finally {
@@ -244,6 +252,33 @@ function WatcherDetailContent() {
     try {
       await api.updateMemory(watcherId, mem.id, { obsolete: !mem.obsolete } as Partial<Memory>);
       await load();
+    } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); }
+  };
+
+  // ---- Channel actions ----
+  const handleCreateChannel = async () => {
+    if (!newChannelDest.trim()) return;
+    try {
+      await api.createChannel(watcherId, { type: newChannelType, destination: newChannelDest.trim() });
+      setNewChannelDest('');
+      setShowNewChannel(false);
+      await load();
+      showFlash('Channel added');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); }
+  };
+
+  const handleToggleChannel = async (ch: Channel) => {
+    try {
+      await api.updateChannel(watcherId, ch.id, { enabled: !ch.enabled } as Partial<Channel>);
+      await load();
+    } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); }
+  };
+
+  const handleDeleteChannel = async (channelId: string) => {
+    try {
+      await api.deleteChannel(watcherId, channelId);
+      await load();
+      showFlash('Channel removed');
     } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); }
   };
 
@@ -717,6 +752,82 @@ function WatcherDetailContent() {
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Tools & Alert Destinations */}
+            <div className="panel p-6">
+              <h3 className="text-sm font-semibold text-gray-700 mb-4">Tools & Alert Destinations</h3>
+
+              <div className="space-y-4">
+                {/* Tool descriptions */}
+                <div>
+                  <div className="data-label mb-2">Enabled Tools</div>
+                  <div className="space-y-2">
+                    {TOOLS.map(tool => {
+                      const enabled = watcher.tools.includes(tool.id);
+                      return (
+                        <div key={tool.id} className={`flex items-start gap-3 p-3 rounded ${enabled ? 'bg-vigil-50 border border-vigil-200' : 'bg-gray-50 border border-gray-200 opacity-60'}`}>
+                          <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${enabled ? 'bg-vigil-500' : 'bg-gray-300'}`} />
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-sm text-gray-900">{tool.id}</span>
+                              <span className={`text-xs ${enabled ? 'text-vigil-600' : 'text-gray-400'}`}>{enabled ? 'enabled' : 'disabled'}</span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-0.5">{tool.description}</p>
+                            {tool.id === 'send_alert' && enabled && (
+                              <p className="text-xs text-gray-400 mt-1">Alerts go to: account email{channels.filter(c => c.type === 'email' && c.enabled).length > 0 ? ` + ${channels.filter(c => c.type === 'email' && c.enabled).length} additional email(s)` : ''}{channels.filter(c => c.type === 'webhook' && c.enabled).length > 0 ? ` + ${channels.filter(c => c.type === 'webhook' && c.enabled).length} webhook(s)` : ''}</p>
+                            )}
+                            {tool.id === 'webhook' && enabled && (
+                              <p className="text-xs text-gray-400 mt-1">Webhooks: {channels.filter(c => c.type === 'webhook' && c.enabled).length > 0 ? channels.filter(c => c.type === 'webhook' && c.enabled).map(c => c.destination).join(', ') : 'none configured'}</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-2">Edit tools in the settings panel above.</p>
+                </div>
+
+                {/* Alert destinations */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="data-label">Alert Destinations</div>
+                    <button onClick={() => setShowNewChannel(!showNewChannel)} className="btn btn-secondary btn-sm">{showNewChannel ? 'Cancel' : '+ Add'}</button>
+                  </div>
+
+                  <p className="text-xs text-gray-500 mb-3">When <code className="text-xs">send_alert</code> fires, the agent sends to your account email plus any destinations below.</p>
+
+                  {showNewChannel && (
+                    <div className="bg-surface-sunken p-3 rounded mb-3 space-y-2">
+                      <div className="flex gap-2">
+                        <select value={newChannelType} onChange={e => setNewChannelType(e.target.value as 'email' | 'webhook')} className="input w-32">
+                          <option value="email">Email</option>
+                          <option value="webhook">Webhook</option>
+                        </select>
+                        <input type="text" value={newChannelDest} onChange={e => setNewChannelDest(e.target.value)}
+                          placeholder={newChannelType === 'email' ? 'email@example.com' : 'https://hooks.example.com/...'}
+                          className="input flex-1" />
+                        <button onClick={handleCreateChannel} disabled={!newChannelDest.trim()} className="btn btn-primary btn-sm">Add</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {channels.length === 0 ? (
+                    <div className="text-sm text-gray-500 p-3 bg-surface-sunken rounded">No additional destinations. Alerts go to your account email only.</div>
+                  ) : (
+                    <div className="space-y-1">
+                      {channels.map(ch => (
+                        <div key={ch.id} className={`flex items-center gap-3 p-3 rounded ${ch.enabled ? 'bg-surface-sunken' : 'bg-gray-50 opacity-60'}`}>
+                          <span className={`badge badge-sm ${ch.type === 'email' ? 'badge-ok' : 'badge-warning'}`}>{ch.type}</span>
+                          <span className="text-sm text-gray-700 flex-1 font-mono truncate">{ch.destination}</span>
+                          <button onClick={() => handleToggleChannel(ch)} className="text-xs text-gray-500 hover:text-gray-700">{ch.enabled ? 'Disable' : 'Enable'}</button>
+                          <button onClick={() => handleDeleteChannel(ch.id)} className="text-xs text-red-500 hover:text-red-700">Remove</button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Danger zone */}

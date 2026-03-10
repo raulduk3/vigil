@@ -24,6 +24,9 @@ import {
     retrieveMemories,
     storeMemories,
     formatMemoriesForContext,
+    touchMemoryAccess,
+    markObsolete,
+    pruneMemories,
 } from "./memory";
 import { executeTool } from "./tools";
 import {
@@ -84,6 +87,11 @@ export async function invokeAgent(
             : undefined;
     const memories = retrieveMemories(watcherId, emailContext);
     const memoryContext = formatMemoriesForContext(memories);
+
+    // Track which memories were loaded into context
+    if (memories.length > 0) {
+        touchMemoryAccess(memories.map((m) => m.id));
+    }
 
     // 3. Load active threads
     const activeThreads = queryMany<ThreadRow>(
@@ -250,6 +258,14 @@ export async function invokeAgent(
         storeMemories(watcherId, agentResponse.memory_append);
     }
 
+    // Mark obsolete memories
+    if (agentResponse.memory_obsolete?.length) {
+        for (const memId of agentResponse.memory_obsolete) {
+            markObsolete(memId);
+        }
+        logger.debug("Marked memories obsolete", { watcherId, count: agentResponse.memory_obsolete.length });
+    }
+
     // Update last_tick_at for scheduled ticks
     if (trigger.type === "scheduled_tick") {
         run(`UPDATE watchers SET last_tick_at = CURRENT_TIMESTAMP WHERE id = ?`, [watcherId]);
@@ -350,12 +366,13 @@ function parseAgentResponse(text: string): AgentResponse {
         return {
             actions: parsed.actions ?? [],
             memory_append: parsed.memory_append ?? null,
+            memory_obsolete: parsed.memory_obsolete ?? null,
             thread_updates: parsed.thread_updates ?? null,
             email_analysis: parsed.email_analysis ?? null,
         };
     } catch (err) {
         logger.warn("Failed to parse agent response as JSON", { text: text.slice(0, 200) });
-        return { actions: [], memory_append: null, thread_updates: null, email_analysis: null };
+        return { actions: [], memory_append: null, memory_obsolete: null, thread_updates: null, email_analysis: null };
     }
 }
 

@@ -159,7 +159,7 @@ export function formatMemoriesForContext(memories: MemoryRow[]): string {
 
     const lines = memories.map((m) => {
         const age = m.created_at ? `(${daysSince(m.created_at)}d ago)` : "";
-        return `- [importance:${m.importance}] ${m.content} ${age}`;
+        return `- [id:${m.id}] [importance:${m.importance}] ${m.content} ${age}`;
     });
 
     return lines.join("\n");

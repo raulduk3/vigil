@@ -13,6 +13,7 @@ import { initializeDatabase } from "./db/client";
 import { logger } from "./logger";
 import { invokeAgent } from "./agent/engine";
 import { queryMany } from "./db/client";
+import { pruneMemories } from "./agent/memory";
 import type { WatcherRow } from "./agent/schema";
 
 const app = new Hono();
@@ -77,6 +78,11 @@ async function runScheduledTicks(): Promise<void> {
             logger.debug("Running scheduled tick", { watcherId: watcher.id });
             invokeAgent(watcher.id, { type: "scheduled_tick", timestamp: now }).catch(
                 (err) => logger.error("Tick invocation failed", { watcherId: watcher.id, err })
+            );
+
+            // Prune obsolete low-importance memories on each tick
+            pruneMemories(watcher.id).catch(
+                (err) => logger.error("Memory prune failed", { watcherId: watcher.id, err })
             );
         }
     }

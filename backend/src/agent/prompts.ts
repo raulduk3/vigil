@@ -59,6 +59,7 @@ Schema:
   "memory_append": [
     { "content": "<what to remember>", "importance": 1-5 }
   ],
+  "memory_obsolete": ["<memory_id to mark as obsolete — use when info is outdated, superseded, or no longer relevant>"],
   "thread_updates": [
     {
       "thread_id": "<id>",
@@ -77,6 +78,7 @@ Schema:
 ## Rules
 - actions can be an empty array if no action is needed
 - thread_updates and email_analysis can be null if not applicable
+- memory_obsolete can be null or an array of memory IDs (from the [id:xxx] tags in Your Memory). Use it to retire outdated info: deadlines that passed, facts that changed, completed tasks, superseded details.
 - memory_append can be null or an empty array. Each memory needs an importance score:
   - 5: Critical — deadlines, money amounts, action items, commitments
   - 4: High — meeting details, key decisions, contact preferences
