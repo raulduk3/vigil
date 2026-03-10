@@ -12,6 +12,106 @@ import { ingestEmail } from "../../ingestion/orchestrator";
 import { logger } from "../../logger";
 
 // ============================================================================
+// Forwarding Confirmation Detection
+// ============================================================================
+
+/**
+ * Known forwarding confirmation senders/patterns.
+ * When a user sets up email forwarding (Gmail, Outlook, Yahoo, etc.),
+ * the provider sends a confirmation email to the forwarding address.
+ * We detect these and relay them to the account owner so they can
+ * complete the verification.
+ */
+const CONFIRMATION_PATTERNS = [
+    // Gmail
+    { from: /forwarding-noreply@google\.com/i, subject: /forwarding confirmation/i },
+    { from: /noreply@google\.com/i, subject: /gmail forwarding/i },
+    // Outlook / Microsoft
+    { from: /no-reply@microsoft\.com/i, subject: /verify.*forwarding/i },
+    { from: /postmaster@outlook\.com/i, subject: /forwarding/i },
+    // Yahoo
+    { from: /no-reply@yahoo\.com/i, subject: /forwarding/i },
+    // iCloud
+    { from: /noreply@apple\.com/i, subject: /forwarding/i },
+    // Fastmail
+    { from: /system@fastmail\.com/i, subject: /forwarding/i },
+    // ProtonMail
+    { from: /noreply@proton\.me/i, subject: /forwarding/i },
+    // Generic catch: any email with "forwarding" + "confirm" in subject
+    { from: /.*/i, subject: /confirm.*forwarding|forwarding.*confirm|verify.*forwarding|forwarding.*verif/i },
+];
+
+function isForwardingConfirmation(from: string, subject: string): boolean {
+    return CONFIRMATION_PATTERNS.some(
+        (p) => p.from.test(from) && p.subject.test(subject)
+    );
+}
+
+/**
+ * Relay a forwarding confirmation email to the watcher's account owner.
+ * Returns true if relayed successfully.
+ */
+async function relayConfirmationEmail(
+    accountEmail: string,
+    originalFrom: string,
+    subject: string,
+    body: string,
+    watcherName: string
+): Promise<boolean> {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) return false;
+
+    const rawFrom = process.env.RESEND_FROM_EMAIL ?? "alerts@vigil.run";
+    const from = rawFrom.includes("<") ? rawFrom : `Vigil <${rawFrom}>`;
+
+    // Preserve original body content (may contain confirmation links/codes)
+    const html = `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;padding:24px 16px;background:#f1f5f9;">
+  <div style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+    <div style="height:4px;background:#0d9488;"></div>
+    <div style="padding:20px 24px 12px;">
+      <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#0d9488;background:#f0fdfa;padding:3px 8px;border-radius:4px;">Forwarding Setup</span>
+      <span style="font-size:12px;color:#94a3b8;margin-left:8px;">${escapeHtml(watcherName)}</span>
+    </div>
+    <div style="padding:4px 24px 16px;">
+      <p style="margin:0 0 8px;font-size:13px;color:#64748b;">Your email provider sent a forwarding confirmation to your Vigil watcher address. Complete the verification below to activate forwarding.</p>
+    </div>
+    <div style="margin:0 24px 20px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+      <p style="margin:0 0 4px;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#94a3b8;">Original message from ${escapeHtml(originalFrom)}</p>
+      <div style="margin-top:8px;font-size:14px;line-height:1.6;color:#1e293b;">${body}</div>
+    </div>
+    <div style="padding:12px 24px;background:#f8fafc;border-top:1px solid #f1f5f9;text-align:center;">
+      <span style="font-size:11px;color:#94a3b8;">Vigil · Forwarding verification relay</span>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    try {
+        const resp = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+            body: JSON.stringify({ from, to: [accountEmail], subject: `[Vigil] ${subject}`, html }),
+        });
+        if (!resp.ok) {
+            logger.error("Confirmation relay failed", { status: resp.status });
+            return false;
+        }
+        logger.info("Forwarding confirmation relayed", { to: accountEmail, originalFrom });
+        return true;
+    } catch (err) {
+        logger.error("Confirmation relay error", { err });
+        return false;
+    }
+}
+
+function escapeHtml(s: string): string {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+// ============================================================================
 // Helpers
 // ============================================================================
 
@@ -59,17 +159,6 @@ export const ingestionHandlers = {
             const rawToken = c.req.param("token");
             const token = extractToken(rawToken);
 
-            const watcher = queryOne<{ id: string; account_id: string; status: string }>(
-                `SELECT id, account_id, status FROM watchers
-                 WHERE ingest_token = ? AND status = 'active'`,
-                [token]
-            );
-
-            if (!watcher) {
-                logger.warn("Unknown watcher token", { rawToken, extractedToken: token });
-                return c.json({ error: "Unknown or inactive watcher" }, 404);
-            }
-
             // Determine if raw MIME or JSON based on content type
             const contentType = c.req.header("content-type") ?? "";
             let messageId: string, from: string, to: string, subject: string, emailBody: string, headers: Record<string, string>, inReplyTo: string | undefined;
@@ -101,6 +190,57 @@ export const ingestionHandlers = {
                 emailBody = body.text ?? body.html ?? body.body ?? "";
                 headers = body.headers ?? {};
                 inReplyTo = body.in_reply_to ?? body.inReplyTo ?? headers["in-reply-to"];
+            }
+
+            // Check for forwarding confirmation emails BEFORE watcher lookup.
+            // These need to be relayed to the account owner so they can complete
+            // the email provider's verification flow.
+            if (isForwardingConfirmation(from, subject)) {
+                logger.info("Forwarding confirmation detected", { from, subject, token });
+
+                // Look up watcher just for account email
+                const watcherForRelay = queryOne<{ id: string; account_id: string; name: string }>(
+                    `SELECT w.id, w.account_id, w.name FROM watchers w WHERE w.ingest_token = ?`,
+                    [token]
+                );
+
+                if (watcherForRelay) {
+                    const account = queryOne<{ email: string }>(
+                        `SELECT email FROM accounts WHERE id = ?`,
+                        [watcherForRelay.account_id]
+                    );
+
+                    if (account) {
+                        const relayed = await relayConfirmationEmail(
+                            account.email, from, subject, emailBody, watcherForRelay.name
+                        );
+                        return c.json({
+                            success: true,
+                            confirmation_relayed: relayed,
+                            message: relayed
+                                ? "Forwarding confirmation relayed to account owner"
+                                : "Confirmation detected but relay failed",
+                        });
+                    }
+                }
+
+                // Couldn't find account — still accept to avoid bounce
+                return c.json({
+                    success: true,
+                    confirmation_relayed: false,
+                    message: "Forwarding confirmation detected but no account found for relay",
+                });
+            }
+
+            const watcher = queryOne<{ id: string; account_id: string; status: string }>(
+                `SELECT id, account_id, status FROM watchers
+                 WHERE ingest_token = ? AND status = 'active'`,
+                [token]
+            );
+
+            if (!watcher) {
+                logger.warn("Unknown watcher token", { rawToken, extractedToken: token });
+                return c.json({ error: "Unknown or inactive watcher" }, 404);
             }
 
             const result = await ingestEmail({
