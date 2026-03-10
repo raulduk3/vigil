@@ -1,13 +1,5 @@
 /**
- * Real-time data polling hook
- * 
- * Provides automatic polling for dashboard data with:
- * - Configurable poll interval
- * - Automatic pause when tab is hidden
- * - Loading and error states
- * - Manual refresh capability
- * - New data detection
- * - SMOOTH updates without jitter (uses refs for transient state)
+ * Real-time data polling hook for V2
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -23,22 +15,18 @@ export interface RealtimeDataState {
 }
 
 interface UseRealtimeDataOptions {
-  /** Polling interval in milliseconds (default: 5000) */
   pollInterval?: number;
-  /** Whether to poll automatically (default: true) */
   enabled?: boolean;
-  /** Whether to pause polling when tab is hidden (default: true) */
   pauseWhenHidden?: boolean;
 }
 
 export function useRealtimeData(options: UseRealtimeDataOptions = {}) {
   const {
-    pollInterval = 5000,
+    pollInterval = 10000,
     enabled = true,
     pauseWhenHidden = true,
   } = options;
 
-  // Main data state - only updated when data actually changes
   const [state, setState] = useState<RealtimeDataState>({
     watchers: [],
     threads: {},
@@ -48,76 +36,52 @@ export function useRealtimeData(options: UseRealtimeDataOptions = {}) {
     lastUpdated: null,
   });
 
-  // Separate polling state to isolate re-renders
   const [isPolling, setIsPolling] = useState(false);
   const pollTimerRef = useRef<number | null>(null);
   const isMountedRef = useRef(false);
   const previousDataRef = useRef<string | null>(null);
   const fetchInProgressRef = useRef(false);
 
-  // Track mounted state
   useEffect(() => {
     isMountedRef.current = true;
-    
-    if (enabled) {
-      fetchData(true);
-    }
-    
-    return () => {
-      isMountedRef.current = false;
-    };
+    if (enabled) fetchData(true);
+    return () => { isMountedRef.current = false; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchData = useCallback(async (isInitialLoad = false) => {
-    // Prevent concurrent fetches
-    if (fetchInProgressRef.current) {
-      return;
-    }
-    
-    if (!isInitialLoad && !isMountedRef.current) {
-      return;
-    }
+    if (fetchInProgressRef.current) return;
+    if (!isInitialLoad && !isMountedRef.current) return;
 
     fetchInProgressRef.current = true;
-    
-    // Only set polling state, don't touch data state yet
-    if (!isInitialLoad) {
-      setIsPolling(true);
-    }
+    if (!isInitialLoad) setIsPolling(true);
 
     try {
-      // Fetch watchers
       const result = await api.getWatchers();
       const watcherList = result.watchers || [];
 
-      if (!isMountedRef.current) {
-        fetchInProgressRef.current = false;
-        return;
-      }
+      if (!isMountedRef.current) { fetchInProgressRef.current = false; return; }
 
-      // Fetch threads for each watcher in parallel for speed
       const threadPromises = watcherList.map(async (watcher) => {
-        const result = await api.getThreads(watcher.watcher_id);
-        return { watcherId: watcher.watcher_id, threads: result.threads || [] };
+        try {
+          const result = await api.getThreads(watcher.id);
+          return { watcherId: watcher.id, threads: result.threads || [] };
+        } catch {
+          return { watcherId: watcher.id, threads: [] };
+        }
       });
 
       const threadResults = await Promise.all(threadPromises);
       const threadData: Record<string, Thread[]> = {};
       for (const { watcherId, threads } of threadResults) {
-        threadData[watcherId] = threads || [];
+        threadData[watcherId] = threads;
       }
 
-      if (!isMountedRef.current) {
-        fetchInProgressRef.current = false;
-        return;
-      }
+      if (!isMountedRef.current) { fetchInProgressRef.current = false; return; }
 
-      // Detect if data changed
       const currentData = JSON.stringify({ watchers: watcherList, threads: threadData });
       const hasNewData = previousDataRef.current !== null && previousDataRef.current !== currentData;
       previousDataRef.current = currentData;
 
-      // Single state update with all data
       setState({
         watchers: watcherList,
         threads: threadData,
@@ -127,17 +91,11 @@ export function useRealtimeData(options: UseRealtimeDataOptions = {}) {
         lastUpdated: Date.now(),
       });
     } catch (error) {
-      if (!isMountedRef.current) {
-        fetchInProgressRef.current = false;
-        return;
-      }
-
-      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch data';
-
+      if (!isMountedRef.current) { fetchInProgressRef.current = false; return; }
       setState((prev) => ({
         ...prev,
         isLoading: false,
-        error: errorMessage,
+        error: error instanceof Error ? error.message : 'Failed to fetch data',
       }));
     } finally {
       fetchInProgressRef.current = false;
@@ -153,59 +111,32 @@ export function useRealtimeData(options: UseRealtimeDataOptions = {}) {
     await fetchData(false);
   }, [fetchData]);
 
-  // Polling setup
   useEffect(() => {
     if (!enabled || pollInterval <= 0) return;
 
     const startPolling = () => {
-      if (pollTimerRef.current) {
-        window.clearInterval(pollTimerRef.current);
-      }
-      pollTimerRef.current = window.setInterval(() => {
-        fetchData(false);
-      }, pollInterval);
+      if (pollTimerRef.current) window.clearInterval(pollTimerRef.current);
+      pollTimerRef.current = window.setInterval(() => fetchData(false), pollInterval);
     };
 
     const stopPolling = () => {
-      if (pollTimerRef.current) {
-        window.clearInterval(pollTimerRef.current);
-        pollTimerRef.current = null;
-      }
+      if (pollTimerRef.current) { window.clearInterval(pollTimerRef.current); pollTimerRef.current = null; }
     };
 
-    // Handle visibility changes
     const handleVisibilityChange = () => {
       if (!pauseWhenHidden) return;
-
-      if (document.visibilityState === 'visible') {
-        // Tab became visible - refresh immediately and resume polling
-        fetchData(false);
-        startPolling();
-      } else {
-        // Tab became hidden - pause polling
-        stopPolling();
-      }
+      if (document.visibilityState === 'visible') { fetchData(false); startPolling(); }
+      else stopPolling();
     };
 
-    // Start polling
     startPolling();
-
-    if (pauseWhenHidden) {
-      document.addEventListener('visibilitychange', handleVisibilityChange);
-    }
+    if (pauseWhenHidden) document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       stopPolling();
-      if (pauseWhenHidden) {
-        document.removeEventListener('visibilitychange', handleVisibilityChange);
-      }
+      if (pauseWhenHidden) document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [enabled, pollInterval, pauseWhenHidden, fetchData]);
 
-  return {
-    ...state,
-    isPolling,
-    refresh,
-    clearNewDataIndicator,
-  };
+  return { ...state, isPolling, refresh, clearNewDataIndicator };
 }

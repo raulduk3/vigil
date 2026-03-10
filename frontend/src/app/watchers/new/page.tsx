@@ -1,171 +1,157 @@
 'use client';
 
-import { useState } from 'react';
-import Link from 'next/link';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { api } from '@/lib/api';
-import { RequireAuth, useAuth } from '@/lib/auth';
+import Link from 'next/link';
+import { RequireAuth } from '@/lib/auth';
 import { AppHeader } from '@/components/layout';
+import { api } from '@/lib/api';
 
-function CreateWatcherContent() {
+const TOOLS = [
+  { id: 'send_alert', label: 'Send Alert', description: 'Email notification when something needs attention' },
+  { id: 'update_thread', label: 'Update Thread', description: 'Change thread status or summary' },
+  { id: 'ignore_thread', label: 'Ignore Thread', description: 'Mark thread as noise' },
+  { id: 'webhook', label: 'Webhook', description: 'POST to a configured URL' },
+];
+
+function NewWatcherContent() {
   const router = useRouter();
-  const { user } = useAuth();
   const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [systemPrompt, setSystemPrompt] = useState(
+    'Watch forwarded emails and alert when something needs attention. Alert on: requests waiting for response, deadlines, money matters, problems. Stay quiet on: newsletters, order confirmations, marketing, routine notifications. When alerting, be specific and actionable. Store useful memories about senders and patterns.'
+  );
+  const [tools, setTools] = useState(['send_alert', 'update_thread', 'ignore_thread']);
+  const [silenceHours, setSilenceHours] = useState(48);
+  const [tickInterval, setTickInterval] = useState(60);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const toggleTool = (toolId: string) => {
+    setTools((prev) => prev.includes(toolId) ? prev.filter((t) => t !== toolId) : [...prev, toolId]);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    if (!name.trim()) { setError('Name is required'); return; }
+    if (!systemPrompt.trim()) { setError('System prompt is required'); return; }
 
-    if (!name.trim()) {
-      setError('Watcher name is required');
-      return;
-    }
+    setIsSubmitting(true);
+    setError(null);
 
-    setIsLoading(true);
     try {
-      // Detect user's timezone from browser
-      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-      
-      const result = await api.createWatcher(name, {
-        // Sender control - add user email as allowed sender by default
-        allowed_senders: user?.email ? [user.email] : [],
-
-        // Timing thresholds (commercial model: silence tracking only)
-        silence_threshold_hours: 72,
-
-        // Notification channels - add user email with 'all' urgency filter
-        notification_channels: user?.email ? [{ type: 'email', destination: user.email, urgency_filter: 'all', enabled: true }] : [],
-
-        // Reporting config - add user email as report recipient
-        reporting_cadence: 'on_demand',
-        reporting_recipients: user?.email ? [user.email] : [],
-
-        // Timezone for report scheduling - auto-detected from browser
-        timezone: userTimezone,
+      const result = await api.createWatcher({
+        name: name.trim(),
+        system_prompt: systemPrompt.trim(),
+        tools,
+        silence_hours: silenceHours,
+        tick_interval: tickInterval,
       });
-      // Attempt activation (optional). If activation fails due to missing channels,
-      // we still navigate to the watcher detail page for configuration.
-      try {
-        await api.activateWatcher(result.watcher.watcher_id);
-      } catch (e) {
-        console.warn('[CreateWatcher] Activation skipped or failed:', e);
-      }
-      // Navigate to the watcher page (activation may show status updated)
-      router.push(`/watchers/${result.watcher.watcher_id}`);
+      router.push(`/watchers/${result.watcher.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create watcher');
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <AppHeader backHref="/dashboard" title="Create Watcher" />
+    <div className="min-h-screen bg-surface-page">
+      <AppHeader />
 
-      {/* Main Content */}
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="card">
-          <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">New Watcher</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Create a new watcher to monitor time-sensitive email communications.
-            </p>
+      <main className="max-w-3xl mx-auto px-6 py-8">
+        <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
+          <Link href="/dashboard" className="hover:text-gray-700">Dashboard</Link>
+          <span>→</span>
+          <span className="text-gray-900">New Watcher</span>
+        </div>
+
+        <h1 className="text-2xl font-display font-semibold text-gray-900 mb-6">Create Watcher</h1>
+
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="panel p-6 space-y-5">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <input
+                id="name" type="text" value={name} onChange={(e) => setName(e.target.value)}
+                placeholder="e.g., Work Email, Billing Alerts"
+                className="input w-full"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="prompt" className="block text-sm font-medium text-gray-700 mb-1">System Prompt</label>
+              <textarea
+                id="prompt" value={systemPrompt} onChange={(e) => setSystemPrompt(e.target.value)}
+                rows={6}
+                className="input w-full resize-y"
+                placeholder="Tell the agent what to watch for, what to ignore, and how to behave..."
+              />
+              <p className="text-xs text-gray-500 mt-1">This is the instruction set for the AI agent. Be specific about what needs alerting vs ignoring.</p>
+            </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            {error && (
-              <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-                {error}
+          <div className="panel p-6 space-y-5">
+            <h2 className="text-sm font-semibold text-gray-700">Tools</h2>
+            <div className="space-y-3">
+              {TOOLS.map((tool) => (
+                <label key={tool.id} className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={tools.includes(tool.id)}
+                    onChange={() => toggleTool(tool.id)}
+                    className="mt-1"
+                  />
+                  <div>
+                    <span className="font-mono text-sm text-gray-900">{tool.id}</span>
+                    <p className="text-xs text-gray-500">{tool.description}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="panel p-6 space-y-5">
+            <h2 className="text-sm font-semibold text-gray-700">Thresholds</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="silence" className="block text-sm font-medium text-gray-700 mb-1">Silence Threshold (hours)</label>
+                <input
+                  id="silence" type="number" value={silenceHours} onChange={(e) => setSilenceHours(parseInt(e.target.value) || 48)}
+                  min={1} max={720} className="input w-full"
+                />
+                <p className="text-xs text-gray-500 mt-1">Alert when a thread goes silent for this long</p>
               </div>
-            )}
-
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                Watcher Name *
-              </label>
-              <input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="input"
-                placeholder="e.g., Client Emails, Project Updates"
-                required
-              />
-              <p className="text-sm text-gray-500 mt-1">
-                A descriptive name to identify this watcher.
-              </p>
+              <div>
+                <label htmlFor="tick" className="block text-sm font-medium text-gray-700 mb-1">Tick Interval (minutes)</label>
+                <input
+                  id="tick" type="number" value={tickInterval} onChange={(e) => setTickInterval(parseInt(e.target.value) || 60)}
+                  min={5} max={1440} className="input w-full"
+                />
+                <p className="text-xs text-gray-500 mt-1">How often the agent reviews active threads</p>
+              </div>
             </div>
+          </div>
 
-            <div>
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="input min-h-[100px]"
-                placeholder="Optional description of what this watcher monitors..."
-              />
-            </div>
-
-            <div className="bg-gray-50 -mx-6 -mb-6 px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
-              <Link href="/dashboard" className="btn btn-secondary">
-                Cancel
-              </Link>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="btn btn-primary"
-              >
-                {isLoading ? (
-                  <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Creating...
-                  </span>
-                ) : (
-                  'Create Watcher'
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
-
-        {/* Info Card */}
-        <div className="card mt-6 p-6">
-          <h3 className="font-medium text-gray-900 mb-3">How it works</h3>
-          <ol className="space-y-3 text-sm text-gray-600">
-            <li className="flex gap-3">
-              <span className="flex-shrink-0 w-6 h-6 bg-vigil-100 text-vigil-600 rounded-full flex items-center justify-center text-xs font-medium">1</span>
-              <span>Create a watcher with a descriptive name</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="flex-shrink-0 w-6 h-6 bg-vigil-100 text-vigil-600 rounded-full flex items-center justify-center text-xs font-medium">2</span>
-              <span>Forward emails to your unique ingestion address</span>
-            </li>
-            <li className="flex gap-3">
-              <span className="flex-shrink-0 w-6 h-6 bg-vigil-100 text-vigil-600 rounded-full flex items-center justify-center text-xs font-medium">3</span>
-              <span>Vigil tracks threads and alerts you when action is needed</span>
-            </li>
-          </ol>
-        </div>
+          <div className="flex items-center justify-between">
+            <Link href="/dashboard" className="btn btn-secondary">Cancel</Link>
+            <button type="submit" disabled={isSubmitting} className="btn btn-primary">
+              {isSubmitting ? 'Creating...' : 'Create Watcher'}
+            </button>
+          </div>
+        </form>
       </main>
     </div>
   );
 }
 
-export default function CreateWatcherPage() {
+export default function NewWatcherPage() {
   return (
     <RequireAuth>
-      <CreateWatcherContent />
+      <NewWatcherContent />
     </RequireAuth>
   );
 }

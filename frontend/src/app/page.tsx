@@ -45,24 +45,7 @@ function Section({ children, className = '', id }: { children: React.ReactNode; 
 }
 
 export default function HomePage() {
-  const [eyeOffset, setEyeOffset] = useState(0);
-  const eyeRafRef = useRef<number | null>(null);
   const isRevealed = useScrollReveal();
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (eyeRafRef.current) cancelAnimationFrame(eyeRafRef.current);
-      eyeRafRef.current = requestAnimationFrame(() => {
-        setEyeOffset(Math.max(0, Math.min(520, window.scrollY * 0.9)));
-      });
-    };
-    handleScroll();
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => {
-      if (eyeRafRef.current) cancelAnimationFrame(eyeRafRef.current);
-      window.removeEventListener('scroll', handleScroll);
-    };
-  }, []);
 
   return (
     <div className="min-h-screen bg-surface-page">
@@ -82,7 +65,7 @@ export default function HomePage() {
       <PublicHeader />
 
       {/* Hero */}
-      <header className="py-52 md:pb-20 relative overflow-hidden bg-surface-page z-[2]">
+      <header className="pt-36 pb-14 md:pt-44 md:pb-16 relative overflow-hidden bg-surface-page z-[2]">
         <div
           className="absolute inset-0 z-0"
           style={{
@@ -107,12 +90,12 @@ export default function HomePage() {
               An email agent that<br />
               never sees your inbox.
             </h1>
-            <p className="text-xl text-gray-600 mb-10 leading-relaxed max-w-2xl">
+            <p className="text-xl text-gray-600 mb-8 leading-relaxed max-w-2xl">
               Forward emails to Vigil. An AI agent reads each one, tracks conversations, builds memory,
               and alerts you when something needs attention. Email bodies are processed and discarded.
               Nothing is stored. Nothing is accessed.
             </p>
-            <div className="flex items-center gap-5">
+            <div className="flex items-center gap-4">
               <Link href="/auth/register" className="btn btn-primary btn-lg">
                 Get started free
               </Link>
@@ -121,17 +104,6 @@ export default function HomePage() {
               </a>
             </div>
           </div>
-        </div>
-
-        <div
-          className="hidden md:block pointer-events-none select-none absolute bottom-[1rem] right-[48%] md:bottom-[1rem] md:right-[42%] lg:bottom-[1.25rem] lg:right-[38%] text-[9rem] md:text-[11rem] lg:text-[13rem] leading-[0.9] text-gray-900/80 drop-shadow-[0_10px_22px_rgba(0,0,0,0.12)] z-[5]"
-          style={{
-            transform: `translate3d(0px, ${Math.min(80, Math.max(25, 80 - eyeOffset * 0.12))}px, 0)`,
-            fontFamily: '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
-          }}
-          aria-hidden
-        >
-          <span className="block">👀</span>
         </div>
 
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
@@ -150,7 +122,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
           <div className="panel p-7 flex flex-col animate-float-in delay-100">
             <div className="flex items-center gap-4 mb-5">
               <span className="w-12 h-12 rounded-full bg-vigil-100 text-vigil-700 text-base font-semibold flex items-center justify-center flex-shrink-0">1</span>
@@ -197,9 +169,9 @@ export default function HomePage() {
               When something needs your attention, the agent sends an alert to your inbox.
               Urgent requests, stale threads, payment deadlines. No noise. Only signal.
             </p>
-            <div className="panel-inset p-5 rounded-md">
+            <div className="panel-inset p-4 rounded-md">
               <p className="text-sm text-gray-500 mb-1">From: Vigil &lt;notifications@vigil.run&gt;</p>
-              <p className="text-sm font-medium text-gray-900">⚡ Payment of $5,000 due tomorrow</p>
+              <p className="text-sm font-medium text-gray-900">Payment of $5,000 due tomorrow</p>
               <p className="text-sm text-gray-600 mt-1">Invoice #4521 from vendor@example.com requires immediate payment...</p>
             </div>
           </div>
@@ -223,32 +195,32 @@ export default function HomePage() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {[
             {
-              icon: '🔒',
+              icon: 'PI',
               title: 'No inbox access',
               description: 'Vigil never connects to your email. You forward what you want watched. Nothing else is visible.',
             },
             {
-              icon: '🧠',
+              icon: 'MEM',
               title: 'Persistent memory',
               description: 'The agent remembers context across emails. Who sends what, patterns, preferences. It gets smarter over time.',
             },
             {
-              icon: '🗑️',
+              icon: 'SHA',
               title: 'Bodies discarded',
               description: 'Email content is processed in memory and never stored. Only a SHA-256 hash proves receipt. No full-text archive.',
             },
             {
-              icon: '🧵',
+              icon: 'THR',
               title: 'Thread tracking',
               description: 'Emails are grouped into conversations automatically. The agent tracks which threads are active, resolved, or going cold.',
             },
             {
-              icon: '⚙️',
+              icon: 'CFG',
               title: 'Configurable agent',
               description: 'Write your own system prompt. Enable the tools you want. Set silence thresholds. Each watcher is a custom agent.',
             },
             {
-              icon: '📋',
+              icon: 'LOG',
               title: 'Full audit trail',
               description: 'Every agent decision is logged: what tool was called, why, what it cost, how long it took. Complete transparency.',
             },
@@ -262,7 +234,7 @@ export default function HomePage() {
                 animation: isRevealed(`feature-${idx}`) ? `slideUpIn 0.6s ease-out ${0.1 + idx * 0.05}s forwards` : 'none',
               }}
             >
-              <div className="text-2xl mb-4">{feature.icon}</div>
+              <div className="inline-flex items-center justify-center h-7 px-2.5 rounded-full bg-vigil-100 text-vigil-700 text-[11px] font-semibold tracking-wide mb-3">{feature.icon}</div>
               <h3 className="font-semibold text-gray-900 mb-2">{feature.title}</h3>
               <p className="text-sm text-gray-600 leading-relaxed">{feature.description}</p>
             </div>
@@ -341,7 +313,7 @@ export default function HomePage() {
       </Section>
 
       {/* Use Cases */}
-      <Section id="use-cases" className="bg-surface-sunken border-y border-gray-200 py-12 md:pt-8 md:pb-8">
+      <Section id="use-cases" className="bg-surface-sunken border-y border-gray-200 py-10 md:pt-8 md:pb-8">
         <div className="mb-2 md:mb-12">
           <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Use cases</p>
           <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4">
@@ -353,7 +325,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        <ul className="space-y-5 md:space-y-7">
+        <ul className="space-y-4 md:space-y-6">
           {[
             { id: 'uc-vendor', role: 'Vendor follow-up', text: 'Forward vendor emails. The agent tracks invoices, flags overdue payments, and alerts when requests go unanswered.' },
             { id: 'uc-client', role: 'Client communications', text: 'Monitor client threads. Get alerted when conversations go cold or when action items surface in long email chains.' },
@@ -408,26 +380,31 @@ export default function HomePage() {
 
         <div
           data-reveal id="arch-flow"
-          className="panel p-8 mb-2 opacity-0"
+          className="panel p-6 mb-2 opacity-0"
           style={{ animation: isRevealed('arch-flow') ? 'scaleIn 0.6s ease-out forwards' : 'none' }}
         >
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6 md:gap-3">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-0">
             {[
-              { icon: '📧', label: 'Your email', sub: 'forwarding rule' },
-              { icon: '☁️', label: 'Cloudflare', sub: 'receives at MX' },
-              { icon: '🤖', label: 'Agent', sub: 'reads + decides' },
-              { icon: '🧠', label: 'Memory', sub: 'learns patterns' },
-              { icon: '🔔', label: 'Alert', sub: 'notifies you' },
-            ].map((step, idx) => (
-              <div key={step.label} className="flex items-center gap-3 md:gap-0 md:flex-col">
-                {idx > 0 && (
-                  <span aria-hidden className="hidden md:block text-3xl leading-none text-gray-400 font-light mb-3">→</span>
-                )}
-                <div className="text-center">
-                  <div className="text-3xl mb-2">{step.icon}</div>
+              { icon: '01', label: 'Your email', sub: 'forwarding rule' },
+              { icon: '02', label: 'Cloudflare', sub: 'receives at MX' },
+              { icon: '03', label: 'Agent', sub: 'reads + decides' },
+              { icon: '04', label: 'Memory', sub: 'learns patterns' },
+              { icon: '05', label: 'Alert', sub: 'notifies you' },
+            ].map((step, idx, steps) => (
+              <div key={step.label} className="flex items-center md:items-start">
+                <div className="text-center min-w-[8.5rem]">
+                  <div className="h-10 w-10 mx-auto mb-2 rounded-full bg-vigil-100 text-vigil-700 text-xs font-semibold flex items-center justify-center">{step.icon}</div>
                   <p className="font-semibold text-gray-900">{step.label}</p>
                   <p className="text-xs text-gray-500">{step.sub}</p>
                 </div>
+                {idx < steps.length - 1 && (
+                  <span
+                    aria-hidden
+                    className="hidden md:flex w-10 h-10 items-center justify-center text-2xl leading-none text-gray-400 font-light mt-0.5"
+                  >
+                    →
+                  </span>
+                )}
               </div>
             ))}
           </div>
@@ -445,6 +422,7 @@ export default function HomePage() {
             Vigil is not magic. Every decision is logged. Every action is traceable.
             Read how it works, what it stores, and why you can trust it.
           </p>
+          <p className="text-sm text-vigil-700 font-medium mt-3">Click any card below to open the full guide.</p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5">
@@ -461,11 +439,16 @@ export default function HomePage() {
               data-reveal
               id={`learn-${idx}`}
               href={item.href}
-              className="panel p-5 hover:shadow-raised transition-all duration-150 group opacity-0"
+              className="panel p-5 hover:shadow-raised hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-vigil-500/40 transition-all duration-150 group opacity-0 cursor-pointer"
               style={{ animation: isRevealed(`learn-${idx}`) ? `slideUpIn 0.6s ease-out ${item.delay}s forwards` : 'none' }}
+              aria-label={`Open documentation: ${item.title}`}
             >
               <h3 className="font-semibold text-gray-900 mb-1.5 group-hover:text-vigil-800 transition-colors">{item.title}</h3>
               <p className="text-sm text-gray-600 leading-relaxed">{item.description}</p>
+              <div className="mt-3 flex items-center gap-2 text-sm font-medium text-vigil-700">
+                <span>Learn more</span>
+                <span aria-hidden className="transition-transform duration-150 group-hover:translate-x-0.5">{'→'}</span>
+              </div>
             </Link>
           ))}
         </div>
@@ -509,8 +492,8 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="border-t border-gray-200 bg-surface-page">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8 py-12">
-          <div className="grid md:grid-cols-4 gap-8">
+        <div className="max-w-6xl mx-auto px-6 lg:px-8 py-10">
+          <div className="grid md:grid-cols-4 gap-6">
             <div>
               <p className="font-display font-semibold text-gray-900 mb-3">Vigil</p>
               <p className="text-sm text-gray-500">An email agent that never sees your inbox.</p>

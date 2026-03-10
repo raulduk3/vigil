@@ -103,7 +103,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         });
         return { success: true };
       }
-      return { success: false, error: response.error || response.errors?.join(', ') || 'Registration failed' };
+      return { success: false, error: response.error || 'Registration failed' };
     } catch (error) {
       return { 
         success: false, 
