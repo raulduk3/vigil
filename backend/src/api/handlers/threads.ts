@@ -170,7 +170,8 @@ export const threadHandlers = {
         );
         if (!thread) return c.json({ error: "Thread not found" }, 404);
 
-        // Delete associated actions and emails first
+        // Delete associated records (cascade)
+        run(`DELETE FROM memories WHERE thread_id = ?`, [threadId]);
         run(`DELETE FROM actions WHERE thread_id = ?`, [threadId]);
         run(`DELETE FROM emails WHERE thread_id = ?`, [threadId]);
         run(`DELETE FROM threads WHERE id = ?`, [threadId]);
