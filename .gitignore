@@ -44,3 +44,5 @@ __pycache__/
 .venv/
 venv/
 ENV/
+vigil.db
+backend/vigil.db
