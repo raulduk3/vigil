@@ -174,13 +174,10 @@ export const watcherHandlers = {
         );
         if (!watcher) return c.json({ error: "Watcher not found" }, 404);
 
-        const { invokeAgent } = await import("../../agent/engine");
-        await invokeAgent(id, {
-            type: "weekly_digest",
-            timestamp: Date.now(),
-        });
+        const { sendDigest } = await import("../../agent/digest");
+        const sent = await sendDigest(id);
 
-        return c.json({ digest_sent: true, watcher_id: id });
+        return c.json({ digest_sent: sent, watcher_id: id });
     },
 
     async getMemory(c: Context) {

@@ -14,6 +14,7 @@ import { logger } from "./logger";
 import { invokeAgent } from "./agent/engine";
 import { queryMany } from "./db/client";
 import { pruneMemories } from "./agent/memory";
+import { sendDigest } from "./agent/digest";
 import type { WatcherRow } from "./agent/schema";
 
 const app = new Hono();
@@ -126,8 +127,8 @@ async function runWeeklyDigest(): Promise<void> {
         if (recentDigest) continue;
 
         logger.info("Sending weekly digest", { watcherId: watcher.id });
-        invokeAgent(watcher.id, { type: "weekly_digest", timestamp: Date.now() }).catch(
-            (err) => logger.error("Digest invocation failed", { watcherId: watcher.id, err })
+        sendDigest(watcher.id).catch(
+            (err) => logger.error("Digest send failed", { watcherId: watcher.id, err })
         );
     }
 }
