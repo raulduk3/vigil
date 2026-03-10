@@ -25,17 +25,50 @@ export interface Tool {
 // ============================================================================
 
 async function sendAlertHandler(
-    params: { subject?: string; body?: string; message?: string; urgency?: string },
+    params: { subject?: string; body?: string; message?: string; urgency?: string; thread_id?: string },
     ctx: WatcherContext
 ): Promise<ToolResult> {
     // Be flexible: accept {subject, body} or just {message}
-    const body = params.body ?? params.message ?? "";
-    const subject = params.subject || (body.length > 80 ? body.substring(0, 77) + "..." : body) || "Alert";
+    const alertBody = params.body ?? params.message ?? "";
     const urgency = params.urgency ?? "normal";
 
-    if (!body) {
+    if (!alertBody) {
         logger.warn("send_alert: no body or message provided", { rawParams: JSON.stringify(params) });
         return { success: false, error: "send_alert requires body or message" };
+    }
+
+    // Look up thread context for the email reference
+    let threadSubject: string | null = null;
+    let threadFrom: string | null = null;
+    let threadEmailCount = 0;
+    if (params.thread_id) {
+        const thread = queryOne<{ subject: string; email_count: number; participants: string }>(
+            `SELECT subject, email_count, participants FROM threads WHERE id = ?`,
+            [params.thread_id]
+        );
+        if (thread) {
+            threadSubject = thread.subject;
+            threadEmailCount = thread.email_count;
+            try {
+                const participants = JSON.parse(thread.participants);
+                threadFrom = participants[0] ?? null;
+            } catch {}
+        }
+    }
+
+    // Build a clean, readable subject line
+    // Priority: explicit subject > thread subject > truncated body
+    let emailSubject: string;
+    if (params.subject && params.subject !== alertBody.substring(0, 77)) {
+        emailSubject = params.subject;
+    } else if (threadSubject) {
+        // Reference the original thread
+        const urgencyPrefix = urgency === "high" ? "⚠️ " : "";
+        emailSubject = `${urgencyPrefix}Re: ${threadSubject}`;
+    } else {
+        // Derive a clean subject from the body (first sentence or first 60 chars)
+        const firstSentence = alertBody.split(/[.!?\n]/)[0].trim();
+        emailSubject = firstSentence.length > 60 ? firstSentence.substring(0, 57) + "..." : firstSentence;
     }
 
     const apiKey = process.env.RESEND_API_KEY;
@@ -47,20 +80,8 @@ async function sendAlertHandler(
     const rawFrom = process.env.RESEND_FROM_EMAIL ?? "alerts@vigil.run";
     const from = rawFrom.includes("<") ? rawFrom : `Vigil <${rawFrom}>`;
 
-    // Get email channels from watcher channels
-    const channels = ctx.channels.filter(
-        (c) => c.type === "email" && Boolean(c.enabled)
-    );
-
-    // Always also send to account owner email
-    const destinations = [
-        ...new Set([
-            ctx.accountEmail,
-            ...channels.map((c) => c.destination),
-        ]),
-    ].filter(Boolean);
-
-    logger.info("send_alert destinations", { destinations, accountEmail: ctx.accountEmail, channelCount: channels.length, from });
+    const channels = ctx.channels.filter((c) => c.type === "email" && Boolean(c.enabled));
+    const destinations = [...new Set([ctx.accountEmail, ...channels.map((c) => c.destination)])].filter(Boolean);
 
     if (destinations.length === 0) {
         return { success: false, error: "No alert destinations configured" };
@@ -71,15 +92,12 @@ async function sendAlertHandler(
         try {
             const resp = await fetch("https://api.resend.com/emails", {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${apiKey}`,
-                },
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
                 body: JSON.stringify({
                     from,
                     to: [destination],
-                    subject: `[Vigil: ${ctx.watcher.name}] ${subject}`,
-                    html: buildAlertHtml(subject, body, urgency, ctx.watcher.name),
+                    subject: emailSubject,
+                    html: buildAlertHtml(alertBody, urgency, ctx.watcher.name, threadSubject, threadFrom, threadEmailCount),
                 }),
             });
 
@@ -89,7 +107,7 @@ async function sendAlertHandler(
                 allSucceeded = false;
             } else {
                 const resendResp = await resp.json() as { id: string };
-                logger.info("Alert sent", { destination, subject, resendId: resendResp.id, from });
+                logger.info("Alert sent", { destination, subject: emailSubject, resendId: resendResp.id, from });
             }
         } catch (err) {
             logger.error("Alert send failed", { err, destination });
@@ -97,25 +115,18 @@ async function sendAlertHandler(
         }
     }
 
-    // Send to webhook channels too
-    const webhookChannels = ctx.channels.filter(
-        (c) => c.type === "webhook" && Boolean(c.enabled)
-    );
+    // Webhook channels
+    const webhookChannels = ctx.channels.filter((c) => c.type === "webhook" && Boolean(c.enabled));
     for (const channel of webhookChannels) {
         await webhookHandler(
-            {
-                url: channel.destination,
-                payload: { event: "send_alert", subject, body, urgency, watcher: ctx.watcher.name },
-            },
+            { url: channel.destination, payload: { event: "send_alert", subject: emailSubject, body: alertBody, urgency, watcher: ctx.watcher.name, thread_subject: threadSubject } },
             ctx
         );
     }
 
     return {
         success: allSucceeded,
-        message: allSucceeded
-            ? `Alert sent to ${destinations.length} recipient(s)`
-            : "Some alert deliveries failed",
+        message: allSucceeded ? `Alert sent to ${destinations.length} recipient(s)` : "Some alert deliveries failed",
     };
 }
 
@@ -276,10 +287,10 @@ export const BUILTIN_TOOLS: Tool[] = [
     {
         name: "send_alert",
         description:
-            "Send an alert email to the watcher owner. Use when something needs attention.",
+            "Send an alert email to the watcher owner. Always include thread_id so the alert references the original email.",
         parameters: {
-            subject: "string — alert subject line",
-            body: "string — alert body (plain text or markdown)",
+            thread_id: "string (REQUIRED) — the thread id from the email being processed",
+            message: "string (REQUIRED) — concise explanation of what needs attention and what action to take",
             urgency: "low|normal|high — defaults to normal",
         },
         handler: sendAlertHandler,
@@ -356,36 +367,61 @@ export async function executeTool(
 // ============================================================================
 
 function buildAlertHtml(
-    subject: string,
     body: string,
     urgency: string,
-    watcherName: string
+    watcherName: string,
+    threadSubject: string | null,
+    threadFrom: string | null,
+    threadEmailCount: number
 ): string {
-    const urgencyColor =
-        urgency === "high" ? "#dc2626" : urgency === "low" ? "#6b7280" : "#2563eb";
+    const urgencyConfig: Record<string, { color: string; bg: string; label: string; icon: string }> = {
+        high: { color: "#dc2626", bg: "#fef2f2", label: "Urgent", icon: "⚠️" },
+        normal: { color: "#2563eb", bg: "#eff6ff", label: "Info", icon: "📬" },
+        low: { color: "#6b7280", bg: "#f9fafb", label: "FYI", icon: "📋" },
+    };
+    const u = urgencyConfig[urgency] ?? urgencyConfig.normal;
+
     const bodyHtml = body
         .split("\n")
-        .map((line) => `<p style="margin:4px 0">${escapeHtml(line)}</p>`)
+        .filter((line) => line.trim())
+        .map((line) => `<p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#1f2937;">${escapeHtml(line)}</p>`)
         .join("");
+
+    // Thread reference section
+    const threadRef = threadSubject
+        ? `<div style="padding:12px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:16px;">
+            <p style="margin:0;font-size:11px;text-transform:uppercase;letter-spacing:0.05em;color:#94a3b8;">Original Thread</p>
+            <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:#1e293b;">${escapeHtml(threadSubject)}</p>
+            ${threadFrom ? `<p style="margin:2px 0 0;font-size:13px;color:#64748b;">From: ${escapeHtml(threadFrom)}${threadEmailCount > 1 ? ` · ${threadEmailCount} emails in thread` : ""}</p>` : ""}
+          </div>`
+        : "";
 
     return `<!DOCTYPE html>
 <html>
-<head><meta charset="UTF-8"></head>
-<body style="font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 40px 20px; color: #111827;">
-  <div style="background: white; border-radius: 8px; border: 1px solid #e5e7eb; overflow: hidden;">
-    <div style="padding: 20px 24px; border-bottom: 3px solid ${urgencyColor}; background: #fafafa;">
-      <p style="margin: 0; font-size: 12px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em;">
-        Vigil Agent — ${escapeHtml(watcherName)}
-      </p>
-      <h1 style="margin: 8px 0 0; font-size: 18px; font-weight: 600; color: #111827;">
-        ${escapeHtml(subject)}
-      </h1>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:600px;margin:0 auto;padding:24px 16px;background:#f1f5f9;color:#111827;">
+  <div style="background:white;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);">
+    <!-- Urgency bar -->
+    <div style="height:4px;background:${u.color};"></div>
+
+    <!-- Header -->
+    <div style="padding:20px 24px 16px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span style="font-size:16px;">${u.icon}</span>
+        <span style="font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:${u.color};background:${u.bg};padding:3px 8px;border-radius:4px;">${u.label}</span>
+        <span style="font-size:12px;color:#94a3b8;margin-left:auto;">${escapeHtml(watcherName)}</span>
+      </div>
     </div>
-    <div style="padding: 24px; font-size: 14px; line-height: 1.6; color: #374151;">
+
+    <!-- Body -->
+    <div style="padding:0 24px 20px;">
+      ${threadRef}
       ${bodyHtml}
     </div>
-    <div style="padding: 16px 24px; background: #f9fafb; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af;">
-      Sent by your Vigil agent. Urgency: ${urgency}.
+
+    <!-- Footer -->
+    <div style="padding:12px 24px;background:#f8fafc;border-top:1px solid #f1f5f9;text-align:center;">
+      <span style="font-size:11px;color:#94a3b8;">Vigil · ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
     </div>
   </div>
 </body>

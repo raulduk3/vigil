@@ -252,6 +252,10 @@ export async function invokeAgent(
     // 7. Execute tools
     const toolResults: Array<{ tool: string; result: any }> = [];
     for (const action of agentResponse.actions ?? []) {
+        // Inject thread context into send_alert if the agent didn't provide it
+        if (action.tool === "send_alert" && !action.params.thread_id && threadId) {
+            action.params.thread_id = threadId;
+        }
         const result = await executeTool(action.tool, action.params, ctx);
         toolResults.push({ tool: action.tool, result });
         logger.info("Tool executed", {
