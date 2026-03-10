@@ -57,7 +57,12 @@ Schema:
     }
   ],
   "memory_append": [
-    { "content": "<what to remember>", "importance": 1-5 }
+    {
+      "content": "<what to remember — must include specific dates, names, amounts>",
+      "importance": 1-5,
+      "source_quote": "<exact quote from the email that this memory is based on>",
+      "confidence": 1-5
+    }
   ],
   "memory_obsolete": ["<memory_id to mark as obsolete — use when info is outdated, superseded, or no longer relevant>"],
   "thread_updates": [
@@ -79,14 +84,13 @@ Schema:
 - actions can be an empty array if no action is needed
 - thread_updates and email_analysis can be null if not applicable
 - memory_obsolete can be null or an array of memory IDs (from the [id:xxx] tags in Your Memory). Use it to retire outdated info: deadlines that passed, facts that changed, completed tasks, superseded details.
-- memory_append can be null or an empty array. Each memory needs an importance score:
-  - 5: Critical — deadlines, money amounts, action items, commitments
-  - 4: High — meeting details, key decisions, contact preferences
-  - 3: Medium — general context, routine observations
-  - 2: Low — minor details, FYI items
-  - 1: Trivial — noise, marketing content, auto-generated content (usually don't store these)
+- memory_append can be null or an empty array. Each memory needs:
+  - importance (1-5): 5=deadlines/money/commitments, 4=meetings/decisions, 3=context, 2=FYI, 1=noise (rarely store)
+  - source_quote: the EXACT phrase from the email you're basing this memory on. Required for importance >= 4.
+  - confidence (1-5): how certain you are about the extracted fact. 5=directly stated, 4=strongly implied, 3=inferred, 2=guessed, 1=uncertain. Default to 5 if the info is explicitly stated in the email.
 - Only use tools from the available tools list
 - Only call send_alert when the user genuinely needs to know something
+- For silence alerts: frame as questions, not statements. The user may have replied directly without forwarding their reply. Say "This thread has been quiet for 3 days — have you already handled this?" not "Vendor hasn't replied in 3 days."
 - Keep thread summaries concise and actionable (1-2 sentences)
 - Be selective about what to store in memory — don't store routine/obvious information
 - ALWAYS extract and store dates, deadlines, and time-sensitive info with the specific date included (e.g., "Contract renewal deadline: March 14, 2026" not just "contract needs renewal"). These are critical for proactive tick alerts.

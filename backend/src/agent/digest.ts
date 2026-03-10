@@ -6,7 +6,7 @@
  */
 
 import { queryMany, queryOne } from "../db/client";
-import { retrieveMemories, formatMemoriesForContext } from "./memory";
+// Memory functions available if needed for future enrichment
 import { logger } from "../logger";
 import type { ThreadRow, WatcherRow } from "./schema";
 

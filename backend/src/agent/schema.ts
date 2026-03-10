@@ -112,7 +112,7 @@ export interface AgentResponse {
         params: Record<string, any>;
         reasoning: string;
     }>;
-    memory_append: string | Array<{ content: string; importance?: number }> | null;
+    memory_append: string | Array<{ content: string; importance?: number; source_quote?: string; confidence?: number }> | null;
     memory_obsolete: string[] | null;
     thread_updates: Array<{
         thread_id: string;

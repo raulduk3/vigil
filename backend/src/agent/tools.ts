@@ -8,6 +8,7 @@
 import { run, queryOne } from "../db/client";
 import { logger } from "../logger";
 import type { ToolResult, WatcherContext } from "./schema";
+import { generateThreadActionToken } from "../api/handlers/thread-actions";
 
 // ============================================================================
 // Types
@@ -35,6 +36,18 @@ async function sendAlertHandler(
     if (!alertBody) {
         logger.warn("send_alert: no body or message provided", { rawParams: JSON.stringify(params) });
         return { success: false, error: "send_alert requires body or message" };
+    }
+
+    // Alert budget: max 5 alerts per watcher per 24h
+    const recentAlerts = queryOne<{ count: number }>(
+        `SELECT COUNT(*) as count FROM actions
+         WHERE watcher_id = ? AND tool = 'send_alert' AND result = 'success'
+         AND created_at >= datetime('now', '-24 hours')`,
+        [ctx.watcher.id]
+    );
+    if ((recentAlerts?.count || 0) >= 5) {
+        logger.info("Alert budget exceeded, suppressing", { watcherId: ctx.watcher.id, count: recentAlerts?.count });
+        return { success: true, message: "Alert suppressed — daily budget of 5 alerts reached. Will include in next digest." };
     }
 
     // Look up thread context for the email reference
@@ -67,7 +80,7 @@ async function sendAlertHandler(
         emailSubject = `${urgencyPrefix}Re: ${threadSubject}`;
     } else {
         // Derive a clean subject from the body (first sentence or first 60 chars)
-        const firstSentence = alertBody.split(/[.!?\n]/)[0].trim();
+        const firstSentence = (alertBody.split(/[.!?\n]/)[0] ?? "").trim();
         emailSubject = firstSentence.length > 60 ? firstSentence.substring(0, 57) + "..." : firstSentence;
     }
 
@@ -97,7 +110,7 @@ async function sendAlertHandler(
                     from,
                     to: [destination],
                     subject: emailSubject,
-                    html: buildAlertHtml(alertBody, urgency, ctx.watcher.name, threadSubject, threadFrom, threadEmailCount),
+                    html: buildAlertHtml(alertBody, urgency, ctx.watcher.name, threadSubject, threadFrom, threadEmailCount, params.thread_id),
                 }),
             });
 
@@ -372,20 +385,35 @@ function buildAlertHtml(
     watcherName: string,
     threadSubject: string | null,
     threadFrom: string | null,
-    threadEmailCount: number
+    threadEmailCount: number,
+    threadId: string | null = null
 ): string {
     const urgencyConfig: Record<string, { color: string; bg: string; label: string; icon: string }> = {
         high: { color: "#dc2626", bg: "#fef2f2", label: "Urgent", icon: "⚠️" },
         normal: { color: "#2563eb", bg: "#eff6ff", label: "Info", icon: "📬" },
         low: { color: "#6b7280", bg: "#f9fafb", label: "FYI", icon: "📋" },
     };
-    const u = urgencyConfig[urgency] ?? urgencyConfig.normal;
+    const u = urgencyConfig[urgency] ?? urgencyConfig["normal"]!;
 
     const bodyHtml = body
         .split("\n")
         .filter((line) => line.trim())
         .map((line) => `<p style="margin:0 0 8px;font-size:14px;line-height:1.6;color:#1f2937;">${escapeHtml(line)}</p>`)
         .join("");
+
+    // Action links (signed, one-click from email)
+    const apiUrl = process.env.API_URL ?? "https://api.vigil.run";
+    let actionLinks = "";
+    if (threadId) {
+        const handledToken = generateThreadActionToken(threadId, "handled");
+        const snoozeToken = generateThreadActionToken(threadId, "snooze");
+        const watchingToken = generateThreadActionToken(threadId, "watching");
+        actionLinks = `<div style="padding:16px 24px;border-top:1px solid #f1f5f9;text-align:center;">
+            <a href="${apiUrl}/api/threads/${handledToken}/action" style="display:inline-block;padding:6px 16px;margin:0 4px;background:#059669;color:white;text-decoration:none;border-radius:6px;font-size:12px;font-weight:600;">✓ Handled</a>
+            <a href="${apiUrl}/api/threads/${snoozeToken}/action" style="display:inline-block;padding:6px 16px;margin:0 4px;background:#d97706;color:white;text-decoration:none;border-radius:6px;font-size:12px;font-weight:600;">⏰ Snooze 24h</a>
+            <a href="${apiUrl}/api/threads/${watchingToken}/action" style="display:inline-block;padding:6px 16px;margin:0 4px;background:#6b7280;color:white;text-decoration:none;border-radius:6px;font-size:12px;font-weight:600;">👁 Watch Only</a>
+        </div>`;
+    }
 
     // Thread reference section
     const threadRef = threadSubject
@@ -418,6 +446,9 @@ function buildAlertHtml(
       ${threadRef}
       ${bodyHtml}
     </div>
+
+    <!-- Actions -->
+    ${actionLinks}
 
     <!-- Footer -->
     <div style="padding:12px 24px;background:#f8fafc;border-top:1px solid #f1f5f9;text-align:center;">

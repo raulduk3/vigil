@@ -122,7 +122,7 @@ function escapeHtml(s: string): string {
  */
 function extractToken(param: string): string {
     const parts = param.split("-");
-    return parts[parts.length - 1];
+    return parts[parts.length - 1] ?? param;
 }
 
 /**

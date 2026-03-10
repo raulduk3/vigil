@@ -12,7 +12,7 @@ import { createRouter } from "./api/router";
 import { initializeDatabase } from "./db/client";
 import { logger } from "./logger";
 import { invokeAgent } from "./agent/engine";
-import { queryMany } from "./db/client";
+import { queryMany, queryOne } from "./db/client";
 import { pruneMemories } from "./agent/memory";
 import { sendDigest } from "./agent/digest";
 import type { WatcherRow } from "./agent/schema";

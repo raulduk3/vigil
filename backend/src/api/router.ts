@@ -10,6 +10,7 @@ import { authHandlers } from "./handlers/auth";
 import { watcherHandlers, templateHandlers } from "./handlers/watchers";
 import { threadHandlers } from "./handlers/threads";
 import { ingestionHandlers } from "./handlers/ingestion";
+import { threadActionHandlers } from "./handlers/thread-actions";
 
 export function createRouter(): Hono {
     const api = new Hono();
@@ -28,6 +29,9 @@ export function createRouter(): Hono {
     // Ingestion endpoints (token auth via path param)
     api.post("/ingest/:token", ingestionHandlers.ingestByToken);
     api.post("/ingestion/cloudflare-email", ingestionHandlers.cloudflareEmail);
+
+    // Thread actions (public — one-click from alert emails, HMAC-signed)
+    api.get("/threads/:token/action", threadActionHandlers.handleAction);
 
     // Templates (public — so the frontend can show them before auth)
     api.get("/templates", templateHandlers.list);

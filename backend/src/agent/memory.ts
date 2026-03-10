@@ -99,13 +99,15 @@ export function retrieveMemories(
 export function storeMemory(
     watcherId: string,
     content: string,
-    importance: number = 3
+    importance: number = 3,
+    sourceQuote?: string,
+    confidence: number = 5
 ): void {
     const id = crypto.randomUUID();
     run(
-        `INSERT INTO memories (id, watcher_id, content, importance, created_at)
-         VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-        [id, watcherId, content.trim(), importance]
+        `INSERT INTO memories (id, watcher_id, content, importance, source_quote, confidence, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+        [id, watcherId, content.trim(), importance, sourceQuote?.trim() ?? null, Math.max(1, Math.min(5, confidence))]
     );
 }
 
@@ -117,7 +119,7 @@ export function storeMemory(
  */
 export function storeMemories(
     watcherId: string,
-    memoryAppend: string | Array<{ content: string; importance?: number }>
+    memoryAppend: string | Array<{ content: string; importance?: number; source_quote?: string; confidence?: number }>
 ): void {
     if (!memoryAppend) return;
 
@@ -127,7 +129,8 @@ export function storeMemories(
             const content = entry.content?.trim();
             if (!content || content.length < 10) continue;
             const importance = Math.max(1, Math.min(5, entry.importance ?? 3));
-            storeMemory(watcherId, content, importance);
+            const confidence = Math.max(1, Math.min(5, entry.confidence ?? 5));
+            storeMemory(watcherId, content, importance, entry.source_quote, confidence);
         }
         logger.debug("Stored memory chunks", { watcherId, count: memoryAppend.length });
         return;
@@ -157,9 +160,10 @@ export function formatMemoriesForContext(memories: MemoryRow[]): string {
         return "No prior memory. This is the first time processing for this watcher.";
     }
 
-    const lines = memories.map((m) => {
+    const lines = memories.map((m: any) => {
         const age = m.created_at ? `(${daysSince(m.created_at)}d ago)` : "";
-        return `- [id:${m.id}] [importance:${m.importance}] ${m.content} ${age}`;
+        const conf = m.confidence && m.confidence < 5 ? ` [confidence:${m.confidence}/5]` : "";
+        return `- [id:${m.id}] [importance:${m.importance}]${conf} ${m.content} ${age}`;
     });
 
     return lines.join("\n");
@@ -172,7 +176,7 @@ export function formatMemoriesForContext(memories: MemoryRow[]): string {
 export function touchMemoryAccess(memoryIds: string[]): void {
     for (const id of memoryIds) {
         run(
-            `UPDATE memories SET last_accessed = CURRENT_TIMESTAMP WHERE id = ?`,
+            `UPDATE memories SET last_accessed = CURRENT_TIMESTAMP, access_count = access_count + 1 WHERE id = ?`,
             [id]
         );
     }

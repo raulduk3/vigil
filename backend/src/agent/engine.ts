@@ -27,7 +27,7 @@ import {
     formatMemoriesForContext,
     touchMemoryAccess,
     markObsolete,
-    pruneMemories,
+
 } from "./memory";
 import { executeTool } from "./tools";
 import {

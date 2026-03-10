@@ -98,6 +98,9 @@ CREATE TABLE IF NOT EXISTS memories (
   content         TEXT NOT NULL,
   embedding       BLOB,
   importance      INTEGER DEFAULT 3,
+  confidence      INTEGER DEFAULT 5,
+  source_quote    TEXT,
+  access_count    INTEGER DEFAULT 0,
   last_accessed   TIMESTAMP,
   obsolete        BOOLEAN DEFAULT FALSE,
   created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
