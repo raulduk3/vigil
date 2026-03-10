@@ -26,7 +26,13 @@ export function buildSystemPrompt(
 
     const threadContext = buildThreadContext(activeThreads);
 
+    const now = new Date();
+    const nowHuman = now.toLocaleString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Chicago", timeZoneName: "short" });
+
     return `You are an autonomous email monitoring agent.
+
+## Current Time
+${nowHuman} (${now.toISOString()})
 
 ## Your Watcher: "${watcher.name}"
 
@@ -146,17 +152,30 @@ export function buildEmailTriggerPrompt(
                   .join("\n")
             : "";
 
+    const now = new Date();
+    const received = new Date(email.receivedAt);
+    const ageMinutes = Math.max(0, Math.round((now.getTime() - received.getTime()) / 60000));
+    const ageLabel = ageMinutes < 2 ? "just now" : ageMinutes < 60 ? `${ageMinutes} minutes ago` : `${Math.round(ageMinutes / 60)} hours ago`;
+
+    const nowStr = now.toISOString();
+    const nowHuman = now.toLocaleString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Chicago", timeZoneName: "short" });
+
     return `## New Email Received
+
+Current time: ${nowHuman} (${nowStr})
+Email received: ${timestamp} (${ageLabel})
 
 Thread ID: ${threadId}
 From: ${email.from}
 To: ${email.to}
 Subject: ${email.subject}
-Received: ${timestamp}
 
 ---
 ${email.body}
 ---${historySection}
+
+## Temporal Reasoning
+When the email uses relative time references ("in 3 hours", "by end of day", "tomorrow", "next week"), resolve them against the email's received timestamp (${timestamp}), NOT the current time. For example, if the email was received at 1pm and says "in 3 hours", the deadline is 4pm on that same day. Then compare that resolved deadline to the current time (${nowStr}) to determine urgency.
 
 Process this email. Analyze content, update thread state, and take action if warranted.
 Use the Thread ID above when calling tools like update_thread, ignore_thread, etc.`;

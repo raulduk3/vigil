@@ -344,7 +344,7 @@ function WatcherDetailContent() {
             ) : (
               <div className="flex items-center gap-2 mb-3">
                 <p className="text-sm text-gray-600">{t.summary || 'No summary'}</p>
-                <button onClick={() => { setEditSummary(t.summary || ''); setEditingThreadSummary(true); }} className="text-xs text-vigil-700 hover:text-vigil-800">Edit</button>
+                <button onClick={() => { setEditSummary(t.summary || ''); setEditingThreadSummary(true); }} className="btn btn-ghost btn-sm">Edit</button>
               </div>
             )}
 
@@ -363,7 +363,7 @@ function WatcherDetailContent() {
             {THREAD_STATUSES.filter(s => s !== t.status).map(s => (
               <button key={s} onClick={() => handleThreadStatusChange(t.id, s)} className="btn btn-secondary btn-sm capitalize">{s === 'resolved' ? 'Close' : s === 'ignored' ? 'Ignore' : `Set ${s}`}</button>
             ))}
-            <button onClick={() => setDeleteThreadId(t.id)} className="btn btn-secondary btn-sm text-red-600 border-red-300 hover:bg-red-50 ml-auto">Delete thread</button>
+            <button onClick={() => setDeleteThreadId(t.id)} className="btn btn-danger-subtle btn-sm ml-auto">Delete thread</button>
           </div>
 
           {/* Delete confirmation */}
@@ -372,7 +372,7 @@ function WatcherDetailContent() {
               <p className="text-sm text-red-700 mb-2">Delete this thread and all its emails and actions? This cannot be undone.</p>
               <div className="flex gap-2">
                 <button onClick={() => setDeleteThreadId(null)} className="btn btn-secondary btn-sm">Cancel</button>
-                <button onClick={() => handleDeleteThread(t.id)} className="btn bg-red-600 text-white hover:bg-red-700 btn-sm">Confirm Delete</button>
+                <button onClick={() => handleDeleteThread(t.id)} className="btn btn-danger btn-sm">Confirm Delete</button>
               </div>
             </div>
           )}
@@ -543,15 +543,15 @@ function WatcherDetailContent() {
                       <td className="table-cell text-right text-sm text-gray-500 tabular-nums">{formatRelative(thread.last_activity)}</td>
                       <td className="table-cell text-right">
                         <div className="flex gap-1 justify-end">
-                          <button onClick={() => openThread(thread.id)} className="text-xs link">View</button>
-                          <button onClick={() => setDeleteThreadId(deleteThreadId === thread.id ? null : thread.id)} className="text-xs text-red-500 hover:text-red-700">Delete</button>
+                          <button onClick={() => openThread(thread.id)} className="btn btn-ghost btn-sm">View</button>
+                          <button onClick={() => setDeleteThreadId(deleteThreadId === thread.id ? null : thread.id)} className="btn btn-danger-subtle btn-sm">Delete</button>
                         </div>
                         {deleteThreadId === thread.id && (
                           <div className="mt-2 text-left">
                             <p className="text-xs text-red-600 mb-1">Delete thread + emails + actions?</p>
                             <div className="flex gap-1">
-                              <button onClick={() => setDeleteThreadId(null)} className="text-xs text-gray-500">Cancel</button>
-                              <button onClick={() => handleDeleteThread(thread.id)} className="text-xs text-red-600 font-semibold">Confirm</button>
+                              <button onClick={() => setDeleteThreadId(null)} className="btn btn-secondary btn-sm">Cancel</button>
+                              <button onClick={() => handleDeleteThread(thread.id)} className="btn btn-danger btn-sm">Confirm</button>
                             </div>
                           </div>
                         )}
@@ -668,8 +668,8 @@ function WatcherDetailContent() {
                           {mem.obsolete ? '↩' : '⊘'}
                         </button>
                         <button onClick={() => { setEditingMemoryId(mem.id); setEditMemContent(mem.content); setEditMemImportance(mem.importance); }}
-                          className="text-xs text-vigil-700 hover:text-vigil-800">Edit</button>
-                        <button onClick={() => handleDeleteMemory(mem.id)} className="text-xs text-red-500 hover:text-red-700">Delete</button>
+                          className="btn btn-ghost btn-sm">Edit</button>
+                        <button onClick={() => handleDeleteMemory(mem.id)} className="btn btn-danger-subtle btn-sm">Delete</button>
                       </div>
                     </div>
                   )}
@@ -824,8 +824,8 @@ function WatcherDetailContent() {
                         <div key={ch.id} className={`flex items-center gap-3 p-3 rounded ${ch.enabled ? 'bg-surface-sunken' : 'bg-gray-50 opacity-60'}`}>
                           <span className={`badge badge-sm ${ch.type === 'email' ? 'badge-ok' : 'badge-warning'}`}>{ch.type}</span>
                           <span className="text-sm text-gray-700 flex-1 font-mono truncate">{ch.destination}</span>
-                          <button onClick={() => handleToggleChannel(ch)} className="text-xs text-gray-500 hover:text-gray-700">{ch.enabled ? 'Disable' : 'Enable'}</button>
-                          <button onClick={() => handleDeleteChannel(ch.id)} className="text-xs text-red-500 hover:text-red-700">Remove</button>
+                          <button onClick={() => handleToggleChannel(ch)} className="btn btn-secondary btn-sm">{ch.enabled ? 'Disable' : 'Enable'}</button>
+                          <button onClick={() => handleDeleteChannel(ch.id)} className="btn btn-danger-subtle btn-sm">Remove</button>
                         </div>
                       ))}
                     </div>
@@ -853,7 +853,7 @@ function WatcherDetailContent() {
               </div>
 
               {!showDeleteWatcher ? (
-                <button onClick={() => setShowDeleteWatcher(true)} className="btn btn-secondary text-red-600 border-red-300 hover:bg-red-50">Delete Watcher</button>
+                <button onClick={() => setShowDeleteWatcher(true)} className="btn btn-danger-subtle">Delete Watcher</button>
               ) : (
                 <div className="bg-red-50 p-4 rounded space-y-3">
                   <p className="text-sm text-red-700">Permanently delete <strong>{watcher.name}</strong> and all associated threads, memories, actions, and channels.</p>
@@ -884,7 +884,7 @@ function WatcherDetailContent() {
                     <button
                       onClick={handleDeleteWatcher}
                       disabled={isDeleting || deleteWatcherConfirmText.trim() !== watcher.name}
-                      className="btn bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="btn btn-danger disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isDeleting ? 'Deleting...' : 'Confirm Delete'}
                     </button>
