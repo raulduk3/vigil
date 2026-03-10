@@ -49,6 +49,7 @@ export const watcherHandlers = {
             tools = ["send_alert"],
             silence_hours = 48,
             tick_interval = 60,
+            model = "gpt-4.1-mini",
             template_id,
         } = body;
 
@@ -56,13 +57,17 @@ export const watcherHandlers = {
         if (!system_prompt)
             return c.json({ error: "system_prompt required" }, 400);
 
+        // Validate model
+        const allowedModels = ["gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini"];
+        const selectedModel = allowedModels.includes(model) ? model : "gpt-4.1-mini";
+
         const id = crypto.randomUUID();
         const ingestToken = generateIngestToken();
 
         run(
             `INSERT INTO watchers
-             (id, account_id, name, ingest_token, system_prompt, tools, silence_hours, tick_interval, status, template_id, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+             (id, account_id, name, ingest_token, system_prompt, tools, silence_hours, tick_interval, model, status, template_id, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
             [
                 id,
                 user.account_id,
@@ -72,6 +77,7 @@ export const watcherHandlers = {
                 JSON.stringify(tools),
                 silence_hours,
                 tick_interval,
+                selectedModel,
                 template_id ?? null,
             ]
         );
@@ -100,6 +106,7 @@ export const watcherHandlers = {
             "tools",
             "silence_hours",
             "tick_interval",
+            "model",
             "status",
         ] as const;
 
@@ -428,6 +435,7 @@ function formatWatcher(row: WatcherRow) {
         tools,
         silence_hours: row.silence_hours,
         tick_interval: row.tick_interval,
+        model: row.model ?? "gpt-4.1-mini",
         status: row.status,
         template_id: row.template_id,
         last_tick_at: row.last_tick_at,

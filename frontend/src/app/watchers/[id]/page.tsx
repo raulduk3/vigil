@@ -100,6 +100,7 @@ function WatcherDetailContent() {
 
   // Delete confirmations
   const [showDeleteWatcher, setShowDeleteWatcher] = useState(false);
+  const [deleteWatcherConfirmText, setDeleteWatcherConfirmText] = useState('');
   const [deleteThreadId, setDeleteThreadId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -835,15 +836,58 @@ function WatcherDetailContent() {
 
             {/* Danger zone */}
             <div className="panel p-6 border-red-200">
-              <h3 className="text-sm font-semibold text-red-700 mb-3">Danger Zone</h3>
+              <h3 className="text-sm font-semibold text-red-700 mb-2">Danger Zone</h3>
+              <p className="text-sm text-red-700/90 mb-4">
+                High-impact actions for <strong>{watcher.name}</strong>. Deletion is permanent and removes all related data.
+              </p>
+
+              <div className="bg-red-50/70 border border-red-100 rounded p-4 mb-4">
+                <p className="text-xs font-semibold uppercase tracking-wider text-red-700 mb-2">What gets deleted</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="text-sm text-red-800 flex items-center justify-between"><span>Threads</span><strong>{threads.length}</strong></div>
+                  <div className="text-sm text-red-800 flex items-center justify-between"><span>Agent actions</span><strong>{actions.length}</strong></div>
+                  <div className="text-sm text-red-800 flex items-center justify-between"><span>Memories</span><strong>{memories.length}</strong></div>
+                  <div className="text-sm text-red-800 flex items-center justify-between"><span>Alert channels</span><strong>{channels.length}</strong></div>
+                </div>
+                <p className="text-xs text-red-700 mt-3">This also disables future ingestion for this watcher token.</p>
+              </div>
+
               {!showDeleteWatcher ? (
                 <button onClick={() => setShowDeleteWatcher(true)} className="btn btn-secondary text-red-600 border-red-300 hover:bg-red-50">Delete Watcher</button>
               ) : (
                 <div className="bg-red-50 p-4 rounded space-y-3">
-                  <p className="text-sm text-red-700">Permanently delete <strong>{watcher.name}</strong> and all threads, memories, and actions. Cannot be undone.</p>
+                  <p className="text-sm text-red-700">Permanently delete <strong>{watcher.name}</strong> and all associated threads, memories, actions, and channels.</p>
+
+                  <div className="text-xs text-red-700 bg-red-100/70 border border-red-200 rounded p-2">
+                    Type <strong>{watcher.name}</strong> to confirm.
+                  </div>
+
+                  <input
+                    type="text"
+                    value={deleteWatcherConfirmText}
+                    onChange={e => setDeleteWatcherConfirmText(e.target.value)}
+                    placeholder={`Type ${watcher.name}`}
+                    className="input border-red-200 focus:border-red-400"
+                    aria-label="Confirm watcher name to delete"
+                  />
+
                   <div className="flex gap-2">
-                    <button onClick={() => setShowDeleteWatcher(false)} className="btn btn-secondary">Cancel</button>
-                    <button onClick={handleDeleteWatcher} disabled={isDeleting} className="btn bg-red-600 text-white hover:bg-red-700">{isDeleting ? 'Deleting...' : 'Confirm Delete'}</button>
+                    <button
+                      onClick={() => {
+                        setShowDeleteWatcher(false);
+                        setDeleteWatcherConfirmText('');
+                      }}
+                      className="btn btn-secondary"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleDeleteWatcher}
+                      disabled={isDeleting || deleteWatcherConfirmText.trim() !== watcher.name}
+                      className="btn bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isDeleting ? 'Deleting...' : 'Confirm Delete'}
+                    </button>
                   </div>
                 </div>
               )}

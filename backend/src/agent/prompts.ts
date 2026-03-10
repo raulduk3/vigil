@@ -76,7 +76,8 @@ Schema:
     "summary": "<one sentence summary>",
     "intent": "<what the sender wants>",
     "urgency": "low|normal|high",
-    "entities": ["<names, amounts, dates, etc>"]
+    "entities": ["<names, amounts, dates, etc>"],
+    "reasoning": "<2-3 sentences explaining your decisions: why you chose this thread status, why you did or did not alert, what you stored in memory and why>"
   }
 }
 

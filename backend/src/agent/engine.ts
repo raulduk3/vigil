@@ -235,17 +235,28 @@ export async function invokeAgent(
     let contextTokens = 0;
     let costUsd = 0;
 
+    // Use watcher's configured model (fallback to env var, then default)
+    const model = watcher.model || process.env.VIGIL_MODEL || "gpt-4.1-mini";
+
     try {
-        const result = await callLLM(systemPrompt, userPrompt);
+        const result = await callLLM(systemPrompt, userPrompt, model);
         agentResponse = result.response;
         contextTokens = result.inputTokens + result.outputTokens;
-        // Claude Haiku: ~$0.00025/1K input + $0.00125/1K output
+        // Pricing varies by model — use OpenAI's per-token rates
+        const pricing: Record<string, { input: number; output: number }> = {
+            "gpt-4.1": { input: 0.002, output: 0.008 },
+            "gpt-4.1-mini": { input: 0.0004, output: 0.0016 },
+            "gpt-4.1-nano": { input: 0.0001, output: 0.0004 },
+            "gpt-4o": { input: 0.0025, output: 0.01 },
+            "gpt-4o-mini": { input: 0.00015, output: 0.0006 },
+        };
+        const rates = pricing[model] ?? pricing["gpt-4.1-mini"]!;
         costUsd =
-            (result.inputTokens / 1000) * 0.00025 +
-            (result.outputTokens / 1000) * 0.00125;
+            (result.inputTokens / 1000) * rates.input +
+            (result.outputTokens / 1000) * rates.output;
     } catch (err) {
-        logger.error("LLM call failed", { watcherId, err });
-        await logAction(watcherId, threadId, emailId, trigger.type, null, null, null, "failed", String(err), startMs);
+        logger.error("LLM call failed", { watcherId, err, model });
+        await logAction(watcherId, threadId, emailId, trigger.type, null, null, null, null, "failed", String(err), startMs);
         return;
     }
 
@@ -312,13 +323,15 @@ export async function invokeAgent(
         const result = toolResults[i]!;
         await logAction(
             watcherId, threadId, emailId, trigger.type,
-            action.reasoning ?? null,
+            null,
             action.tool,
             JSON.stringify(action.params),
+            action.reasoning ?? null,
             result.result.success ? "success" : "failed",
             result.result.error ?? null,
             startMs,
-            null, i === 0 ? contextTokens : 0, i === 0 ? costUsd : 0
+            null, i === 0 ? contextTokens : 0, i === 0 ? costUsd : 0,
+            i === 0 ? model : null
         );
     }
 
@@ -330,7 +343,7 @@ export async function invokeAgent(
                 watcherId, threadId, emailId, trigger.type,
                 null, "memory_store",
                 JSON.stringify({ content: mem.content, importance: mem.importance ?? 3, confidence: mem.confidence ?? 5 }),
-                "success", null, startMs
+                null, "success", null, startMs
             );
         }
     }
@@ -340,7 +353,7 @@ export async function invokeAgent(
             watcherId, threadId, emailId, trigger.type,
             null, "memory_obsolete",
             JSON.stringify({ ids: agentResponse.memory_obsolete }),
-            "success", null, startMs
+            null, "success", null, startMs
         );
     }
 
@@ -350,7 +363,7 @@ export async function invokeAgent(
             watcherId, threadId, emailId, trigger.type,
             null, "thread_update",
             JSON.stringify(update),
-            "success", null, startMs
+            null, "success", null, startMs
         );
     }
 
@@ -359,9 +372,9 @@ export async function invokeAgent(
         await logAction(
             watcherId, threadId, emailId, trigger.type,
             agentResponse.email_analysis ? JSON.stringify(agentResponse.email_analysis) : null,
-            null, null,
+            null, null, null,
             "success", null, startMs,
-            null, contextTokens, costUsd
+            null, contextTokens, costUsd, model
         );
     }
 
@@ -379,12 +392,11 @@ export async function invokeAgent(
 
 async function callLLM(
     systemPrompt: string,
-    userPrompt: string
+    userPrompt: string,
+    model: string = "gpt-4.1-mini"
 ): Promise<{ response: AgentResponse; inputTokens: number; outputTokens: number }> {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
-
-    const model = process.env.VIGIL_MODEL ?? "gpt-4.1-mini";
 
     const resp = await fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
@@ -499,17 +511,19 @@ async function logAction(
     decision: string | null,
     tool: string | null,
     toolParams: string | null,
+    reasoning: string | null,
     result: string,
     error: string | null,
     startMs: number,
     memoryDelta?: string | null,
     contextTokens?: number,
-    costUsd?: number
+    costUsd?: number,
+    modelUsed?: string | null
 ): Promise<void> {
     run(
         `INSERT INTO actions
-         (id, watcher_id, thread_id, trigger_type, email_id, decision, tool, tool_params, result, error, memory_delta, context_tokens, cost_usd, duration_ms, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+         (id, watcher_id, thread_id, trigger_type, email_id, decision, tool, tool_params, reasoning, model, result, error, memory_delta, context_tokens, cost_usd, duration_ms, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
         [
             crypto.randomUUID(),
             watcherId,
@@ -519,6 +533,8 @@ async function logAction(
             decision,
             tool,
             toolParams,
+            reasoning ?? null,
+            modelUsed ?? null,
             result,
             error,
             memoryDelta ?? null,

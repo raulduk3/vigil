@@ -17,6 +17,7 @@ export interface WatcherRow {
     tools: string; // JSON array string
     silence_hours: number;
     tick_interval: number;
+    model: string | null;
     status: string;
     template_id: string | null;
     last_tick_at: string | null;
