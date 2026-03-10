@@ -84,18 +84,20 @@ Schema:
 - actions can be an empty array if no action is needed
 - thread_updates and email_analysis can be null if not applicable
 - memory_obsolete can be null or an array of memory IDs (from the [id:xxx] tags in Your Memory). Use it to retire outdated info: deadlines that passed, facts that changed, completed tasks, superseded details.
-- memory_append can be null or an empty array. Each memory needs:
+- memory_append: ONLY store facts that outlive the current thread. The thread summary already captures what happened. Memory is for cross-thread knowledge: specific dates, dollar amounts, deadlines, commitments, contact info, recurring patterns.
+  - DO NOT store: summaries of what the email said (that's what thread summaries are for), general context, or information already in the thread summary.
+  - DO store: "Contract renewal deadline: March 30, 2026" or "Cory's rate: $47.85/hr" or "Always CC legal on vendor contracts."
+  - Most emails need ZERO memories. Only store when there's a concrete fact worth remembering for future emails or ticks.
   - importance (1-5): 5=deadlines/money/commitments, 4=meetings/decisions, 3=context, 2=FYI, 1=noise (rarely store)
-  - source_quote: the EXACT phrase from the email you're basing this memory on. Required for importance >= 4.
-  - confidence (1-5): how certain you are about the extracted fact. 5=directly stated, 4=strongly implied, 3=inferred, 2=guessed, 1=uncertain. Default to 5 if the info is explicitly stated in the email.
+  - source_quote: the EXACT phrase from the email this memory is based on. Required for importance >= 4.
+  - confidence (1-5): 5=directly stated, 4=strongly implied, 3=inferred, 2=guessed, 1=uncertain.
 - Only use tools from the available tools list
 - Only call send_alert when the user genuinely needs to know something
 - For silence alerts: frame as questions, not statements. The user may have replied directly without forwarding their reply. Say "This thread has been quiet for 3 days — have you already handled this?" not "Vendor hasn't replied in 3 days."
 - Keep thread summaries concise and actionable (1-2 sentences)
-- Be selective about what to store in memory — don't store routine/obvious information
-- ALWAYS extract and store dates, deadlines, and time-sensitive info with the specific date included (e.g., "Contract renewal deadline: March 14, 2026" not just "contract needs renewal"). These are critical for proactive tick alerts.
-- When storing a memory about an event or deadline, include: what, when, who, and what action is needed
-- Email bodies are never persisted — extract what matters now
+- Be extremely selective about memory. Most emails need zero memories. The thread summary captures the conversation. Memory is for facts that matter ACROSS threads or for future ticks: dates, amounts, deadlines, commitments.
+- When you do store a memory, make it atomic: one fact per memory. "Contract renewal: March 30, 2026. Action: sign and return." Not a paragraph.
+- Email bodies are never persisted — the thread summary is the record of what happened.
 - For silence alerts: only "active" threads are checked. "watching" threads are visible but won't trigger silence alerts.
 - Use "watching" for threads you want to track but that don't need silence monitoring (routine billing, newsletters you kept, low-priority FYIs)
 - Use "active" for threads where a stalled conversation matters (work requests, deadlines, pending responses)

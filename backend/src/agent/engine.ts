@@ -306,29 +306,64 @@ export async function invokeAgent(
         run(`UPDATE watchers SET last_tick_at = CURRENT_TIMESTAMP WHERE id = ?`, [watcherId]);
     }
 
-    // 8. Log invocation
-    const firstAction = agentResponse.actions?.[0];
-    await logAction(
-        watcherId,
-        threadId,
-        emailId,
-        trigger.type,
-        agentResponse.email_analysis
-            ? JSON.stringify(agentResponse.email_analysis)
-            : null,
-        firstAction?.tool ?? null,
-        firstAction ? JSON.stringify(firstAction.params) : null,
-        toolResults.every((r) => r.result.success) ? "success" : "failed",
-        null,
-        startMs,
-        agentResponse.memory_append
-            ? (typeof agentResponse.memory_append === "string"
-                ? agentResponse.memory_append
-                : JSON.stringify(agentResponse.memory_append))
-            : null,
-        contextTokens,
-        costUsd
-    );
+    // 8. Log all actions individually
+    for (let i = 0; i < toolResults.length; i++) {
+        const action = agentResponse.actions![i]!;
+        const result = toolResults[i]!;
+        await logAction(
+            watcherId, threadId, emailId, trigger.type,
+            action.reasoning ?? null,
+            action.tool,
+            JSON.stringify(action.params),
+            result.result.success ? "success" : "failed",
+            result.result.error ?? null,
+            startMs,
+            null, i === 0 ? contextTokens : 0, i === 0 ? costUsd : 0
+        );
+    }
+
+    // Log memory operations as actions so they're visible in activity
+    if (agentResponse.memory_append && Array.isArray(agentResponse.memory_append)) {
+        for (const mem of agentResponse.memory_append) {
+            if (!mem.content?.trim()) continue;
+            await logAction(
+                watcherId, threadId, emailId, trigger.type,
+                null, "memory_store",
+                JSON.stringify({ content: mem.content, importance: mem.importance ?? 3, confidence: mem.confidence ?? 5 }),
+                "success", null, startMs
+            );
+        }
+    }
+
+    if (agentResponse.memory_obsolete?.length) {
+        await logAction(
+            watcherId, threadId, emailId, trigger.type,
+            null, "memory_obsolete",
+            JSON.stringify({ ids: agentResponse.memory_obsolete }),
+            "success", null, startMs
+        );
+    }
+
+    // Log thread updates as actions
+    for (const update of agentResponse.thread_updates ?? []) {
+        await logAction(
+            watcherId, threadId, emailId, trigger.type,
+            null, "thread_update",
+            JSON.stringify(update),
+            "success", null, startMs
+        );
+    }
+
+    // If no tool actions at all, log the invocation itself
+    if (toolResults.length === 0 && !(agentResponse.memory_append && Array.isArray(agentResponse.memory_append) && agentResponse.memory_append.length > 0)) {
+        await logAction(
+            watcherId, threadId, emailId, trigger.type,
+            agentResponse.email_analysis ? JSON.stringify(agentResponse.email_analysis) : null,
+            null, null,
+            "success", null, startMs,
+            null, contextTokens, costUsd
+        );
+    }
 
     logger.info("Agent invocation complete", {
         watcherId,
