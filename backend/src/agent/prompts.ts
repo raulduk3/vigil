@@ -89,6 +89,8 @@ Schema:
 - Only call send_alert when the user genuinely needs to know something
 - Keep thread summaries concise and actionable (1-2 sentences)
 - Be selective about what to store in memory — don't store routine/obvious information
+- ALWAYS extract and store dates, deadlines, and time-sensitive info with the specific date included (e.g., "Contract renewal deadline: March 14, 2026" not just "contract needs renewal"). These are critical for proactive tick alerts.
+- When storing a memory about an event or deadline, include: what, when, who, and what action is needed
 - Email bodies are never persisted — extract what matters now
 - For silence alerts: only "active" threads are checked. "watching" threads are visible but won't trigger silence alerts.
 - Use "watching" for threads you want to track but that don't need silence monitoring (routine billing, newsletters you kept, low-priority FYIs)
@@ -146,11 +148,13 @@ Use the Thread ID above when calling tools like update_thread, ignore_thread, et
 export function buildTickTriggerPrompt(
     timestamp: number,
     activeThreads: ThreadRow[],
-    silenceHours: number
+    silenceHours: number,
+    memoryContext: string
 ): string {
     const now = new Date(timestamp).toISOString();
+    const dateStr = new Date(timestamp).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 
-    // Only "active" threads get silence-checked. "watching" threads are monitored but excluded from silence alerts.
+    // Silence check: only "active" threads
     const overdueThreads = activeThreads.filter((t) => {
         if (t.status !== "active") return false;
         if (!t.last_activity) return false;
@@ -159,38 +163,95 @@ export function buildTickTriggerPrompt(
         return hoursSilent >= silenceHours;
     });
 
-    const threadList =
-        overdueThreads.length > 0
-            ? overdueThreads
-                  .map((t) => {
-                      const lastActivity = t.last_activity
-                          ? new Date(t.last_activity).toISOString()
-                          : "unknown";
-                      const hoursSilent = t.last_activity
-                          ? Math.floor(
-                                (timestamp -
-                                    new Date(t.last_activity).getTime()) /
-                                    (1000 * 60 * 60)
-                            )
-                          : "?";
-                      return `- Thread "${t.subject ?? "(no subject)"}" (${t.id}): silent for ${hoursSilent}h, last activity ${lastActivity}, summary: ${t.summary ?? "none"}`;
-                  })
-                  .join("\n")
-            : "No threads currently exceed the silence threshold.";
+    const silenceSection = overdueThreads.length > 0
+        ? overdueThreads.map((t) => {
+            const hoursSilent = t.last_activity
+                ? Math.floor((timestamp - new Date(t.last_activity).getTime()) / (1000 * 60 * 60))
+                : "?";
+            return `- Thread "${t.subject ?? "(no subject)"}" (${t.id}): silent for ${hoursSilent}h — ${t.summary ?? "no summary"}`;
+        }).join("\n")
+        : "No threads currently exceed the silence threshold.";
 
-    const watchingCount = activeThreads.filter((t) => t.status === "watching").length;
+    const watchingThreads = activeThreads.filter((t) => t.status === "watching");
+    const activeCount = activeThreads.filter((t) => t.status === "active").length;
 
-    return `## Scheduled Check — ${now}
+    // Thread summaries for full review
+    const allThreadSummary = activeThreads.map((t) => {
+        const age = t.first_seen ? Math.floor((timestamp - new Date(t.first_seen).getTime()) / (1000 * 60 * 60)) : 0;
+        return `- [${t.id}] "${t.subject ?? "(no subject)"}" (${t.status}, ${age}h old, ${t.email_count} emails) — ${t.summary ?? "no summary"}`;
+    }).join("\n");
 
-Review active threads for silence violations (threshold: ${silenceHours}h).
-Note: only "active" threads are checked for silence. ${watchingCount} "watching" thread(s) are excluded.
+    return `## Proactive Review — ${dateStr} (${now})
 
-Threads exceeding threshold (${overdueThreads.length}):
-${threadList}
+You are doing a scheduled review. This is your chance to think proactively, not just react to emails.
 
-For each overdue thread, decide: send alert, update status, or take no action.
-If a thread has already been alerted recently, do not alert again.
-Consider downgrading resolved conversations to "watching" or "resolved" to reduce noise.`;
+### 1. Silence Check (threshold: ${silenceHours}h)
+${activeCount} active thread(s), ${watchingThreads.length} watching.
+${silenceSection}
+
+### 2. All Active Threads
+${allThreadSummary || "No active threads."}
+
+### 3. Your Memories
+Review your memories for time-sensitive items: approaching deadlines, pending payments, scheduled events, promises made, follow-ups needed. The current date/time is ${dateStr}.
+${memoryContext}
+
+### Your Tasks
+1. **Silence alerts**: Alert on overdue active threads if not already alerted recently.
+2. **Proactive alerts**: Scan your memories for deadlines or events approaching within the next 48 hours. Alert the user if they need to act soon.
+3. **Thread cleanup**: Resolve or downgrade threads that are done. Ignore threads that turned out to be noise.
+4. **Memory maintenance**: Mark obsolete memories (passed deadlines, completed tasks, outdated info). Store new observations.
+5. **Status review**: Should any "active" threads be downgraded to "watching"? Should any "watching" threads be escalated to "active"?
+
+Only alert when the user genuinely needs to know something. Don't re-alert on things you've already flagged.`;
+}
+
+export function buildDigestPrompt(
+    timestamp: number,
+    activeThreads: ThreadRow[],
+    allThreads: ThreadRow[],
+    memoryContext: string,
+    actionStats: { total: number; alerts: number; ignored: number; costUsd: number; periodDays: number }
+): string {
+    const dateStr = new Date(timestamp).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+
+    const statusCounts = {
+        active: allThreads.filter((t) => t.status === "active").length,
+        watching: allThreads.filter((t) => t.status === "watching").length,
+        resolved: allThreads.filter((t) => t.status === "resolved").length,
+        ignored: allThreads.filter((t) => t.status === "ignored").length,
+    };
+
+    const threadSummaries = activeThreads.map((t) => {
+        return `- "${t.subject ?? "(no subject)"}" (${t.status}, ${t.email_count} emails) — ${t.summary ?? "no summary"}`;
+    }).join("\n") || "No active threads.";
+
+    return `## Weekly Digest — ${dateStr}
+
+Generate a concise weekly email digest for the user. This should be a helpful summary they actually want to read.
+
+### Stats (last ${actionStats.periodDays} days)
+- Emails processed: ${actionStats.total}
+- Alerts sent: ${actionStats.alerts}
+- Threads ignored: ${actionStats.ignored}
+- AI cost: $${actionStats.costUsd.toFixed(4)}
+- Threads: ${statusCounts.active} active, ${statusCounts.watching} watching, ${statusCounts.resolved} resolved, ${statusCounts.ignored} ignored
+
+### Active Threads Needing Attention
+${threadSummaries}
+
+### Your Memories (check for upcoming deadlines)
+${memoryContext}
+
+### Instructions
+Compose the digest as the "message" parameter in a send_alert call. Format it as a readable summary with sections:
+1. **What happened** — brief overview of email activity
+2. **Needs attention** — threads or deadlines that need action this week
+3. **Resolved** — things that got handled
+4. **Coming up** — deadlines or events from your memories in the next 7 days
+
+Keep it concise and actionable. This is a weekly email the user should look forward to, not dread.
+Use send_alert with subject "Weekly Digest" to deliver it.`;
 }
 
 export function buildUserQueryPrompt(queryText: string): string {

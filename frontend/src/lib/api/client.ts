@@ -267,6 +267,10 @@ export const api = {
     return request(`/api/watchers/${id}/invoke`, { method: 'POST' });
   },
 
+  async sendDigest(id: string): Promise<{ digest_sent: boolean }> {
+    return request(`/api/watchers/${id}/digest`, { method: 'POST' });
+  },
+
   // Threads
   async getThreads(watcherId: string): Promise<{ threads: Thread[] }> {
     return request(`/api/watchers/${watcherId}/threads`);

@@ -49,6 +49,7 @@ export function createRouter(): Hono {
 
     // Watcher agent controls
     protected_.post("/watchers/:id/invoke", watcherHandlers.invoke);
+    protected_.post("/watchers/:id/digest", watcherHandlers.digest);
     protected_.get("/watchers/:id/memory", watcherHandlers.getMemory);
     protected_.get("/watchers/:id/actions", watcherHandlers.getActions);
 

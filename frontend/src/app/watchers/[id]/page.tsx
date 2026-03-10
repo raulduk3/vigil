@@ -474,7 +474,10 @@ function WatcherDetailContent() {
                 <button className="text-xs text-vigil-700 hover:text-vigil-800" onClick={() => copyToClipboard(watcher.ingestion_address)}>Copy</button>
               </div>
             </div>
-            <button onClick={handlePauseResume} className="btn btn-secondary">{watcher.status === 'active' ? 'Pause' : 'Resume'}</button>
+            <div className="flex gap-2">
+              <button onClick={async () => { try { await api.sendDigest(watcherId); showFlash('Digest sent to your email'); } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); }}} className="btn btn-secondary">Send Digest</button>
+              <button onClick={handlePauseResume} className="btn btn-secondary">{watcher.status === 'active' ? 'Pause' : 'Resume'}</button>
+            </div>
           </div>
         </div>
 

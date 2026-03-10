@@ -99,6 +99,7 @@ export interface ParsedEmail {
 export type InvocationTrigger =
     | { type: "email_received"; email: ParsedEmail }
     | { type: "scheduled_tick"; timestamp: number }
+    | { type: "weekly_digest"; timestamp: number }
     | { type: "user_query"; query: string };
 
 // ============================================================================

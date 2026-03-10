@@ -164,6 +164,25 @@ export const watcherHandlers = {
         return c.json({ invoked: true, watcher_id: id });
     },
 
+    async digest(c: Context) {
+        const user = c.get("user");
+        const id = c.req.param("id");
+
+        const watcher = queryOne<WatcherRow>(
+            `SELECT * FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
+            [id, user.account_id]
+        );
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
+
+        const { invokeAgent } = await import("../../agent/engine");
+        await invokeAgent(id, {
+            type: "weekly_digest",
+            timestamp: Date.now(),
+        });
+
+        return c.json({ digest_sent: true, watcher_id: id });
+    },
+
     async getMemory(c: Context) {
         const user = c.get("user");
         const id = c.req.param("id");

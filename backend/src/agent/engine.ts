@@ -18,6 +18,7 @@ import {
     buildSystemPrompt,
     buildEmailTriggerPrompt,
     buildTickTriggerPrompt,
+    buildDigestPrompt,
     buildUserQueryPrompt,
 } from "./prompts";
 import {
@@ -188,16 +189,46 @@ export async function invokeAgent(
 
     // 5. Build prompt
     const systemPrompt = buildSystemPrompt(watcher, memoryContext, activeThreads);
-    const userPrompt =
-        trigger.type === "email_received"
-            ? emailTriggerContext
-            : trigger.type === "scheduled_tick"
-              ? buildTickTriggerPrompt(
-                    trigger.timestamp,
-                    activeThreads,
-                    watcher.silence_hours
-                )
-              : buildUserQueryPrompt(trigger.query);
+    let userPrompt: string;
+
+    if (trigger.type === "email_received") {
+        userPrompt = emailTriggerContext;
+    } else if (trigger.type === "scheduled_tick") {
+        userPrompt = buildTickTriggerPrompt(
+            trigger.timestamp,
+            activeThreads,
+            watcher.silence_hours,
+            memoryContext
+        );
+    } else if (trigger.type === "weekly_digest") {
+        // Load all threads (not just active) for the digest
+        const allThreads = queryMany<ThreadRow>(
+            `SELECT * FROM threads WHERE watcher_id = ? ORDER BY last_activity DESC LIMIT 50`,
+            [watcherId]
+        );
+        // Get action stats for the period
+        const periodDays = 7;
+        const cutoff = new Date(trigger.timestamp - periodDays * 86400000).toISOString();
+        const actionStats = queryOne<{ total: number; alerts: number; ignored: number; cost: number }>(
+            `SELECT
+                COUNT(*) as total,
+                SUM(CASE WHEN tool = 'send_alert' THEN 1 ELSE 0 END) as alerts,
+                SUM(CASE WHEN tool = 'ignore_thread' THEN 1 ELSE 0 END) as ignored,
+                COALESCE(SUM(cost_usd), 0) as cost
+             FROM actions WHERE watcher_id = ? AND created_at >= ?`,
+            [watcherId, cutoff]
+        ) ?? { total: 0, alerts: 0, ignored: 0, cost: 0 };
+
+        userPrompt = buildDigestPrompt(
+            trigger.timestamp,
+            activeThreads,
+            allThreads,
+            memoryContext,
+            { total: actionStats.total, alerts: actionStats.alerts, ignored: actionStats.ignored, costUsd: actionStats.cost, periodDays }
+        );
+    } else {
+        userPrompt = buildUserQueryPrompt(trigger.query);
+    }
 
     // 6. Call Claude API
     let agentResponse: AgentResponse;
