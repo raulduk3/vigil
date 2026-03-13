@@ -84,7 +84,7 @@ export async function invokeAgent(
     // 2. Load memory (pass email context for FTS5 retrieval when > 20 memories)
     const emailContext =
         trigger.type === "email_received"
-            ? { from: trigger.email.from, subject: trigger.email.subject, body: trigger.email.body }
+            ? { from: trigger.email.originalFrom ?? trigger.email.from, subject: trigger.email.subject, body: trigger.email.body }
             : undefined;
     const memories = retrieveMemories(watcherId, emailContext);
     const memoryContext = formatMemoriesForContext(memories);
@@ -111,6 +111,9 @@ export async function invokeAgent(
         // Hash body for proof-of-receipt (never store the body itself)
         const bodyHash = await hashBody(email.body);
 
+        // Use originalFrom (forwarded email's actual sender) when available
+        const effectiveFrom = email.originalFrom ?? email.from;
+
         // Insert email record
         emailId = crypto.randomUUID();
         run(
@@ -121,7 +124,7 @@ export async function invokeAgent(
                 emailId,
                 watcherId,
                 email.messageId,
-                email.from,
+                effectiveFrom,
                 email.to,
                 email.subject,
                 new Date(email.receivedAt).toISOString(),
@@ -136,7 +139,7 @@ export async function invokeAgent(
         const match = findMatchingThread(
             {
                 messageId: email.messageId,
-                from: email.from,
+                from: effectiveFrom,
                 subject: email.subject,
                 headers: email.headers,
             },
@@ -153,7 +156,7 @@ export async function invokeAgent(
         } else {
             // Create new thread
             threadId = crypto.randomUUID();
-            const participants = JSON.stringify([email.from]);
+            const participants = JSON.stringify([effectiveFrom]);
             run(
                 `INSERT INTO threads
                  (id, watcher_id, subject, participants, status, first_seen, last_activity, email_count, created_at)
@@ -176,7 +179,7 @@ export async function invokeAgent(
 
         emailTriggerContext = buildEmailTriggerPrompt(
             {
-                from: email.from,
+                from: effectiveFrom,
                 to: email.to,
                 subject: email.subject,
                 body: email.body,

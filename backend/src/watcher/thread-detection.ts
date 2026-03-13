@@ -159,7 +159,11 @@ export function findMatchingThread(
         }
     }
 
-    // Priority 3: Subject + participant matching
+    // Priority 3: Subject matching (no participant requirement)
+    // For email monitoring via a single forwarding address, the sender is always
+    // the forwarder — participant overlap is unreliable. Subject match alone
+    // (with generic subject filtering) is sufficient.
+    // Also matches closed threads so a resolved thread can get a follow-up.
     const normalizedSubject = normalizeSubject(context.subject);
 
     if (isGenericSubject(normalizedSubject)) {
@@ -167,21 +171,13 @@ export function findMatchingThread(
     }
 
     for (const [threadId, thread] of existingThreads) {
-        if (thread.status !== "open") continue;
-
         if (thread.normalized_subject !== normalizedSubject) continue;
 
-        const hasOverlap = thread.participants.some(
-            (p) => p.toLowerCase() === context.from.toLowerCase()
-        );
-
-        if (hasOverlap) {
-            return {
-                threadId,
-                matchType: "subject_participants",
-                confidence: "medium",
-            };
-        }
+        return {
+            threadId,
+            matchType: "subject_participants",
+            confidence: "medium",
+        };
     }
 
     return null;

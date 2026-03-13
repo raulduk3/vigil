@@ -161,7 +161,7 @@ export const ingestionHandlers = {
 
             // Determine if raw MIME or JSON based on content type
             const contentType = c.req.header("content-type") ?? "";
-            let messageId: string, from: string, to: string, subject: string, emailBody: string, headers: Record<string, string>, inReplyTo: string | undefined;
+            let messageId: string, from: string, to: string, subject: string, emailBody: string, headers: Record<string, string>, inReplyTo: string | undefined, originalFrom: string | undefined;
 
             if (contentType.includes("text/plain") || contentType.includes("message/rfc822")) {
                 // Raw MIME from Cloudflare Worker
@@ -179,7 +179,21 @@ export const ingestionHandlers = {
                 if (from === "unknown") from = c.req.header("x-cloudflare-email-from") ?? "unknown";
                 if (!to) to = c.req.header("x-cloudflare-email-to") ?? "";
 
-                logger.info("Parsed raw MIME email", { from, subject, to: to.substring(0, 30) });
+                // Extract original sender via fallback chain for forwarded emails:
+                // 1. X-Forwarded-For header (Gmail auto-forward preserves original sender here)
+                const xForwardedFor = headers["x-forwarded-for"];
+                if (xForwardedFor && xForwardedFor.trim() !== from) {
+                    originalFrom = xForwardedFor.trim();
+                }
+                // 2. Parse 'From:' line from manual forward body marker
+                if (!originalFrom && emailBody.includes("---------- Forwarded message")) {
+                    const fwdFromMatch = emailBody.match(/From:\s*(.+?)(?:\r?\n|$)/m);
+                    if (fwdFromMatch?.[1]?.trim()) {
+                        originalFrom = fwdFromMatch[1].trim();
+                    }
+                }
+
+                logger.info("Parsed raw MIME email", { from, originalFrom, subject, to: to.substring(0, 30) });
             } else {
                 // JSON from direct API calls / tests
                 const body = await c.req.json();
@@ -253,6 +267,7 @@ export const ingestionHandlers = {
                 headers,
                 inReplyTo,
                 receivedAt: Date.now(),
+                originalFrom,
             });
 
             return c.json({

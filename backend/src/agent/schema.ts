@@ -95,6 +95,7 @@ export interface ParsedEmail {
     body: string;
     headers: Record<string, string>;
     receivedAt: number;
+    originalFrom?: string; // original sender when email was auto-forwarded
 }
 
 export type InvocationTrigger =

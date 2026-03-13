@@ -97,7 +97,14 @@ Schema:
   - Most emails need ZERO memories. Only store when there's a concrete fact worth remembering for future emails or ticks.
   - Memories are linked to the current thread. If you see a memory tagged with the same thread (shown as [thread:XXXXXXXX] in Your Memory), that memory will be UPDATED with your new content, not duplicated. So if a date changes, just store the corrected fact and it will replace the old one for this thread.
   - When a thread is resolved or ignored, its low-importance memories are automatically pruned. High-importance memories (4-5) survive because they contain facts that matter beyond the thread (deadlines, money, commitments).
-  - importance (1-5): 5=deadlines/money/commitments, 4=meetings/decisions, 3=context, 2=FYI, 1=noise (rarely store)
+  - importance (1-5):
+    - 5: ONLY for hard deadlines with specific dates, money amounts, or contractual commitments. Should be rare — maybe 1 in 10 emails.
+    - 4: Meetings, decisions that affect plans, schedule changes with specific dates.
+    - 3: Useful context, names, preferences. The DEFAULT for most worth-remembering facts.
+    - 2: Nice to know, background info. Most routine emails.
+    - 1: Barely worth remembering. Almost never store these.
+  - If you find yourself rating most memories as 4 or 5, you are miscalibrated. The average memory should be importance 2-3. A 5 should feel exceptional.
+  - Most emails need ZERO memories. If the thread summary captures the key facts, don't duplicate them in memory.
   - source_quote: the EXACT phrase from the email this memory is based on. Required for importance >= 4.
   - confidence (1-5): 5=directly stated, 4=strongly implied, 3=inferred, 2=guessed, 1=uncertain.
 - Only use tools from the available tools list

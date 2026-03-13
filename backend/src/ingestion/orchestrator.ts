@@ -25,6 +25,7 @@ export interface IngestEmailInput {
     headers: Record<string, string>;
     inReplyTo?: string;
     receivedAt: number;
+    originalFrom?: string; // original sender extracted from forwarding headers
 }
 
 export interface IngestEmailResult {
@@ -65,6 +66,7 @@ export async function ingestEmail(
                 body: input.body,
                 headers: input.headers,
                 receivedAt: input.receivedAt,
+                originalFrom: input.originalFrom,
             },
         });
 
