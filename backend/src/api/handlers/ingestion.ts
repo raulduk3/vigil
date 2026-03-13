@@ -156,7 +156,7 @@ export const ingestionHandlers = {
     // POST /api/ingest/:token — called by Cloudflare worker (raw MIME) or API (JSON)
     async ingestByToken(c: Context) {
         try {
-            const rawToken = c.req.param("token");
+            const rawToken = c.req.param("token") ?? "";
             const token = extractToken(rawToken);
 
             // Determine if raw MIME or JSON based on content type

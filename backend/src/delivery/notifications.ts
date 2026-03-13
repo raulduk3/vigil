@@ -161,7 +161,8 @@ export async function sendAlertWebhook(
 }
 
 async function signWebhook(payload: string): Promise<string> {
-    const secret = process.env.WEBHOOK_SIGNING_SECRET ?? "vigil-webhook-secret";
+    const secret = process.env.WEBHOOK_SIGNING_SECRET;
+    if (!secret) return "unsigned";
     const encoder = new TextEncoder();
     const key = await crypto.subtle.importKey(
         "raw",

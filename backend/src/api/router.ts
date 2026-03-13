@@ -4,6 +4,7 @@
 
 import { Hono } from "hono";
 import { requireAuth } from "../auth/middleware";
+import { authRateLimit, ingestRateLimit, apiRateLimit } from "../auth/rate-limit";
 
 import { healthHandler } from "./handlers/health";
 import { authHandlers } from "./handlers/auth";
@@ -18,17 +19,17 @@ export function createRouter(): Hono {
     // Public routes
     api.get("/health", healthHandler);
 
-    // Auth (public)
-    api.post("/auth/login", authHandlers.login);
-    api.post("/auth/register", authHandlers.register);
-    api.post("/auth/refresh", authHandlers.refresh);
+    // Auth (public, rate-limited)
+    api.post("/auth/login", authRateLimit, authHandlers.login);
+    api.post("/auth/register", authRateLimit, authHandlers.register);
+    api.post("/auth/refresh", authRateLimit, authHandlers.refresh);
     api.get("/auth/oauth/providers", authHandlers.oauthProviders);
     api.get("/auth/oauth/:provider", authHandlers.oauthStart);
     api.get("/auth/oauth/:provider/callback", authHandlers.oauthCallback);
 
-    // Ingestion endpoints (token auth via path param)
-    api.post("/ingest/:token", ingestionHandlers.ingestByToken);
-    api.post("/ingestion/cloudflare-email", ingestionHandlers.cloudflareEmail);
+    // Ingestion endpoints (token auth via path param, rate-limited)
+    api.post("/ingest/:token", ingestRateLimit, ingestionHandlers.ingestByToken);
+    api.post("/ingestion/cloudflare-email", ingestRateLimit, ingestionHandlers.cloudflareEmail);
 
     // Thread actions (public — one-click from alert emails, HMAC-signed)
     api.get("/threads/:token/action", threadActionHandlers.handleAction);
@@ -38,6 +39,7 @@ export function createRouter(): Hono {
 
     // Protected routes
     const protected_ = new Hono();
+    protected_.use("*", apiRateLimit);
     protected_.use("*", requireAuth);
 
     // Auth (protected)

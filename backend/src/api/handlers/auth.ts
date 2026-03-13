@@ -119,6 +119,12 @@ export const authHandlers = {
             return c.json({ error: "Email and password required" }, 400);
         }
 
+        // Basic email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email) || email.length > 254) {
+            return c.json({ error: "Invalid email address" }, 400);
+        }
+
         if (password.length < 8) {
             return c.json({ error: "Password must be at least 8 characters" }, 400);
         }
@@ -192,7 +198,7 @@ export const authHandlers = {
     },
 
     async oauthStart(c: Context) {
-        const provider = c.req.param("provider") as OAuthProvider;
+        const provider = (c.req.param("provider") ?? "") as OAuthProvider;
 
         if (provider !== "google" && provider !== "github") {
             return c.json({ error: "Invalid provider" }, 400);
@@ -207,7 +213,7 @@ export const authHandlers = {
     },
 
     async oauthCallback(c: Context) {
-        const provider = c.req.param("provider") as OAuthProvider;
+        const provider = (c.req.param("provider") ?? "") as OAuthProvider;
         const code = c.req.query("code");
         const errorParam = c.req.query("error");
         const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:3000";

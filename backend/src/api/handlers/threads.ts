@@ -13,7 +13,7 @@ import type { ThreadRow, EmailRow } from "../../agent/schema";
 export const threadHandlers = {
     async list(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("watcherId");
+        const watcherId = c.req.param("watcherId") ?? "";
         const status = c.req.query("status");
 
         const watcher = queryOne(
@@ -38,8 +38,8 @@ export const threadHandlers = {
 
     async get(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("watcherId");
-        const threadId = c.req.param("threadId");
+        const watcherId = c.req.param("watcherId") ?? "";
+        const threadId = c.req.param("threadId") ?? "";
 
         const watcher = queryOne(
             `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
@@ -75,8 +75,8 @@ export const threadHandlers = {
 
     async update(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("watcherId");
-        const threadId = c.req.param("threadId");
+        const watcherId = c.req.param("watcherId") ?? "";
+        const threadId = c.req.param("threadId") ?? "";
 
         const watcher = queryOne(
             `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
@@ -126,8 +126,8 @@ export const threadHandlers = {
 
     async close(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("watcherId");
-        const threadId = c.req.param("threadId");
+        const watcherId = c.req.param("watcherId") ?? "";
+        const threadId = c.req.param("threadId") ?? "";
 
         const watcher = queryOne(
             `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
@@ -155,8 +155,8 @@ export const threadHandlers = {
 
     async delete_(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("watcherId");
-        const threadId = c.req.param("threadId");
+        const watcherId = c.req.param("watcherId") ?? "";
+        const threadId = c.req.param("threadId") ?? "";
 
         const watcher = queryOne(
             `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,

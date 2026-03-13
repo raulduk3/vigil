@@ -18,7 +18,7 @@
     "check": "bun run typecheck && bun run lint && bun run format:check && bun run test"
   },
   "dependencies": {
-    "hono": "^4.11.3",
+    "hono": "^4.12.7",
     "jsonwebtoken": "^9.0.2",
     "postal-mime": "^2.7.3"
   },

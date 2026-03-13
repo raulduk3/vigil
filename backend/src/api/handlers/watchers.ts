@@ -28,7 +28,7 @@ export const watcherHandlers = {
 
     async get(c: Context) {
         const user = c.get("user");
-        const id = c.req.param("id");
+        const id = c.req.param("id") ?? "";
 
         const watcher = queryOne<WatcherRow>(
             `SELECT * FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
@@ -88,7 +88,7 @@ export const watcherHandlers = {
 
     async update(c: Context) {
         const user = c.get("user");
-        const id = c.req.param("id");
+        const id = c.req.param("id") ?? "";
         const body = await c.req.json();
 
         const watcher = queryOne<WatcherRow>(
@@ -135,7 +135,7 @@ export const watcherHandlers = {
 
     async delete_(c: Context) {
         const user = c.get("user");
-        const id = c.req.param("id");
+        const id = c.req.param("id") ?? "";
 
         const watcher = queryOne<WatcherRow>(
             `SELECT * FROM watchers WHERE id = ? AND account_id = ?`,
@@ -153,7 +153,7 @@ export const watcherHandlers = {
 
     async invoke(c: Context) {
         const user = c.get("user");
-        const id = c.req.param("id");
+        const id = c.req.param("id") ?? "";
         const body = await c.req.json().catch(() => ({}));
 
         const watcher = queryOne<WatcherRow>(
@@ -173,7 +173,7 @@ export const watcherHandlers = {
 
     async digest(c: Context) {
         const user = c.get("user");
-        const id = c.req.param("id");
+        const id = c.req.param("id") ?? "";
 
         const watcher = queryOne<WatcherRow>(
             `SELECT * FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
@@ -189,7 +189,7 @@ export const watcherHandlers = {
 
     async getMemory(c: Context) {
         const user = c.get("user");
-        const id = c.req.param("id");
+        const id = c.req.param("id") ?? "";
 
         const watcher = queryOne(
             `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
@@ -209,8 +209,8 @@ export const watcherHandlers = {
 
     async updateMemory(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
-        const memoryId = c.req.param("memoryId");
+        const watcherId = c.req.param("id") ?? "";
+        const memoryId = c.req.param("memoryId") ?? "";
 
         const watcher = queryOne(
             `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
@@ -255,8 +255,8 @@ export const watcherHandlers = {
 
     async deleteMemory(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
-        const memoryId = c.req.param("memoryId");
+        const watcherId = c.req.param("id") ?? "";
+        const memoryId = c.req.param("memoryId") ?? "";
 
         const watcher = queryOne(
             `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
@@ -276,7 +276,7 @@ export const watcherHandlers = {
 
     async createMemory(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
+        const watcherId = c.req.param("id") ?? "";
 
         const watcher = queryOne(
             `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
@@ -306,7 +306,7 @@ export const watcherHandlers = {
     // Channels (alert destinations)
     async getChannels(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
+        const watcherId = c.req.param("id") ?? "";
         const watcher = queryOne(`SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`, [watcherId, user.account_id]);
         if (!watcher) return c.json({ error: "Watcher not found" }, 404);
 
@@ -316,7 +316,7 @@ export const watcherHandlers = {
 
     async createChannel(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
+        const watcherId = c.req.param("id") ?? "";
         const watcher = queryOne(`SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`, [watcherId, user.account_id]);
         if (!watcher) return c.json({ error: "Watcher not found" }, 404);
 
@@ -334,8 +334,8 @@ export const watcherHandlers = {
 
     async updateChannel(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
-        const channelId = c.req.param("channelId");
+        const watcherId = c.req.param("id") ?? "";
+        const channelId = c.req.param("channelId") ?? "";
         const watcher = queryOne(`SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`, [watcherId, user.account_id]);
         if (!watcher) return c.json({ error: "Watcher not found" }, 404);
 
@@ -357,8 +357,8 @@ export const watcherHandlers = {
 
     async deleteChannel(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
-        const channelId = c.req.param("channelId");
+        const watcherId = c.req.param("id") ?? "";
+        const channelId = c.req.param("channelId") ?? "";
         const watcher = queryOne(`SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`, [watcherId, user.account_id]);
         if (!watcher) return c.json({ error: "Watcher not found" }, 404);
 
@@ -371,7 +371,7 @@ export const watcherHandlers = {
 
     async getActions(c: Context) {
         const user = c.get("user");
-        const id = c.req.param("id");
+        const id = c.req.param("id") ?? "";
         const limit = parseInt(c.req.query("limit") ?? "50", 10);
 
         const watcher = queryOne(

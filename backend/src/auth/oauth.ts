@@ -254,39 +254,35 @@ interface UserRecord {
 
 async function findOrCreateUser(
     email: string,
-    _provider: OAuthProvider
+    provider: OAuthProvider
 ): Promise<UserRecord | null> {
-    // Try to find existing user
-    const existing = await queryOne<UserRecord>(
-        `SELECT u.user_id, u.account_id, u.email, u.role
-         FROM users u
-         WHERE u.email = $1`,
+    // V2 schema: accounts table has id, email, oauth_provider, oauth_id
+    const existing = queryOne<{ id: string; email: string }>(
+        `SELECT id, email FROM accounts WHERE email = ?`,
         [email]
     );
 
     if (existing) {
-        return existing;
+        return {
+            user_id: existing.id,
+            account_id: existing.id,
+            email: existing.email,
+            role: "owner",
+        };
     }
 
-    // Create new account and user
-    const accountId = crypto.randomUUID();
-    const userId = crypto.randomUUID();
+    // Create new account (V2: user_id = account_id = accounts.id)
+    const id = crypto.randomUUID();
 
-    await query(
-        `INSERT INTO accounts (account_id, owner_email, plan)
-         VALUES ($1, $2, 'free')`,
-        [accountId, email]
-    );
-
-    await query(
-        `INSERT INTO users (user_id, account_id, email, password_hash, role)
-         VALUES ($1, $2, $3, '', 'owner')`,
-        [userId, accountId, email]
+    query(
+        `INSERT INTO accounts (id, email, oauth_provider, plan, created_at)
+         VALUES (?, ?, ?, 'free', CURRENT_TIMESTAMP)`,
+        [id, email, provider]
     );
 
     return {
-        user_id: userId,
-        account_id: accountId,
+        user_id: id,
+        account_id: id,
         email,
         role: "owner",
     };

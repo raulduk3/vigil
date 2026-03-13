@@ -10,7 +10,11 @@ import { queryOne, run } from "../../db/client";
 import { logger } from "../../logger";
 import crypto from "crypto";
 
-const JWT_SECRET = process.env.JWT_SECRET ?? "vigil-dev-secret";
+function getActionSecret(): string {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new Error("JWT_SECRET environment variable required");
+    return secret;
+}
 
 // ============================================================================
 // Token Generation (called when building alert emails)
@@ -18,7 +22,7 @@ const JWT_SECRET = process.env.JWT_SECRET ?? "vigil-dev-secret";
 
 export function generateThreadActionToken(threadId: string, action: string): string {
     const payload = `${threadId}:${action}:${Math.floor(Date.now() / 1000)}`;
-    const hmac = crypto.createHmac("sha256", JWT_SECRET).update(payload).digest("hex").substring(0, 16);
+    const hmac = crypto.createHmac("sha256", getActionSecret()).update(payload).digest("hex").substring(0, 16);
     // Base64url encode: threadId:action:timestamp:hmac
     return Buffer.from(`${payload}:${hmac}`).toString("base64url");
 }
@@ -36,7 +40,7 @@ export function verifyThreadActionToken(token: string): { threadId: string; acti
 
         // Verify HMAC
         const payload = `${threadId}:${action}:${timestamp}`;
-        const expected = crypto.createHmac("sha256", JWT_SECRET).update(payload).digest("hex").substring(0, 16);
+        const expected = crypto.createHmac("sha256", getActionSecret()).update(payload).digest("hex").substring(0, 16);
         if (hmac !== expected) return null;
 
         // Tokens expire after 7 days
@@ -55,7 +59,7 @@ export function verifyThreadActionToken(token: string): { threadId: string; acti
 
 export const threadActionHandlers = {
     async handleAction(c: Context) {
-        const token = c.req.param("token");
+        const token = c.req.param("token") ?? "";
         const verified = verifyThreadActionToken(token);
 
         if (!verified) {
