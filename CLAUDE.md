@@ -4,7 +4,9 @@ Development guidance for working with the Vigil codebase.
 
 ## Product
 
-Vigil is an email oversight agent. Forward emails to a `@vigil.run` address. An AI agent reads them, tracks conversations, remembers context, and alerts you when something needs attention. No inbox access. No email bodies stored.
+Vigil is an AI agent that reads your email so you don't have to. Forward emails to a `@vigil.run` address. The agent reads each one, tracks conversations, builds memory over time, and decides what to do. Most of the time it thinks and remembers. Occasionally it alerts you when something actually needs attention. No inbox access. No email bodies stored. Usage-based pricing at $0.005/email.
+
+**Read PRODUCT.md for the canonical product definition.** Everything derives from that.
 
 ## Commands
 

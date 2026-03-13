@@ -168,14 +168,16 @@ POST   /api/watchers/:wid/threads/:tid/close
 
 ## Unit Economics
 
+Usage-based pricing. See PRODUCT.md for full model.
+
 | Metric | Value |
 |--------|-------|
-| Cost per invocation (gpt-4.1-mini) | ~$0.001 |
-| Cost per user/month (200 emails) | ~$0.20 |
-| Cost per user/month (1000 emails) | ~$1.00 |
-| Price point | $9/mo |
-| Gross margin (200 emails) | 97.8% |
-| Infrastructure (Cloudflare free + VPS) | ~$5/mo |
+| Price per email processed | $0.005 |
+| Cost per invocation (gpt-4.1-mini) | ~$0.001–0.003 |
+| Margin per email | 2–5x |
+| Free tier | 50 emails/month, 1 watcher |
+| Scheduled ticks & digests | Free (not billed) |
+| Infrastructure (Cloudflare free + VPS) | ~$20/mo |
 | Break-even | 1 paying user |
 
 ## Stack
@@ -232,11 +234,17 @@ vigil.run/
 
 ## What's Left
 
-- [ ] Deploy backend (VPS, fly.io, or DigitalOcean)
-- [ ] Point api.vigil.run DNS at backend
-- [ ] Test real email flow through Cloudflare Worker
-- [ ] Rebuild frontend for V2 data model
+See PRODUCT.md for sequenced roadmap. Summary:
+
+- [ ] Deploy backend publicly (api.vigil.run DNS)
+- [ ] End-to-end real email flow test
+- [ ] Three-panel frontend redesign (agent chat, inbox, watcher switcher)
+- [ ] Usage metering (instrument invocations per account)
+- [ ] Stripe metered billing ($0.005/email)
+- [ ] Usage dashboard
+- [ ] Onboarding flow with forwarding instructions
+- [ ] Landing page refresh (reframe: agent intelligence, not alerts)
+- [ ] Dark mode
+- [ ] Google OAuth
 - [ ] Additional watcher templates
-- [ ] Stripe billing integration
-- [ ] OAuth providers (Google, GitHub)
-- [ ] Memory compaction (prune old/obsolete entries)
+- [ ] Memory compaction

@@ -1,15 +1,17 @@
 # Vigil
 
-**An email agent that never sees your inbox.**
+**Your email has a brain now.**
 
-Forward emails to Vigil. It watches your threads, remembers context, and alerts you when something needs attention. No OAuth. No inbox access. No email content stored.
+Forward emails to an AI agent. It reads them, tracks conversations, remembers context, and tells you when something needs your attention. Half a cent per email. No inbox access. No email bodies stored.
+
+Most of the time the agent thinks and remembers. It connects patterns across conversations, tracks who sends what and when, and builds a growing understanding of your email. Alerts are the exception, not the rule. When the agent does interrupt you, it's because something actually matters.
 
 ## How It Works
 
-1. Create a watcher and get a unique email address (e.g. `your-watcher-abc123@vigil.run`)
-2. Set up a forwarding rule in your email client
-3. Vigil's AI agent reads each email, tracks conversations, and decides what to do
-4. You get alerts when threads need your attention
+1. Create a watcher and get a unique email address (e.g. `work-a7f3k9@vigil.run`)
+2. Set up a forwarding rule in Gmail or Outlook (3 steps, 2 minutes)
+3. The agent reads each email, analyzes it, remembers what matters, tracks conversations
+4. When something needs your attention, it tells you. Otherwise, it stays quiet.
 5. Email content is processed in memory and never stored
 
 ## Architecture
@@ -21,10 +23,10 @@ Email → Cloudflare Email Routing → Worker → Backend → Agent → Resend �
 - **Cloudflare Worker** — receives raw MIME email, forwards to backend
 - **Backend** — Bun + Hono, SQLite, agent engine with memory and tools
 - **Agent** — OpenAI gpt-4.1-mini, JSON mode, per-watcher system prompts
-- **Frontend** — Next.js 14 dashboard (watcher management, thread viewer, activity log)
-- **Alerts** — Resend API (notifications@vigil.run)
+- **Frontend** — Next.js 14, three-panel layout (agent interface, inbox, watcher switcher)
+- **Delivery** — Resend API (notifications@vigil.run)
 
-See [CLAUDE.md](CLAUDE.md) for full technical details.
+See [PRODUCT.md](PRODUCT.md) for the product definition and [CLAUDE.md](CLAUDE.md) for technical details.
 
 ## Development
 
@@ -63,13 +65,20 @@ vigil.run/
 └── docs/                 # Architecture docs
 ```
 
+## Pricing
+
+Usage-based. $0.005 per email processed. Free tier: 50 emails/month, 1 watcher, no credit card.
+
+No tiers. No plans. One price, one meter.
+
 ## Status
 
 V2 in development. Branch: `v2-agent-architecture`.
 
-Backend: functional (agent loop, tools, memory, MIME parsing, Resend alerts).
+Backend: complete (agent loop, tools, memory, MIME parsing, Resend alerts, audit trail).
 Cloudflare Worker: deployed, email routing configured.
-Frontend: needs V2 update.
+Frontend: redesign in progress (three-panel layout).
+Billing: not yet built (Stripe metered).
 
 ## License
 
