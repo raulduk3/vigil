@@ -46,3 +46,4 @@ venv/
 ENV/
 vigil.db
 backend/vigil.db
+.vercel

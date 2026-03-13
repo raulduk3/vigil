@@ -10,7 +10,4 @@ compatibility_date = "2024-01-01"
 # and forwards them to the Vigil backend
 
 [vars]
-# VIGIL_API_URL = "https://api.vigil.run"
-
-# For local development, override with:
-VIGIL_API_URL = "http://localhost:3000"
+VIGIL_API_URL = "https://api.vigil.run"
