@@ -110,7 +110,7 @@ export function EmailDetail({ thread, watcherId, onClose, onStatusChange, onDele
   };
 
   return (
-    <div className="flex flex-col h-full bg-surface-page">
+    <div className="flex flex-col h-full w-full bg-surface-page">
       {/* Header */}
       <div className="flex items-start gap-3 px-4 py-3 border-b border-gray-200 bg-surface-raised">
         <button
@@ -139,31 +139,25 @@ export function EmailDetail({ thread, watcherId, onClose, onStatusChange, onDele
       <div className="flex-1 overflow-y-auto">
         {/* Thread info */}
         <div className="px-4 py-4 border-b border-gray-100">
-          <div className="grid grid-cols-2 gap-3 text-xs">
+          <div className="flex flex-wrap gap-x-6 gap-y-3 text-xs mb-3">
             <div>
               <div className="data-label mb-1">Participants</div>
-              <div className="text-gray-700 space-y-0.5">
-                {thread.participants.slice(0, 5).map((p, i) => (
-                  <div key={i} className="truncate">{p}</div>
-                ))}
-                {thread.participants.length > 5 && (
-                  <div className="text-gray-400">+{thread.participants.length - 5} more</div>
-                )}
-              </div>
+              <div className="text-gray-700">{thread.participants.slice(0, 5).join(', ')}{thread.participants.length > 5 ? ` +${thread.participants.length - 5} more` : ''}</div>
             </div>
             <div>
-              <div className="data-label mb-1">Timeline</div>
-              <div className="text-gray-600 space-y-0.5">
-                <div>First: {formatFullTime(thread.first_seen)}</div>
-                <div>Last: {formatFullTime(thread.last_activity)}</div>
-              </div>
+              <div className="data-label mb-1">First seen</div>
+              <div className="text-gray-600">{formatFullTime(thread.first_seen)}</div>
+            </div>
+            <div>
+              <div className="data-label mb-1">Last activity</div>
+              <div className="text-gray-600">{formatFullTime(thread.last_activity)}</div>
             </div>
           </div>
 
           {thread.summary && (
-            <div className="mt-3">
+            <div>
               <div className="data-label mb-1">Agent Summary</div>
-              <p className="text-sm text-gray-700 bg-surface-sunken rounded px-3 py-2">{thread.summary}</p>
+              <div className="text-sm text-gray-700 bg-surface-sunken rounded px-3 py-2.5 w-full">{thread.summary}</div>
             </div>
           )}
         </div>
