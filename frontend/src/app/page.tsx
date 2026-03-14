@@ -421,23 +421,27 @@ export default function HomePage() {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5">
           {[
-            { title: 'Watchers', description: 'Create agents that monitor email streams. Configure prompts, tools, and alert thresholds.' },
-            { title: 'Email forwarding', description: 'How to forward emails to Vigil, what gets processed, and how threads are detected.' },
-            { title: 'The agent', description: 'How the AI agent analyzes email, builds memory, and decides when to alert you.' },
-            { title: 'Memory system', description: 'How the agent remembers context across emails and surfaces relevant memories.' },
-            { title: 'Architecture', description: 'The full technical design: data flow, privacy model, and why no email bodies are stored.' },
-            { title: 'Security & privacy', description: 'What Vigil stores, what it discards, and how data flows through the system.' },
+            { href: '/learn/watchers', title: 'Watchers', description: 'Create agents that monitor email streams. Configure prompts, tools, and alert thresholds.' },
+            { href: '/learn/email-ingestion', title: 'Email Ingestion', description: 'How to forward emails to Vigil, what gets processed, and how threads are detected.' },
+            { href: '/learn/agent', title: 'The Agent', description: 'How the AI agent analyzes email, builds memory, and decides when to act.' },
+            { href: '/learn/memory', title: 'Memory System', description: 'How the agent remembers context across emails and surfaces relevant memories.' },
+            { href: '/learn/architecture', title: 'Architecture', description: 'Data flow, privacy model, and why no email bodies are stored.' },
+            { href: '/learn/security', title: 'Security & Privacy', description: 'What Vigil stores, what it discards, and how data flows through the system.' },
           ].map((item, idx) => (
-            <div
-              key={item.title}
+            <Link
+              key={item.href}
+              href={item.href}
               data-reveal
               id={`learn-${idx}`}
-              className="panel p-5 opacity-0"
+              className="panel p-5 opacity-0 hover:shadow-raised hover:-translate-y-0.5 transition-all duration-150 group cursor-pointer"
               style={{ animation: isRevealed(`learn-${idx}`) ? `slideUpIn 0.6s ease-out ${0.1 + idx * 0.05}s forwards` : 'none' }}
             >
-              <h3 className="font-semibold text-gray-900 mb-1.5">{item.title}</h3>
+              <h3 className="font-semibold text-gray-900 mb-1.5 group-hover:text-vigil-800 transition-colors">{item.title}</h3>
               <p className="text-sm text-gray-600 leading-relaxed">{item.description}</p>
-            </div>
+              <span className="mt-3 flex items-center gap-1.5 text-sm font-medium text-vigil-700">
+                Read more <span className="transition-transform group-hover:translate-x-0.5">→</span>
+              </span>
+            </Link>
           ))}
         </div>
       </Section>
@@ -484,7 +488,7 @@ export default function HomePage() {
           <div className="grid md:grid-cols-4 gap-6">
             <div>
               <p className="font-display font-semibold text-gray-900 mb-3">Vigil</p>
-              <p className="text-sm text-gray-500">An email agent that never sees your inbox.</p>
+              <p className="text-sm text-gray-500">An AI agent that reads your email and acts on it.</p>
             </div>
             <div>
               <p className="text-sm font-medium text-gray-700 mb-3">Product</p>
@@ -495,11 +499,19 @@ export default function HomePage() {
               </ul>
             </div>
             <div>
+              <p className="text-sm font-medium text-gray-700 mb-3">Documentation</p>
+              <ul className="space-y-2 text-sm text-gray-500">
+                <li><Link href="/learn/watchers" className="hover:text-gray-700">Watchers</Link></li>
+                <li><Link href="/learn/agent" className="hover:text-gray-700">The Agent</Link></li>
+                <li><Link href="/learn/architecture" className="hover:text-gray-700">Architecture</Link></li>
+                <li><Link href="/learn/security" className="hover:text-gray-700">Security</Link></li>
+              </ul>
+            </div>
+            <div>
               <p className="text-sm font-medium text-gray-700 mb-3">Account</p>
               <ul className="space-y-2 text-sm text-gray-500">
                 <li><Link href="/auth/register" className="hover:text-gray-700">Sign up</Link></li>
                 <li><Link href="/auth/login" className="hover:text-gray-700">Sign in</Link></li>
-                <li><Link href="/pricing" className="hover:text-gray-700">Pricing</Link></li>
               </ul>
             </div>
           </div>
