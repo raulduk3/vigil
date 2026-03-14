@@ -138,9 +138,17 @@ async function initStep2() {
 // Step 3: Watcher Selection
 // ============================================================================
 
+function buildSystemPrompt(intent) {
+    if (!intent) {
+        return `You monitor emails and focus on deadlines, obligations, and anything requiring action. Alert the user when someone is waiting on them or when a deadline is approaching. Ignore marketing, newsletters, and automated notifications unless they contain something actionable.`;
+    }
+    return `You are an email monitoring agent. Your instructions from the user:\n\n${intent}\n\nCore behavior:\n- Track deadlines, obligations, and anything requiring the user's action.\n- Alert when someone is waiting on the user or a deadline is approaching.\n- Remember patterns across emails (sender behavior, recurring topics, payment schedules).\n- Ignore noise unless the user's instructions say otherwise.\n- When in doubt about urgency, err on the side of alerting.`;
+}
+
 async function initStep3() {
     const listEl = document.getElementById("watcher-list");
     const errorEl = document.getElementById("watcher-error");
+    const intentEl = document.getElementById("watcher-intent");
 
     try {
         const watchers = await vigilAPI.getWatchers();
@@ -152,12 +160,25 @@ async function initStep3() {
                 item.className = "watcher-item";
                 item.innerHTML = `
                     <div class="name">${escapeHtml(w.name)}</div>
-                    <div class="meta">${w.email_count || 0} emails · ${w.status}</div>
+                    <div class="meta">${w.total_emails || 0} emails · ${w.status}</div>
                 `;
-                item.addEventListener("click", () => {
+                item.addEventListener("click", async () => {
                     document.querySelectorAll(".watcher-item").forEach(i => i.classList.remove("selected"));
                     item.classList.add("selected");
                     selectedWatcher = w;
+
+                    // If user typed instructions, update the watcher's prompt
+                    const intent = intentEl.value.trim();
+                    if (intent) {
+                        try {
+                            const prompt = buildSystemPrompt(intent);
+                            await vigilAPI.updateWatcher(w.id, { system_prompt: prompt });
+                            console.log("[vigil] updated watcher prompt with user intent");
+                        } catch (e) {
+                            console.warn("[vigil] failed to update watcher prompt:", e);
+                        }
+                    }
+
                     goToStep(4);
                 });
                 listEl.appendChild(item);
@@ -173,14 +194,12 @@ async function initStep3() {
     // Create watcher
     document.getElementById("btn-create-watcher").addEventListener("click", async () => {
         const name = document.getElementById("watcher-name").value.trim();
-        const intent = document.getElementById("watcher-intent").value.trim();
+        const intent = intentEl.value.trim();
         if (!name) return;
 
         errorEl.classList.add("hidden");
         try {
-            const prompt = intent
-                ? `You monitor emails related to: ${intent}. Focus on deadlines, obligations, and anything requiring action.`
-                : `You monitor emails and focus on deadlines, obligations, and anything requiring action.`;
+            const prompt = buildSystemPrompt(intent);
             const watcher = await vigilAPI.createWatcher(name, prompt);
             selectedWatcher = watcher;
             goToStep(4);
@@ -278,8 +297,8 @@ async function initStep5() {
 
     try {
         const status = await vigilAPI.getForwardingStatus(selectedWatcher.id);
-        document.getElementById("status-active").textContent = status.forwarding_active ? "Active ✅" : "Waiting...";
-        document.getElementById("status-active").style.color = status.forwarding_active ? "#0d9488" : "#eab308";
+        document.getElementById("status-active").textContent = status.forwarding_active ? "Active" : "Waiting...";
+        document.getElementById("status-active").style.color = status.forwarding_active ? "#3d6b4f" : "#8b7234";
         document.getElementById("status-last-email").textContent = status.last_email_at
             ? new Date(status.last_email_at).toLocaleString()
             : "—";

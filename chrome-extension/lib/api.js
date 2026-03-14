@@ -162,6 +162,14 @@ class VigilAPI {
         return data.watcher || data;
     }
 
+    async updateWatcher(watcherId, updates) {
+        const data = await this.request(`/watchers/${watcherId}`, {
+            method: "PATCH",
+            body: JSON.stringify(updates),
+        });
+        return data.watcher || data;
+    }
+
     // Forwarding
     async getConfirmCode(watcherId) {
         return this.request(`/forwarding/confirm-code/${watcherId}`);
