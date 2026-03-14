@@ -23,7 +23,7 @@ export default function PricingPage() {
       <PublicHeader />
 
       <main className="pt-28 pb-20">
-        <div className="max-w-3xl mx-auto px-6">
+        <div className="pricing-content max-w-3xl mx-auto px-6">
           {/* Header */}
           <div className="text-center mb-14">
             <p className="text-sm font-medium text-vigil-700 uppercase tracking-wider mb-3">Pricing</p>

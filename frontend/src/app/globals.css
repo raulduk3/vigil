@@ -181,6 +181,10 @@ html {
     max-width: none;
   }
 
+  .text-center p {
+    margin-inline: auto;
+  }
+
   /* Focus - subtle, functional */
   *:focus-visible {
     @apply outline-none;
@@ -650,6 +654,11 @@ html {
   .landing-section-copy {
     @apply text-lg text-gray-600 leading-relaxed;
     max-width: 62rem;
+  }
+
+  .landing-section-header.text-center .landing-section-title,
+  .landing-section-header.text-center .landing-section-copy {
+    margin-inline: auto;
   }
 
   .landing-step-card,
