@@ -86,7 +86,7 @@ export default function HomePage() {
             <p className="text-base font-medium text-vigil-700 mb-5 uppercase tracking-wider">
               AI email agent · Pay per use · No inbox access
             </p>
-            <h1 className="text-5xl md:text-6xl font-display font-semibold text-gray-900 tracking-tight mb-7 text-balance leading-[1.1]" style={{ wordSpacing: '0.05em' }}>
+            <h1 className="text-5xl md:text-6xl font-display font-semibold text-gray-900 tracking-tight mb-7 text-balance leading-[1.1]" style={{ wordSpacing: '0.08em' }}>
               An AI agent that reads<br />
               your email and acts on it.
             </h1>
@@ -113,7 +113,7 @@ export default function HomePage() {
       <Section id="how-it-works" className="py-12 md:py-16">
         <div className="mb-8 md:mb-12">
           <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">How it works</p>
-          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.05em' }}>
+          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.08em' }}>
             Analyze. Remember. Act.
           </h2>
           <p className="text-lg text-gray-600 leading-relaxed max-w-none">
@@ -182,7 +182,7 @@ export default function HomePage() {
       <Section id="features" className="bg-surface-sunken border-y border-gray-200 py-12 md:py-16">
         <div className="mb-8 md:mb-12">
           <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Why Vigil</p>
-          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.05em' }}>
+          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.08em' }}>
             Your agent. Your rules. Your data stays yours.
           </h2>
           <p className="text-lg text-gray-600 leading-relaxed max-w-none">
@@ -245,7 +245,7 @@ export default function HomePage() {
       <Section id="agent" className="py-12 md:py-16">
         <div className="mb-8 md:mb-12">
           <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">The agent</p>
-          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.05em' }}>
+          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.08em' }}>
             More than a filter. An actual agent.
           </h2>
           <p className="text-lg text-gray-600 leading-relaxed max-w-none">
@@ -310,9 +310,9 @@ export default function HomePage() {
 
       {/* Use Cases */}
       <Section id="use-cases" className="bg-surface-sunken border-y border-gray-200 py-10 md:pt-8 md:pb-8">
-        <div className="mb-2 md:mb-12">
+        <div className="mb-2 md:mb-8">
           <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Use cases</p>
-          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.05em' }}>
+          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.08em' }}>
             Set up a watcher. Forward what matters.
           </h2>
           <p className="text-lg text-gray-600 leading-relaxed max-w-none">
@@ -358,7 +358,7 @@ export default function HomePage() {
       <Section id="architecture" className="py-12 md:py-16">
         <div className="mb-8 md:mb-2">
           <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Architecture</p>
-          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.05em' }}>
+          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.08em' }}>
             Simple by design.
           </h2>
           <p className="text-lg text-gray-600 leading-relaxed max-w-none">
@@ -410,7 +410,7 @@ export default function HomePage() {
       <Section id="learn-more" className="bg-surface-sunken border-y border-gray-200 py-12 md:py-16">
         <div className="mb-8 md:mb-12">
           <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Documentation</p>
-          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.05em' }}>
+          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.08em' }}>
             Understand what it does.
           </h2>
           <p className="text-lg text-gray-600 leading-relaxed max-w-none">
@@ -449,7 +449,7 @@ export default function HomePage() {
       {/* CTA */}
       <Section id="cta" className="py-12 md:py-16">
         <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.05em' }}>
+          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.08em' }}>
             Start watching in 2 minutes.
           </h2>
           <p className="text-lg text-gray-600 mb-8 leading-relaxed">
