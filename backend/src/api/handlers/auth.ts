@@ -197,6 +197,22 @@ export const authHandlers = {
         return c.json(formatAuthResponse(tokens, account));
     },
 
+    async getConnections(c: Context) {
+        const user = c.get("user");
+        const account = queryOne<{ oauth_provider: string | null; oauth_id: string | null }>(
+            `SELECT oauth_provider, oauth_id FROM accounts WHERE id = ?`,
+            [user.account_id]
+        );
+        const connections: Array<{ provider: string; connected: boolean }> = [];
+        if (process.env.GOOGLE_CLIENT_ID) {
+            connections.push({ provider: 'google', connected: account?.oauth_provider === 'google' });
+        }
+        if (process.env.GITHUB_CLIENT_ID) {
+            connections.push({ provider: 'github', connected: account?.oauth_provider === 'github' });
+        }
+        return c.json({ connections });
+    },
+
     async changePassword(c: Context) {
         const user = c.get("user");
         const { current_password, new_password } = await c.req.json();

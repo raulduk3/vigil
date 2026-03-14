@@ -12,13 +12,27 @@ export default function SecurityPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [providers, setProviders] = useState<Array<{ id: string; name: string; enabled: boolean }>>([]);
+  const [connections, setConnections] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const token = localStorage.getItem('vigil_access_token');
+    // Fetch available providers
     fetch(`${apiUrl}/api/auth/oauth/providers`)
       .then(r => r.json())
       .then(data => setProviders(data.providers || []))
       .catch(() => {});
+    // Fetch connected status
+    if (token) {
+      fetch(`${apiUrl}/api/auth/connections`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(data => {
+          const map: Record<string, boolean> = {};
+          for (const c of data.connections || []) map[c.provider] = c.connected;
+          setConnections(map);
+        })
+        .catch(() => {});
+    }
   }, []);
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -128,6 +142,7 @@ export default function SecurityPage() {
             {providers.map(p => (
               <div key={p.id} className="flex items-center justify-between p-3 bg-surface-sunken rounded">
                 <div className="flex items-center gap-3">
+                  {connections[p.id] && <span className="status-indicator status-indicator-ok" />}
                   {p.id === 'google' && (
                     <svg className="w-5 h-5" viewBox="0 0 24 24">
                       <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
@@ -143,12 +158,13 @@ export default function SecurityPage() {
                   )}
                   <span className="text-sm font-medium text-gray-900">{p.name}</span>
                 </div>
-                <a
-                  href={`${apiUrl}/api/auth/oauth/${p.id}`}
-                  className="btn btn-secondary btn-sm"
-                >
-                  Connect
-                </a>
+                {connections[p.id] ? (
+                  <span className="badge badge-ok">Connected</span>
+                ) : (
+                  <a href={`${apiUrl}/api/auth/oauth/${p.id}`} className="btn btn-secondary btn-sm">
+                    Connect
+                  </a>
+                )}
               </div>
             ))}
           </div>
