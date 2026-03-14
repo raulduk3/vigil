@@ -182,11 +182,16 @@ export const ingestionHandlers = {
                 if (from === "unknown") from = c.req.header("x-cloudflare-email-from") ?? "unknown";
                 if (!to) to = c.req.header("x-cloudflare-email-to") ?? "";
 
-                // Extract original sender via fallback chain for forwarded emails:
-                // 1. X-Forwarded-For header (Gmail auto-forward preserves original sender here)
+                // Extract original sender for forwarded emails:
+                // 1. X-Forwarded-For header — but only if it's a single clean email address
+                //    (Gmail auto-forward puts multiple addresses space-separated, which is not useful)
                 const xForwardedFor = headers["x-forwarded-for"];
-                if (xForwardedFor && xForwardedFor.trim() !== from) {
-                    originalFrom = xForwardedFor.trim();
+                if (xForwardedFor) {
+                    const cleaned = xForwardedFor.trim();
+                    // Only use if it's a single email address (no spaces)
+                    if (!cleaned.includes(" ") && cleaned.includes("@") && cleaned !== from) {
+                        originalFrom = cleaned;
+                    }
                 }
                 // 2. Parse 'From:' line from manual forward body marker
                 if (!originalFrom && emailBody.includes("---------- Forwarded message")) {
