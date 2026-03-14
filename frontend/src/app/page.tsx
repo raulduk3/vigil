@@ -110,38 +110,47 @@ export default function HomePage() {
               An AI agent that reads<br />
               your email and acts on it.
             </h1>
-            <p className="text-xl text-gray-600 mb-8 leading-relaxed max-w-2xl">
+            <p className="text-xl text-gray-600 mb-8 leading-relaxed max-w-3xl mx-auto">
               Forward an email. Your agent reads it, remembers what matters, and does
               whatever you told it to do. Send a text. Fire a webhook. Connect to another system.
               Prompt it like you'd prompt anything else. It works for you.
             </p>
             {/* Onboarding prompt */}
-            <div className="mt-8 max-w-xl">
+            <div className="mt-10 max-w-3xl mx-auto text-center">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  const input = (e.target as HTMLFormElement).querySelector('input') as HTMLInputElement;
-                  const intent = encodeURIComponent(input.value.trim());
-                  if (intent) {
-                    window.location.href = `/auth/register?intent=${intent}`;
+                  const encodedIntent = encodeURIComponent(intent.trim());
+                  if (encodedIntent) {
+                    window.location.href = `/auth/register?intent=${encodedIntent}`;
                   }
                 }}
-                className="flex gap-2"
+                className="flex flex-col items-stretch justify-center gap-3 md:flex-row md:items-center"
               >
-                <input
-                  type="text"
-                  placeholder="What do you want to start watching? (e.g. my work emails, client invoices, support requests...)"
-                  className="input py-3 text-base flex-1"
-                  required
-                />
+                <div className="hero-prompt-shell relative flex-1">
+                  <input
+                    type="text"
+                    value={intent}
+                    onChange={(event) => setIntent(event.target.value)}
+                    placeholder=" "
+                    aria-label="Describe what you want Vigil to watch"
+                    className="input hero-prompt-input py-4 text-base md:text-lg w-full"
+                    required
+                  />
+                  {!intent && (
+                    <span key={heroPromptIndex} className="hero-prompt-placeholder absolute inset-y-0 left-0 flex items-center px-4 md:px-5 text-sm md:text-base text-gray-400 pointer-events-none">
+                      {heroPromptSamples[heroPromptIndex]}
+                    </span>
+                  )}
+                </div>
                 <button type="submit" className="btn btn-primary btn-lg shrink-0">
                   Start watching
                 </button>
               </form>
-              <p className="text-sm text-gray-400 mt-2">Free to start. 50 emails on us. No credit card needed.</p>
+              <p className="text-sm text-gray-400 mt-3">Free to start. 50 emails on us. No credit card needed.</p>
             </div>
 
-            <div className="flex items-center gap-4 mt-4">
+            <div className="flex items-center justify-center gap-4 mt-5">
               <a href="#how-it-works" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
                 How it works ↓
               </a>
