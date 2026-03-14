@@ -108,7 +108,7 @@ export async function getCustomerPortalUrl(
     customerId: string,
     returnUrl: string
 ): Promise<string> {
-    const session = await stripePost("/billing/portal/sessions", {
+    const session = await stripePost("/billing_portal/sessions", {
         customer: customerId,
         return_url: returnUrl,
     });
