@@ -93,4 +93,4 @@ Contributions welcome. Bug fixes, feature improvements, documentation, and integ
 
 - Website: [vigil.run](https://vigil.run)
 - Email: ricky@vigil.run
-- Author: [Richard Álvarez](https://richardalvarez.com)
+- Author: [Richard Álvarez](https://richardalvarez.info)
