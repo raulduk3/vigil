@@ -51,12 +51,24 @@ export default function ActionsPage() {
         </li>
       </ul>
 
-      <h3>Custom Tools (coming soon)</h3>
+      <h3>Custom Tools</h3>
       <p>
-        Define your own tools with a name, description, webhook URL, and parameter schema.
-        The agent sees custom tools alongside built-in tools and uses them naturally.
-        For example, you could create a &quot;Create Jira Ticket&quot; tool that POSTs to your
-        Jira webhook whenever the agent identifies a support request.
+        Define your own tools to connect Vigil to any external system. Each custom tool has
+        a name, a description (which the agent reads to know when to use it), a webhook URL,
+        and a parameter schema that tells the agent what data to extract from the email.
+      </p>
+      <p>Create custom tools in the dashboard (Settings → Tools) or via the API:</p>
+      <ul>
+        <li><strong>Slack notification</strong> — fire a webhook to Slack when a client emails</li>
+        <li><strong>Jira ticket</strong> — create a ticket when the agent identifies a support request</li>
+        <li><strong>Notion database</strong> — log invoice details into a Notion table</li>
+        <li><strong>PagerDuty alert</strong> — escalate urgent infrastructure emails</li>
+        <li><strong>Custom API</strong> — POST to any endpoint you control</li>
+      </ul>
+      <p>
+        The agent sees your custom tools alongside built-in tools. When it decides to use one,
+        it extracts the parameters you defined from the email content and POSTs them to your
+        webhook URL with full email context. Every execution is logged.
       </p>
 
       <h2>Prompts vs Tools</h2>

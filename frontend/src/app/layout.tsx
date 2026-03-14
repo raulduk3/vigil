@@ -23,9 +23,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <div className="relative min-h-screen">
-          <Providers>{children}</Providers>
+        <div className="relative isolate min-h-screen">
           <HashTextureOverlay />
+          <div className="relative z-[2]">
+            <Providers>{children}</Providers>
+          </div>
         </div>
       </body>
     </html>

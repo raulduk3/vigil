@@ -22,12 +22,7 @@ function useScrollReveal() {
           if (!id) return;
           if (entry.isIntersecting) {
             setRevealed((prev) => new Set(prev).add(id));
-          } else {
-            setRevealed((prev) => {
-              const s = new Set(prev);
-              s.delete(id);
-              return s;
-            });
+            observerRef.current?.unobserve(entry.target);
           }
         });
       },
@@ -69,7 +64,7 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-surface-page">
-      <svg className="absolute w-0 h-0">
+      <svg aria-hidden="true" className="absolute w-0 h-0">
         <defs>
           <filter id="noise">
             <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch" />
@@ -87,14 +82,13 @@ export default function HomePage() {
       {/* Hero */}
       <header className="pt-36 pb-14 md:pt-44 md:pb-16 relative overflow-hidden bg-surface-page z-[2]">
         <div
-          className="absolute inset-0 z-0"
+          aria-hidden="true"
+          className="hero-texture absolute inset-0 z-0"
           style={{
             backgroundImage: 'url(/hero-texture.png)',
             backgroundSize: 'cover',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
-            filter: 'blur(1px) brightness(0.9)',
-            transform: 'scale(1.03)',
             opacity: 0.19,
           }}
         />
