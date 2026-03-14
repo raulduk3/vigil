@@ -102,7 +102,7 @@ export default function HomePage() {
         <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-b from-[#E5E5E6]/35 via-[#E5E5E6]/20 to-transparent" />
 
         <div className="max-w-6xl mx-auto px-6 lg:px-8 relative z-10">
-          <div className="relative max-w-4xl">
+          <div className="relative max-w-5xl mx-auto text-center">
             <p className="text-base font-medium text-vigil-700 mb-5 uppercase tracking-wider">
               AI email agent · Pay per use · No inbox access
             </p>
