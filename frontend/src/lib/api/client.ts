@@ -101,6 +101,34 @@ export interface Channel {
   enabled: boolean;
 }
 
+export interface CustomTool {
+  id: string;
+  watcher_id: string;
+  name: string;
+  description: string;
+  webhook_url: string;
+  headers: Record<string, string>;
+  parameter_schema: Record<string, { type?: string; description?: string }>;
+  enabled: boolean;
+  execution_count: number;
+  last_executed_at: string | null;
+  created_at: string;
+}
+
+export interface ApiKey {
+  id: string;
+  name: string;
+  key_prefix: string;
+  permissions: string[];
+  last_used_at: string | null;
+  usage_count: number;
+  created_at: string;
+}
+
+export interface NewApiKey extends ApiKey {
+  full_key: string;
+}
+
 // ============================================================================
 // Token Management
 // ============================================================================
@@ -373,6 +401,55 @@ export const api = {
   // Templates
   async getTemplates(): Promise<{ templates: unknown[] }> {
     return request('/api/templates');
+  },
+
+  // Custom Tools
+  async getCustomTools(watcherId: string): Promise<{ tools: CustomTool[] }> {
+    return request(`/api/watchers/${watcherId}/tools`);
+  },
+
+  async createCustomTool(watcherId: string, data: {
+    name: string;
+    description: string;
+    webhook_url: string;
+    headers?: Record<string, string>;
+    parameter_schema?: Record<string, { type?: string; description?: string }>;
+  }): Promise<{ tool: CustomTool }> {
+    return request(`/api/watchers/${watcherId}/tools`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateCustomTool(watcherId: string, toolId: string, data: Partial<CustomTool>): Promise<{ tool: CustomTool }> {
+    return request(`/api/watchers/${watcherId}/tools/${toolId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteCustomTool(watcherId: string, toolId: string): Promise<void> {
+    return request(`/api/watchers/${watcherId}/tools/${toolId}`, { method: 'DELETE' });
+  },
+
+  async testCustomTool(watcherId: string, toolId: string): Promise<{ success: boolean; status?: number; response_body?: string; error?: string }> {
+    return request(`/api/watchers/${watcherId}/tools/${toolId}/test`, { method: 'POST' });
+  },
+
+  // API Keys
+  async getApiKeys(): Promise<{ keys: ApiKey[] }> {
+    return request('/api/keys');
+  },
+
+  async createApiKey(data: { name: string; permissions?: string[] }): Promise<{ key: NewApiKey }> {
+    return request('/api/keys', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteApiKey(id: string): Promise<void> {
+    return request(`/api/keys/${id}`, { method: 'DELETE' });
   },
 
   // Health
