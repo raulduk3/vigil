@@ -148,3 +148,34 @@ CREATE TABLE IF NOT EXISTS refresh_tokens (
 
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_account ON refresh_tokens(account_id);
 CREATE INDEX IF NOT EXISTS idx_refresh_tokens_hash ON refresh_tokens(token_hash);
+
+-- Custom tools (per watcher, for agent use)
+CREATE TABLE IF NOT EXISTS custom_tools (
+  id              TEXT PRIMARY KEY,
+  watcher_id      TEXT NOT NULL REFERENCES watchers(id),
+  name            TEXT NOT NULL,
+  description     TEXT NOT NULL,
+  webhook_url     TEXT NOT NULL,
+  headers         TEXT DEFAULT '{}',
+  parameter_schema TEXT DEFAULT '{}',
+  enabled         BOOLEAN DEFAULT TRUE,
+  execution_count INTEGER DEFAULT 0,
+  last_executed_at TIMESTAMP,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_custom_tools_watcher ON custom_tools(watcher_id);
+
+-- API keys (per account, for developer API access)
+CREATE TABLE IF NOT EXISTS api_keys (
+  id              TEXT PRIMARY KEY,
+  account_id      TEXT NOT NULL REFERENCES accounts(id),
+  name            TEXT NOT NULL,
+  key_hash        TEXT NOT NULL,
+  key_prefix      TEXT NOT NULL,
+  permissions     TEXT DEFAULT '["read"]',
+  last_used_at    TIMESTAMP,
+  usage_count     INTEGER DEFAULT 0,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_api_keys_account ON api_keys(account_id);
+CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
