@@ -16,8 +16,8 @@ function showView(name) {
     document.querySelectorAll(".nav-tab").forEach(t => {
         t.classList.toggle("active", t.dataset.view === name);
     });
+    if (name === "dashboard") loadDashboard();
     if (name === "inbox") loadInbox();
-    if (name === "stats") loadStats();
     if (name === "setup") loadSetup();
 }
 
@@ -25,7 +25,7 @@ function showDashboard() {
     document.getElementById("view-auth").classList.remove("active");
     document.getElementById("header-controls").classList.remove("hidden");
     document.getElementById("nav-tabs").classList.remove("hidden");
-    showView("chat");
+    showView("dashboard");
 }
 
 // ============================================================================
@@ -210,6 +210,111 @@ async function loadWatchers() {
         }
     } catch (e) {
         console.error("[vigil] loadWatchers failed:", e);
+    }
+}
+
+// ============================================================================
+// Dashboard — what the agent has been doing
+// ============================================================================
+
+async function loadDashboard() {
+    if (!currentWatcher) return;
+    const container = document.getElementById("dashboard-content");
+    container.innerHTML = '<div class="loading-state">Loading...</div>';
+
+    try {
+        const [statusResult, usageResult, threadsResult, memoriesResult, actionsResult] = await Promise.allSettled([
+            vigilAPI.getForwardingStatus(currentWatcher.id),
+            vigilAPI.getUsage(),
+            vigilAPI.getThreads(currentWatcher.id),
+            vigilAPI.getMemories(currentWatcher.id),
+            vigilAPI.getActions(currentWatcher.id),
+        ]);
+
+        const status = statusResult.status === "fulfilled" ? statusResult.value : {};
+        const usage = usageResult.status === "fulfilled" ? usageResult.value?.usage : {};
+        const threads = threadsResult.status === "fulfilled" ? threadsResult.value : [];
+        const memories = memoriesResult.status === "fulfilled" ? memoriesResult.value : [];
+        const actions = actionsResult.status === "fulfilled" ? actionsResult.value : [];
+        const wu = usage?.watchers?.find(w => w.watcher_id === currentWatcher.id) || {};
+
+        const activeThreads = threads.filter(t => t.status === "active");
+        const recentAlerts = actions.filter(a => a.tool === "send_alert" && a.result === "success").slice(0, 5);
+        const recentActions = actions.slice(0, 8);
+
+        let html = '';
+
+        // Status bar
+        const active = status.forwarding_active ?? false;
+        html += `<div class="dash-status-bar ${active ? 'dash-active' : 'dash-waiting'}">
+            <span>${active ? 'Active' : 'Waiting for emails'}</span>
+            <span>${(wu.emails ?? 0).toLocaleString()} emails · ${(wu.invocations ?? 0).toLocaleString()} invocations · $${(wu.cost ?? 0).toFixed(3)}</span>
+        </div>`;
+
+        // Active threads that need attention
+        if (activeThreads.length > 0) {
+            html += `<div class="dash-section">
+                <div class="dash-section-header">Active threads <span class="dash-count">${activeThreads.length}</span></div>
+                ${activeThreads.slice(0, 6).map(t => `
+                    <div class="dash-thread">
+                        <div class="dash-thread-subject">${escapeHtml(t.subject || "No subject")}</div>
+                        <div class="dash-thread-meta">${t.email_count || 0} emails · ${t.last_activity ? timeAgo(t.last_activity) : ''}</div>
+                        ${t.summary ? `<div class="dash-thread-summary">${escapeHtml(t.summary)}</div>` : ''}
+                    </div>
+                `).join("")}
+            </div>`;
+        }
+
+        // Recent alerts
+        if (recentAlerts.length > 0) {
+            html += `<div class="dash-section">
+                <div class="dash-section-header">Recent alerts <span class="dash-count">${wu.alerts ?? 0}</span></div>
+                ${recentAlerts.map(a => `
+                    <div class="dash-alert">
+                        <div class="dash-alert-text">${escapeHtml(a.reasoning || a.decision || "Alert sent")}</div>
+                        <div class="dash-alert-meta">${a.created_at ? timeAgo(a.created_at) : ''}</div>
+                    </div>
+                `).join("")}
+            </div>`;
+        }
+
+        // Recent agent decisions
+        if (recentActions.length > 0) {
+            html += `<div class="dash-section">
+                <div class="dash-section-header">Agent activity</div>
+                ${recentActions.map(a => {
+                    const tool = a.tool || 'analyze';
+                    const toolClass = tool === 'send_alert' ? 'dash-tool-alert' : tool === 'ignore_thread' ? 'dash-tool-ignore' : 'dash-tool-default';
+                    return `<div class="dash-action">
+                        <span class="dash-tool ${toolClass}">${escapeHtml(tool)}</span>
+                        <span class="dash-action-text">${escapeHtml(a.decision || a.reasoning || '—')}</span>
+                        <span class="dash-action-time">${a.created_at ? timeAgo(a.created_at) : ''}</span>
+                    </div>`;
+                }).join("")}
+            </div>`;
+        }
+
+        // Key memories
+        if (memories.length > 0) {
+            html += `<div class="dash-section">
+                <div class="dash-section-header">What the agent remembers <span class="dash-count">${memories.length}</span></div>
+                ${memories.slice(0, 6).map(m => `
+                    <div class="dash-memory">${escapeHtml(m.content)}</div>
+                `).join("")}
+            </div>`;
+        }
+
+        // Empty state
+        if (!activeThreads.length && !recentActions.length && !memories.length) {
+            html += `<div class="empty-state">
+                <p>No activity yet.</p>
+                <p style="margin-top:4px;">Forward an email to <strong>${escapeHtml(currentWatcher.ingestion_address || '')}</strong> to get started.</p>
+            </div>`;
+        }
+
+        container.innerHTML = html;
+    } catch (e) {
+        container.innerHTML = `<div class="error">${escapeHtml(e.message)}</div>`;
     }
 }
 

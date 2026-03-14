@@ -20,10 +20,10 @@
             </div>
             <!-- Nav tabs -->
             <div id="nav-tabs" class="nav-tabs hidden">
-                <button class="nav-tab active" data-view="chat">Chat</button>
-                <button class="nav-tab" data-view="inbox">Inbox</button>
-                <button class="nav-tab" data-view="stats">Stats</button>
-                <button class="nav-tab" data-view="setup">Setup</button>
+                <button class="nav-tab active" data-view="dashboard">Overview</button>
+                <button class="nav-tab" data-view="inbox">Threads</button>
+                <button class="nav-tab" data-view="chat">Chat</button>
+                <button class="nav-tab" data-view="setup">Config</button>
             </div>
         </div>
 
@@ -39,6 +39,13 @@
             <button id="panel-btn-login" class="btn primary">Sign In</button>
             <p class="help">Don't have an account? <a href="https://vigil.run" target="_blank">Sign up at vigil.run</a></p>
             <div id="panel-auth-error" class="error hidden"></div>
+        </div>
+
+        <!-- Dashboard View -->
+        <div class="view" id="view-dashboard">
+            <div id="dashboard-content" class="dashboard-content">
+                <div class="loading-state">Loading...</div>
+            </div>
         </div>
 
         <!-- Chat View -->
