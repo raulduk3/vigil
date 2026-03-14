@@ -1,85 +1,96 @@
 # Vigil
 
-**Your email has a brain now.**
+**An autonomous email agent. Forward your email. Vigil handles the rest.**
 
-Forward emails to an AI agent. It reads them, tracks conversations, remembers context, and tells you when something needs your attention. Half a cent per email. No inbox access. No email bodies stored.
+Vigil reads your email 24/7, remembers every conversation, and only interrupts you when something actually needs your attention. No inbox access. No email bodies stored. Half a cent per email on the hosted version, or self-host it for free.
 
-Most of the time the agent thinks and remembers. It connects patterns across conversations, tracks who sends what and when, and builds a growing understanding of your email. Alerts are the exception, not the rule. When the agent does interrupt you, it's because something actually matters.
+## What it does
 
-## How It Works
-
-1. Create a watcher and get a unique email address (e.g. `work-a7f3k9@vigil.run`)
-2. Set up a forwarding rule in Gmail or Outlook (3 steps, 2 minutes)
-3. The agent reads each email, analyzes it, remembers what matters, tracks conversations
-4. When something needs your attention, it tells you. Otherwise, it stays quiet.
-5. Email content is processed in memory and never stored
+- Reads and analyzes every forwarded email (summary, intent, urgency, entities)
+- Groups emails into conversation threads automatically
+- Builds persistent memory across all emails (sender patterns, deadlines, preferences)
+- Alerts you only when something genuinely needs action (deadline approaching, thread gone cold, obligation detected)
+- Fires webhooks, sends notifications, or triggers any API you connect
+- Each watcher runs its own agent with its own prompt, memory, and tools
 
 ## Architecture
 
 ```
-Email → Cloudflare Email Routing → Worker → Backend → Agent → Resend → You
+Your email → forwarding rule → Cloudflare Worker → Vigil Backend → Agent → You
 ```
 
-- **Cloudflare Worker** — receives raw MIME email, forwards to backend
-- **Backend** — Bun + Hono, SQLite, agent engine with memory and tools
-- **Agent** — OpenAI gpt-4.1-mini, JSON mode, per-watcher system prompts
-- **Frontend** — Next.js 14, three-panel layout (agent interface, inbox, watcher switcher)
-- **Delivery** — Resend API (notifications@vigil.run)
+- **Backend**: Bun + Hono, SQLite, multi-model agent engine (GPT-4.1, Gemini, Claude)
+- **Frontend**: Next.js, three-panel dashboard
+- **Email**: Cloudflare Email Routing + Workers
+- **Alerts**: Resend API
+- **Billing**: Stripe metered usage
+- **Extension**: Chrome sidepanel for setup and watcher management
 
-See [PRODUCT.md](PRODUCT.md) for the product definition and [CLAUDE.md](CLAUDE.md) for technical details.
-
-## Development
+## Self-hosting
 
 ```bash
 # Backend
 cd backend
 bun install
-cp .env.example .env
+cp .env.example .env  # Add your OpenAI key, JWT secrets, etc.
 bun run src/index.ts
 
 # Frontend
 cd frontend
 npm install
 npm run dev
-
-# E2E test
-cd backend
-bun run scripts/test-e2e.ts
 ```
 
-## Project Structure
+You need:
+- An OpenAI API key (or Anthropic/Google for other models)
+- A domain with Cloudflare email routing (for receiving forwarded email)
+- Resend API key (for sending alert emails)
+
+See [CLAUDE.md](CLAUDE.md) for full setup details.
+
+## Hosted version
+
+**[vigil.run](https://vigil.run)** — managed service, no setup required.
+
+- 50 emails free every month
+- $0.005 per email after that
+- Chrome extension for 30-second Gmail/Outlook setup
+- No credit card to start
+
+## Project structure
 
 ```
 vigil.run/
 ├── backend/              # Bun + Hono API server
-│   ├── src/
-│   │   ├── agent/        # Engine, tools, memory, prompts, templates
-│   │   ├── api/          # Routes + handlers
-│   │   ├── auth/         # JWT + OAuth
-│   │   ├── db/           # SQLite client + schema
-│   │   ├── ingestion/    # Email pipeline
-│   │   └── watcher/      # Thread detection
-│   └── scripts/          # E2E tests
-├── frontend/             # Next.js 14 dashboard
+│   ├── src/agent/        # Engine, tools, memory, prompts
+│   ├── src/api/          # Routes + handlers (56 endpoints)
+│   ├── src/auth/         # JWT + OAuth (Google, GitHub)
+│   ├── src/db/           # SQLite client + schema
+│   └── src/ingestion/    # Email pipeline
+├── frontend/             # Next.js dashboard (27 pages)
+├── chrome-extension/     # Sidepanel: setup, chat, overview
 ├── cloudflare-worker/    # Email ingestion worker
 └── docs/                 # Architecture docs
 ```
 
-## Pricing
-
-Usage-based. $0.005 per email processed. Free tier: 50 emails/month, 1 watcher, no credit card.
-
-No tiers. No plans. One price, one meter.
-
-## Status
-
-V2 in development. Branch: `v2-agent-architecture`.
-
-Backend: complete (agent loop, tools, memory, MIME parsing, Resend alerts, audit trail).
-Cloudflare Worker: deployed, email routing configured.
-Frontend: redesign in progress (three-panel layout).
-Billing: not yet built (Stripe metered).
-
 ## License
 
-Proprietary. All rights reserved.
+**Business Source License 1.1** (BSL)
+
+Source code is available. You can read it, modify it, self-host it for personal or internal business use, and contribute back.
+
+You cannot use it to run a competing hosted email monitoring service.
+
+After 4 years from each release, the code converts to Apache 2.0.
+
+See [LICENSE](LICENSE) for the full terms.
+
+## Contributing
+
+Contributions welcome. Bug fixes, feature improvements, documentation, and integrations are all appreciated. By contributing, you agree that your contributions are licensed under the same BSL 1.1 terms.
+
+## Contact
+
+- Website: [vigil.run](https://vigil.run)
+- Email: ricky@vigil.run
+- Author: [Richard Álvarez](https://richardalvarez.com)
