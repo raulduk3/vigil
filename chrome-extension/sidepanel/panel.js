@@ -180,7 +180,7 @@ async function initStep3() {
         try {
             const prompt = intent
                 ? `You monitor emails related to: ${intent}. Focus on deadlines, obligations, and anything requiring action.`
-                : undefined;
+                : `You monitor emails and focus on deadlines, obligations, and anything requiring action.`;
             const watcher = await vigilAPI.createWatcher(name, prompt);
             selectedWatcher = watcher;
             goToStep(4);
