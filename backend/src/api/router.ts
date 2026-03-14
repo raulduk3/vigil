@@ -79,6 +79,19 @@ export function createRouter(): Hono {
     protected_.post("/watchers/:watcherId/threads/:threadId/close", threadHandlers.close);
     protected_.delete("/watchers/:watcherId/threads/:threadId", threadHandlers.delete_);
 
+    // Models catalog (public, no auth needed for listing)
+    protected_.get("/models", async (c) => {
+        const { MODEL_CATALOG } = await import("../agent/engine");
+        const models = Object.entries(MODEL_CATALOG).map(([id, m]) => ({
+            id,
+            label: m.label,
+            provider: m.provider,
+            tier: m.tier,
+            pricing: m.pricing,
+        }));
+        return c.json({ models });
+    });
+
     api.route("/", protected_);
 
     return api;

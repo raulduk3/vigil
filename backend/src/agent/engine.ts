@@ -245,15 +245,8 @@ export async function invokeAgent(
         const result = await callLLM(systemPrompt, userPrompt, model);
         agentResponse = result.response;
         contextTokens = result.inputTokens + result.outputTokens;
-        // Pricing varies by model — use OpenAI's per-token rates
-        const pricing: Record<string, { input: number; output: number }> = {
-            "gpt-4.1": { input: 0.002, output: 0.008 },
-            "gpt-4.1-mini": { input: 0.0004, output: 0.0016 },
-            "gpt-4.1-nano": { input: 0.0001, output: 0.0004 },
-            "gpt-4o": { input: 0.0025, output: 0.01 },
-            "gpt-4o-mini": { input: 0.00015, output: 0.0006 },
-        };
-        const rates = pricing[model] ?? pricing["gpt-4.1-mini"]!;
+        // Pricing from MODEL_CATALOG
+        const rates = MODEL_CATALOG[model]?.pricing ?? { input: 0.0004, output: 0.0016 };
         costUsd =
             (result.inputTokens / 1000) * rates.input +
             (result.outputTokens / 1000) * rates.output;
@@ -392,13 +385,84 @@ export async function invokeAgent(
 }
 
 // ============================================================================
-// OpenAI API
+// Multi-Provider LLM API
 // ============================================================================
+
+/**
+ * Supported models with provider routing and pricing.
+ * Pricing is per 1K tokens (input/output).
+ */
+export const MODEL_CATALOG: Record<string, {
+    provider: "openai" | "anthropic" | "google";
+    label: string;
+    tier: "nano" | "mini" | "standard" | "pro";
+    pricing: { input: number; output: number };
+    maxTokens: number;
+}> = {
+    // OpenAI
+    "gpt-4.1-nano": {
+        provider: "openai", label: "GPT-4.1 Nano", tier: "nano",
+        pricing: { input: 0.0001, output: 0.0004 }, maxTokens: 1024,
+    },
+    "gpt-4.1-mini": {
+        provider: "openai", label: "GPT-4.1 Mini", tier: "mini",
+        pricing: { input: 0.0004, output: 0.0016 }, maxTokens: 1024,
+    },
+    "gpt-4.1": {
+        provider: "openai", label: "GPT-4.1", tier: "standard",
+        pricing: { input: 0.002, output: 0.008 }, maxTokens: 2048,
+    },
+    "gpt-4o": {
+        provider: "openai", label: "GPT-4o", tier: "standard",
+        pricing: { input: 0.0025, output: 0.01 }, maxTokens: 2048,
+    },
+    "gpt-4o-mini": {
+        provider: "openai", label: "GPT-4o Mini", tier: "mini",
+        pricing: { input: 0.00015, output: 0.0006 }, maxTokens: 1024,
+    },
+    // Anthropic
+    "claude-haiku-4": {
+        provider: "anthropic", label: "Claude Haiku 4", tier: "mini",
+        pricing: { input: 0.0008, output: 0.004 }, maxTokens: 1024,
+    },
+    "claude-sonnet-4": {
+        provider: "anthropic", label: "Claude Sonnet 4", tier: "standard",
+        pricing: { input: 0.003, output: 0.015 }, maxTokens: 2048,
+    },
+    // Google
+    "gemini-2.5-flash": {
+        provider: "google", label: "Gemini 2.5 Flash", tier: "mini",
+        pricing: { input: 0.00015, output: 0.0006 }, maxTokens: 1024,
+    },
+    "gemini-2.5-pro": {
+        provider: "google", label: "Gemini 2.5 Pro", tier: "standard",
+        pricing: { input: 0.00125, output: 0.01 }, maxTokens: 2048,
+    },
+};
 
 async function callLLM(
     systemPrompt: string,
     userPrompt: string,
     model: string = "gpt-4.1-mini"
+): Promise<{ response: AgentResponse; inputTokens: number; outputTokens: number }> {
+    const catalog = MODEL_CATALOG[model];
+    const provider = catalog?.provider ?? "openai";
+
+    switch (provider) {
+        case "anthropic":
+            return callAnthropic(systemPrompt, userPrompt, model, catalog?.maxTokens ?? 1024);
+        case "google":
+            return callGoogle(systemPrompt, userPrompt, model, catalog?.maxTokens ?? 1024);
+        default:
+            return callOpenAI(systemPrompt, userPrompt, model, catalog?.maxTokens ?? 1024);
+    }
+}
+
+async function callOpenAI(
+    systemPrompt: string,
+    userPrompt: string,
+    model: string,
+    maxTokens: number
 ): Promise<{ response: AgentResponse; inputTokens: number; outputTokens: number }> {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
@@ -411,7 +475,7 @@ async function callLLM(
         },
         body: JSON.stringify({
             model,
-            max_tokens: 1024,
+            max_tokens: maxTokens,
             messages: [
                 { role: "system", content: systemPrompt },
                 { role: "user", content: userPrompt },
@@ -430,13 +494,95 @@ async function callLLM(
         usage: { prompt_tokens: number; completion_tokens: number };
     };
 
-    const text = data.choices[0]?.message?.content ?? "";
-    const response = parseAgentResponse(text);
-
     return {
-        response,
+        response: parseAgentResponse(data.choices[0]?.message?.content ?? ""),
         inputTokens: data.usage.prompt_tokens,
         outputTokens: data.usage.completion_tokens,
+    };
+}
+
+async function callAnthropic(
+    systemPrompt: string,
+    userPrompt: string,
+    model: string,
+    maxTokens: number
+): Promise<{ response: AgentResponse; inputTokens: number; outputTokens: number }> {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
+
+    const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+            "x-api-key": apiKey,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        body: JSON.stringify({
+            model,
+            max_tokens: maxTokens,
+            system: systemPrompt,
+            messages: [{ role: "user", content: userPrompt + "\n\nRespond with a single JSON object. No markdown fences." }],
+        }),
+    });
+
+    if (!resp.ok) {
+        const err = await resp.text();
+        throw new Error(`Anthropic API error ${resp.status}: ${err}`);
+    }
+
+    const data = (await resp.json()) as {
+        content: Array<{ type: string; text: string }>;
+        usage: { input_tokens: number; output_tokens: number };
+    };
+
+    const text = data.content.find(c => c.type === "text")?.text ?? "";
+    return {
+        response: parseAgentResponse(text),
+        inputTokens: data.usage.input_tokens,
+        outputTokens: data.usage.output_tokens,
+    };
+}
+
+async function callGoogle(
+    systemPrompt: string,
+    userPrompt: string,
+    model: string,
+    maxTokens: number
+): Promise<{ response: AgentResponse; inputTokens: number; outputTokens: number }> {
+    const apiKey = process.env.GOOGLE_AI_API_KEY;
+    if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured");
+
+    const resp = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+                systemInstruction: { parts: [{ text: systemPrompt }] },
+                contents: [{ role: "user", parts: [{ text: userPrompt + "\n\nRespond with a single JSON object. No markdown fences." }] }],
+                generationConfig: {
+                    maxOutputTokens: maxTokens,
+                    responseMimeType: "application/json",
+                },
+            }),
+        }
+    );
+
+    if (!resp.ok) {
+        const err = await resp.text();
+        throw new Error(`Google AI API error ${resp.status}: ${err}`);
+    }
+
+    const data = (await resp.json()) as {
+        candidates: Array<{ content: { parts: Array<{ text: string }> } }>;
+        usageMetadata: { promptTokenCount: number; candidatesTokenCount: number };
+    };
+
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+    return {
+        response: parseAgentResponse(text),
+        inputTokens: data.usageMetadata?.promptTokenCount ?? 0,
+        outputTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
     };
 }
 
