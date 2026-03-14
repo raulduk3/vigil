@@ -221,8 +221,8 @@ async function initStep4() {
     // Copy address button
     document.getElementById("btn-copy-address").addEventListener("click", () => {
         navigator.clipboard.writeText(address);
-        document.getElementById("btn-copy-address").textContent = "✅";
-        setTimeout(() => document.getElementById("btn-copy-address").textContent = "📋", 2000);
+        document.getElementById("btn-copy-address").textContent = "Copied";
+        setTimeout(() => document.getElementById("btn-copy-address").textContent = "Copy", 2000);
     });
 
     // Gmail settings button
@@ -291,8 +291,8 @@ function startPollingConfirmCode() {
                 // Copy code button
                 document.getElementById("btn-copy-code").addEventListener("click", () => {
                     navigator.clipboard.writeText(result.code);
-                    document.getElementById("btn-copy-code").textContent = "✅";
-                    setTimeout(() => document.getElementById("btn-copy-code").textContent = "📋", 2000);
+                    document.getElementById("btn-copy-code").textContent = "Copied";
+                    setTimeout(() => document.getElementById("btn-copy-code").textContent = "Copy", 2000);
                 });
             }
         } catch (e) {

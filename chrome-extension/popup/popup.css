@@ -6,9 +6,9 @@
 
 body {
     width: 320px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #0f172a;
-    color: #e2e8f0;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+    background: #f8f8f7;
+    color: #3d3d3a;
 }
 
 .popup {
@@ -23,12 +23,13 @@ body {
 .logo {
     font-size: 20px;
     font-weight: 700;
-    color: #0d9488;
+    color: #0B1F2A;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', system-ui, sans-serif;
 }
 
 .tagline {
     font-size: 11px;
-    color: #64748b;
+    color: #787874;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin-top: 4px;
@@ -46,7 +47,7 @@ body {
 
 .desc {
     font-size: 13px;
-    color: #94a3b8;
+    color: #5a5a56;
     line-height: 1.5;
     text-align: center;
 }
@@ -54,9 +55,10 @@ body {
 .auth-tabs {
     display: flex;
     gap: 0;
-    background: #1e293b;
-    border-radius: 8px;
+    background: #f0f0ee;
+    border-radius: 6px;
     padding: 3px;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,0.04), inset 0 0 0 1px rgba(0,0,0,0.03);
 }
 
 .tab {
@@ -64,17 +66,18 @@ body {
     padding: 8px;
     border: none;
     background: transparent;
-    color: #64748b;
+    color: #787874;
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    border-radius: 6px;
+    border-radius: 4px;
     transition: all 0.2s;
 }
 
 .tab.active {
-    background: #0d9488;
-    color: white;
+    background: #ffffff;
+    color: #0B1F2A;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04);
 }
 
 .tab-content {
@@ -89,27 +92,28 @@ body {
 
 input {
     padding: 10px 14px;
-    border: 1px solid #334155;
-    border-radius: 8px;
-    background: #1e293b;
-    color: #e2e8f0;
+    border: none;
+    border-radius: 4px;
+    background: #f0f0ee;
+    color: #3d3d3a;
     font-size: 13px;
     outline: none;
-    transition: border-color 0.2s;
+    transition: box-shadow 0.2s;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(0,0,0,0.08);
 }
 
 input:focus {
-    border-color: #0d9488;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(0,0,0,0.08), 0 0 0 2px rgba(11,31,42,0.15);
 }
 
 input::placeholder {
-    color: #475569;
+    color: #a6a6a1;
 }
 
 .btn {
     padding: 10px 16px;
     border: none;
-    border-radius: 8px;
+    border-radius: 4px;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
@@ -117,32 +121,32 @@ input::placeholder {
 }
 
 .btn.primary {
-    background: #0d9488;
-    color: white;
+    background: #0B1F2A;
+    color: #f8f8f7;
 }
 
 .btn.primary:hover {
-    background: #0f766e;
+    background: #152d37;
 }
 
 .btn.secondary {
-    background: #1e293b;
-    color: #94a3b8;
-    border: 1px solid #334155;
+    background: #f0f0ee;
+    color: #5a5a56;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
 }
 
 .btn.secondary:hover {
-    background: #334155;
+    background: #e4e4e1;
 }
 
 .help {
     font-size: 11px;
-    color: #475569;
+    color: #a6a6a1;
     text-align: center;
 }
 
 .help a {
-    color: #0d9488;
+    color: #2d5261;
     text-decoration: none;
 }
 
@@ -152,11 +156,12 @@ input::placeholder {
 
 .error {
     font-size: 12px;
-    color: #f87171;
+    color: #8b4242;
     text-align: center;
     padding: 8px;
-    background: rgba(248, 113, 113, 0.1);
-    border-radius: 6px;
+    background: #f8f8f7;
+    border-radius: 4px;
+    box-shadow: inset 0 0 0 1px rgba(139,66,66,0.2);
 }
 
 .status-badge {
@@ -165,21 +170,21 @@ input::placeholder {
     justify-content: center;
     gap: 8px;
     padding: 8px 16px;
-    border-radius: 8px;
+    border-radius: 4px;
     font-size: 13px;
     font-weight: 600;
 }
 
 .status-badge.connected {
-    background: rgba(13, 148, 136, 0.1);
-    color: #0d9488;
+    background: rgba(61,107,79,0.08);
+    color: #3d6b4f;
 }
 
 .dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #0d9488;
+    background: #3d6b4f;
     animation: pulse 2s infinite;
 }
 

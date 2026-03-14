@@ -11,6 +11,7 @@
     "tabs"
   ],
   "host_permissions": [
+    "https://api.vigil.run/*",
     "https://mail.google.com/*",
     "https://outlook.live.com/*",
     "https://outlook.office.com/*"

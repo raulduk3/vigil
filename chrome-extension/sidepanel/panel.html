@@ -9,7 +9,7 @@
     <div class="panel">
         <!-- Header -->
         <div class="panel-header">
-            <div class="logo">👁️ Vigil</div>
+            <div class="logo">Vigil</div>
             <div class="step-indicator">
                 <span class="step active" data-step="1">1</span>
                 <span class="step-line"></span>
@@ -47,16 +47,18 @@
             <p class="step-desc">Navigate to Gmail or Outlook so Vigil can help set up forwarding.</p>
             
             <div id="provider-status" class="provider-detect">
-                <div class="detect-icon">🔍</div>
+                <div class="detect-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </div>
                 <p id="provider-message">Checking current page...</p>
             </div>
 
             <div class="provider-buttons">
                 <a href="https://mail.google.com" target="_blank" class="btn provider-btn gmail">
-                    <span>📧</span> Open Gmail
+                    Open Gmail
                 </a>
                 <a href="https://outlook.live.com" target="_blank" class="btn provider-btn outlook">
-                    <span>📬</span> Open Outlook
+                    Open Outlook
                 </a>
             </div>
         </div>
@@ -86,7 +88,7 @@
                 <label>Your Vigil forwarding address:</label>
                 <div class="copy-box">
                     <code id="forwarding-address">loading...</code>
-                    <button id="btn-copy-address" class="btn-icon" title="Copy">📋</button>
+                    <button id="btn-copy-address" class="btn-icon" title="Copy">Copy</button>
                 </div>
             </div>
 
@@ -95,7 +97,7 @@
                 <div class="step-item">
                     <span class="step-num">1</span>
                     <div>
-                        <p>Open Gmail Settings → Forwarding</p>
+                        <p>Open Gmail Settings, then Forwarding</p>
                         <button id="btn-gmail-settings" class="btn secondary small">Open Settings</button>
                     </div>
                 </div>
@@ -116,7 +118,7 @@
                         <div id="confirm-code-found" class="confirm-found hidden">
                             <span class="code-label">Code:</span>
                             <code id="confirm-code"></code>
-                            <button id="btn-copy-code" class="btn-icon" title="Copy">📋</button>
+                            <button id="btn-copy-code" class="btn-icon" title="Copy">Copy</button>
                         </div>
                     </div>
                 </div>
@@ -133,7 +135,7 @@
                 <div class="step-item">
                     <span class="step-num">1</span>
                     <div>
-                        <p>Open Outlook Settings → Mail → Forwarding</p>
+                        <p>Open Outlook Settings, then Mail, then Forwarding</p>
                         <button id="btn-outlook-settings" class="btn secondary small">Open Settings</button>
                     </div>
                 </div>
@@ -162,8 +164,10 @@
 
         <!-- Step 5: Done -->
         <div class="wizard-step" id="step-5">
-            <div class="success-icon">✅</div>
-            <h2>You're Connected!</h2>
+            <div class="success-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            </div>
+            <h2>You're Connected</h2>
             <p class="step-desc">Vigil is now watching your email. The agent will read, remember, and alert you when something needs attention.</p>
             
             <div id="forwarding-status" class="status-card">
