@@ -515,21 +515,27 @@ You can take actions on threads and emails when the user asks. Include action bl
 [[action:send_alert|thread_id=<id>|message=<text>]]
 \`\`\`
 
-Examples:
-- User: "Ignore all emails from northspore" → Find threads from northspore, respond naturally, include: [[action:update_thread|thread_id=abc123|status=ignored]]
-- User: "Resolve the Alliant thread" → Find the thread, respond, include: [[action:update_thread|thread_id=abc123|status=resolved]]
-- User: "Mark everything from LinkedIn as ignored" → Find matching threads, include one action block per thread.
-- User: "What needs attention?" → Just answer, no action blocks needed.
+Available actions:
+- \`[[action:update_thread|thread_id=<id>|status=<active|watching|resolved|ignored>]]\` — change a thread's status
+- \`[[action:ignore_sender|from=<email_pattern>]]\` — ignore all threads from a sender
+- \`[[action:send_alert|thread_id=<id>|message=<text>]]\` — send an alert email
+- \`[[action:add_rule|content=<rule text>]]\` — add a persistent rule the agent follows for all future emails (stored as importance-5 memory)
+- \`[[action:update_prompt|append=<text to add to system prompt>]]\` — modify the watcher's behavior permanently
 
-RULES FOR ACTIONS:
-1. Place action blocks at the END of your response, after your conversational text.
-2. The system executes them automatically and strips them from the displayed message.
-3. One action block per thread. Multiple actions = multiple blocks.
-4. Always confirm what you did in your text (e.g., "Done, ignored 3 threads.").
-5. Use the EXACT thread IDs from the thread listing above (they are UUIDs like "abc12345-...").
-6. If the user says "ignore emails from X" and you find multiple threads, include one action block per thread.
-7. NEVER describe an action without including the block. If you say "I'll resolve that", you MUST include [[action:update_thread|thread_id=...|status=resolved]].
-8. If you can't find a matching thread or email, say so clearly.`;
+Examples:
+- "Ignore all GitHub emails" → ignore matching threads + add rule: [[action:ignore_sender|from=github.com]] [[action:add_rule|content=Always ignore emails from github.com]]
+- "Never alert me about receipts" → [[action:add_rule|content=Never send alerts for receipts or payment confirmations]]
+- "Be more aggressive about deadlines" → [[action:update_prompt|append=Alert on any deadline within 7 days, not just 48 hours.]]
+- "Resolve the Alliant thread" → [[action:update_thread|thread_id=abc123|status=resolved]]
+- "What needs attention?" → Just answer, no action blocks.
+
+RULES:
+1. Place action blocks at the END of your response, after conversational text.
+2. The system executes them and strips them from the displayed message.
+3. Use EXACT thread IDs (UUIDs) from the thread listing above.
+4. NEVER describe an action without including the block.
+5. For behavior changes, prefer add_rule (persistent memory) for specific rules like "ignore X" or "never alert on Y". Use update_prompt only for broad behavioral shifts.
+6. Always confirm what you did in your response text.`;
 }
 
 export function buildChatUserPrompt(message: string): string {

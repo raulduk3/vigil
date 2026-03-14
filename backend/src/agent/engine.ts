@@ -720,6 +720,25 @@ async function executeChatActions(
                     message: action.params.message,
                 }, ctx);
                 executed++;
+            } else if (action.tool === "add_rule" && action.params.content) {
+                // Store as high-importance memory that persists as a behavioral rule
+                run(
+                    `INSERT INTO memories (id, watcher_id, content, importance, created_at)
+                     VALUES (?, ?, ?, 5, CURRENT_TIMESTAMP)`,
+                    [crypto.randomUUID(), ctx.watcher.id, `RULE: ${action.params.content}`]
+                );
+                executed++;
+                logger.info("Chat action: rule added", { content: action.params.content });
+            } else if (action.tool === "update_prompt" && action.params.append) {
+                // Append to the watcher's system prompt
+                const currentPrompt = ctx.watcher.system_prompt || "";
+                const newPrompt = currentPrompt.trim() + "\n\n" + action.params.append.trim();
+                run(
+                    `UPDATE watchers SET system_prompt = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+                    [newPrompt, ctx.watcher.id]
+                );
+                executed++;
+                logger.info("Chat action: prompt updated", { appended: action.params.append });
             }
         } catch (err) {
             logger.error("Chat action failed", { tool: action.tool, err });
