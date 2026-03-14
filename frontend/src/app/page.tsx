@@ -115,8 +115,8 @@ export default function HomePage() {
               whatever you told it to do. Send a text. Fire a webhook. Connect to another system.
               Prompt it like you'd prompt anything else. It works for you.
             </p>
-            {/* Onboarding prompt */}
-            <div className="mt-10 max-w-3xl mx-auto text-center">
+            {/* Onboarding prompt — full width */}
+            <div className="mt-10 w-full">
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -125,29 +125,29 @@ export default function HomePage() {
                     window.location.href = `/auth/register?intent=${encodedIntent}`;
                   }
                 }}
-                className="flex flex-col items-stretch justify-center gap-3 md:flex-row md:items-center"
+                className="panel p-2 flex flex-col gap-2 md:flex-row md:gap-0"
               >
-                <div className="hero-prompt-shell relative flex-1">
+                <div className="relative flex-1">
                   <input
                     type="text"
                     value={intent}
                     onChange={(event) => setIntent(event.target.value)}
                     placeholder=" "
                     aria-label="Describe what you want Vigil to watch"
-                    className="input hero-prompt-input py-4 text-base md:text-lg w-full"
+                    className="w-full bg-transparent px-4 py-4 text-base md:text-lg text-gray-900 outline-none"
                     required
                   />
                   {!intent && (
-                    <span key={heroPromptIndex} className="hero-prompt-placeholder absolute inset-y-0 left-0 flex items-center px-4 md:px-5 text-sm md:text-base text-gray-400 pointer-events-none">
+                    <span key={heroPromptIndex} className="hero-prompt-placeholder absolute inset-y-0 left-0 flex items-center px-4 text-base md:text-lg text-gray-400 pointer-events-none">
                       {heroPromptSamples[heroPromptIndex]}
                     </span>
                   )}
                 </div>
-                <button type="submit" className="btn btn-primary btn-lg shrink-0">
-                  Start watching
+                <button type="submit" className="btn btn-primary py-4 px-8 text-base md:rounded-l-none shrink-0">
+                  Start watching →
                 </button>
               </form>
-              <p className="text-sm text-gray-400 mt-3">Free to start. 50 emails on us. No credit card needed.</p>
+              <p className="text-sm text-gray-400 mt-3 text-center">Free to start. 50 emails on us. No credit card needed.</p>
             </div>
 
             <div className="flex items-center justify-center gap-4 mt-5">
@@ -158,8 +158,8 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="relative z-10 mt-12 md:mt-16 mb-8 px-4 sm:px-6 lg:px-8">
-          <div className="panel hero-demo-stage mx-auto max-w-[88rem] overflow-hidden p-1.5">
+        <div className="relative z-10 mt-12 md:mt-16 mb-8 max-w-6xl mx-auto px-6 lg:px-8">
+          <div className="panel hero-demo-stage w-full overflow-hidden p-1.5">
             <div className="hero-demo-surface relative aspect-[16/9] overflow-hidden rounded-md">
               <div className="hero-demo-grid absolute inset-0" />
               <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/55 via-white/20 to-transparent" />
