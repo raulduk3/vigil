@@ -77,7 +77,7 @@ function getActionLabel(action: Action): { label: string; badge: string; badgeCl
   if (action.tool === 'send_alert') {
     const msg = (p as any).message || (p as any).subject || '';
     return {
-      label: `Alert sent: ${truncate(msg)}`,
+      label: `Alert sent: ${truncate(msg, 200)}`,
       badge: 'alert',
       badgeClass: 'badge-critical',
     };
@@ -123,13 +123,13 @@ function getActionLabel(action: Action): { label: string; badge: string; badgeCl
       const urgency = d.urgency || 'low';
       const summary = d.summary || d.reasoning || '';
       return {
-        label: truncate(summary),
+        label: truncate(summary, 200),
         badge: urgency,
         badgeClass: urgency === 'high' ? 'badge-critical' : urgency === 'normal' ? 'badge-warning' : 'badge-neutral',
       };
     } catch {
       return {
-        label: truncate(String(action.decision)),
+        label: truncate(String(action.decision), 200),
         badge: 'analysis',
         badgeClass: 'badge-neutral',
       };

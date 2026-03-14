@@ -93,7 +93,7 @@ async function relayConfirmationEmail(
         const resp = await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-            body: JSON.stringify({ from, to: [accountEmail], subject: `[Vigil] ${subject}`, html }),
+            body: JSON.stringify({ from, to: [accountEmail], subject: `Vigil · Confirm email forwarding to ${watcherName}`, html }),
         });
         if (!resp.ok) {
             logger.error("Confirmation relay failed", { status: resp.status });

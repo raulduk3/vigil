@@ -75,11 +75,13 @@ The triage table shifts based on your reactivity level above. At low reactivity,
 ${memSensitivityBlock}
 The thread summary already records what happened in this conversation.
 
-Store a memory when you encounter: a specific date or deadline, a dollar amount, a commitment someone made, a recurring pattern, contact info that will matter later.
+Store a memory ONLY when the fact will help you process a FUTURE email from a DIFFERENT sender or thread. Ask yourself: "If I forget this, will I make a worse decision on a future email?"
 
-Do NOT store: summaries of what the email said, general context, or anything the thread summary already captures.
+YES store: upcoming deadlines with dates, account balances, recurring payment amounts, commitments someone made to the user, the user's obligations to others.
 
-Most emails need zero memories. When you do store one, make it atomic: one fact, one memory. Include the exact number, date, or name.
+NO do not store: receipt details, one-time confirmations, account setup events, facts from ignored/spam threads, news or weather, anything the thread summary already captures.
+
+Most emails need ZERO memories. When you do store one, make it atomic: one fact, one memory.
 
 **Importance:**
 - 5 — Hard deadline with a date, money on the line, contractual obligation. Rare.
@@ -243,7 +245,18 @@ function buildMemorySensitivityBlock(level: number): string {
         case 2:
             return "**Low.** Store concrete facts: deadlines, dollar amounts, commitments, contact info. Skip context, patterns, and nice-to-know info.";
         case 3:
-            return "**Balanced.** Store facts that matter across threads or in the future: dates, amounts, names, preferences, recurring patterns. Skip info the thread summary already captures.";
+            return `**Balanced.** Only store facts the agent will need when processing FUTURE emails from DIFFERENT threads. Ask: "Will this fact help me understand a future email better?"
+
+Store: recurring payment amounts, account numbers that appear across threads, deadlines that haven't passed, commitments someone made, the user's financial balances.
+
+Do NOT store:
+- One-time confirmations (account setup, billing preference changes, device additions)
+- Receipt details (the thread summary already has them)
+- Facts from ignored threads (promos, newsletters, news articles)
+- Weather forecasts or ephemeral info
+- Anything already captured in the thread summary
+
+When a thread is ignored or resolved with no cross-thread value, store ZERO memories from it.`;
         case 4:
             return "**Detailed.** Store useful context: sender patterns, preferences, project details, relationships between threads. Be generous with what you remember.";
         case 5:
