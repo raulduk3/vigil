@@ -4,19 +4,22 @@ import Link from 'next/link';
 import { PublicHeader } from '@/components/layout';
 
 const models = [
-  { name: 'GPT-4.1 Nano', cost: '$0.10', speed: 'Fastest', quality: 'Basic triage', recommended: false },
-  { name: 'GPT-4.1 Mini', cost: '$0.40', speed: 'Fast', quality: 'Good balance', recommended: true },
-  { name: 'Gemini 2.5 Flash', cost: '$0.15', speed: 'Fast', quality: 'Good balance', recommended: false },
-  { name: 'GPT-4.1', cost: '$2.00', speed: 'Moderate', quality: 'High accuracy', recommended: false },
-  { name: 'Claude Sonnet 4', cost: '$3.00', speed: 'Moderate', quality: 'Strongest reasoning', recommended: false },
-  { name: 'Gemini 2.5 Pro', cost: '$1.25', speed: 'Moderate', quality: 'High accuracy', recommended: false },
+  { name: 'GPT-4.1 Nano', cost: '$0.14', speed: 'Fastest', quality: 'Basic triage', recommended: false },
+  { name: 'GPT-4o Mini', cost: '$0.21', speed: 'Fast', quality: 'Good balance', recommended: false },
+  { name: 'Gemini 2.5 Flash', cost: '$0.21', speed: 'Fast', quality: 'Good balance', recommended: false },
+  { name: 'GPT-4.1 Mini', cost: '$0.56', speed: 'Fast', quality: 'Good balance', recommended: true },
+  { name: 'Claude Haiku 4', cost: '$1.12', speed: 'Fast', quality: 'Strong reasoning', recommended: false },
+  { name: 'Gemini 2.5 Pro', cost: '$1.75', speed: 'Moderate', quality: 'High accuracy', recommended: false },
+  { name: 'GPT-4.1', cost: '$2.80', speed: 'Moderate', quality: 'High accuracy', recommended: false },
+  { name: 'GPT-4o', cost: '$3.50', speed: 'Moderate', quality: 'High accuracy', recommended: false },
+  { name: 'Claude Sonnet 4', cost: '$4.20', speed: 'Moderate', quality: 'Strongest reasoning', recommended: false },
 ];
 
 const examples = [
-  { emails: 10, label: '10 emails/day', monthly: '~$0.12/mo', model: 'GPT-4.1 Mini' },
-  { emails: 50, label: '50 emails/day', monthly: '~$0.60/mo', model: 'GPT-4.1 Mini' },
-  { emails: 200, label: '200 emails/day', monthly: '~$2.40/mo', model: 'GPT-4.1 Mini' },
-  { emails: 50, label: '50 emails/day', monthly: '~$3.00/mo', model: 'GPT-4.1 (full)' },
+  { emails: 10, label: '10 emails/day', monthly: '~$0.18/mo', model: 'GPT-4.1 Mini' },
+  { emails: 50, label: '50 emails/day', monthly: '~$0.90/mo', model: 'GPT-4.1 Mini' },
+  { emails: 200, label: '200 emails/day', monthly: '~$3.60/mo', model: 'GPT-4.1 Mini' },
+  { emails: 50, label: '50 emails/day', monthly: '~$4.20/mo', model: 'GPT-4.1 (full)' },
 ];
 
 export default function PricingPage() {
@@ -25,7 +28,8 @@ export default function PricingPage() {
       <PublicHeader />
 
       <main className="pt-28 pb-20">
-        <div className="max-w-4xl mx-auto px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-14">
             <p className="text-sm font-medium text-vigil-700 uppercase tracking-wider mb-3">Pricing</p>
@@ -46,7 +50,7 @@ export default function PricingPage() {
                 <div className="text-sm text-gray-500">per alert email sent</div>
               </div>
               <div>
-                <div className="text-3xl font-display font-semibold text-gray-900 mb-1">~$0.0004</div>
+                <div className="text-3xl font-display font-semibold text-gray-900 mb-1">~$0.0006</div>
                 <div className="text-sm text-gray-500">per email processed (GPT-4.1 Mini)</div>
               </div>
               <div>
@@ -156,6 +160,7 @@ export default function PricingPage() {
           <div className="text-center">
             <Link href="/auth/register" className="btn btn-primary btn-lg">Start for free</Link>
             <p className="text-sm text-gray-500 mt-3">No credit card required. Pay only when you use it.</p>
+          </div>
           </div>
         </div>
       </main>
