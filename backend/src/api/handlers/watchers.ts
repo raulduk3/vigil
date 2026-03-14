@@ -164,12 +164,12 @@ export const watcherHandlers = {
         if (!watcher) return c.json({ error: "Watcher not found" }, 404);
 
         const { invokeAgent } = await import("../../agent/engine");
-        await invokeAgent(id, {
+        const response = await invokeAgent(id, {
             type: "user_query",
             query: body.query ?? "Manual invocation — review active threads.",
         });
 
-        return c.json({ invoked: true, watcher_id: id });
+        return c.json({ invoked: true, watcher_id: id, response });
     },
 
     async digest(c: Context) {

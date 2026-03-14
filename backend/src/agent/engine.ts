@@ -51,7 +51,7 @@ import type {
 export async function invokeAgent(
     watcherId: string,
     trigger: InvocationTrigger
-): Promise<void> {
+): Promise<AgentResponse | null> {
     const startMs = Date.now();
     let emailId: string | null = null;
     let threadId: string | null = null;
@@ -63,7 +63,7 @@ export async function invokeAgent(
     );
     if (!watcher) {
         logger.warn("invokeAgent: watcher not found", { watcherId });
-        return;
+        return null;
     }
 
     // Load channels and account email for context
@@ -260,7 +260,7 @@ export async function invokeAgent(
     } catch (err) {
         logger.error("LLM call failed", { watcherId, err, model });
         await logAction(watcherId, threadId, emailId, trigger.type, null, null, null, null, "failed", String(err), startMs);
-        return;
+        return null;
     }
 
     // 7. Execute tools
@@ -387,6 +387,8 @@ export async function invokeAgent(
         actions: agentResponse.actions?.length ?? 0,
         durationMs: Date.now() - startMs,
     });
+
+    return agentResponse;
 }
 
 // ============================================================================
