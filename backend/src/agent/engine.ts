@@ -200,7 +200,12 @@ export async function invokeAgent(
             [watcherId]
         );
 
-        const chatSystem = buildChatSystemPrompt(watcher, memoryContext, activeThreads, recentEmails);
+        // Load ALL threads for chat context (not just active/watching)
+        const allThreadsForChat = queryMany<ThreadRow>(
+            `SELECT * FROM threads WHERE watcher_id = ? ORDER BY last_activity DESC LIMIT 50`,
+            [watcherId]
+        );
+        const chatSystem = buildChatSystemPrompt(watcher, memoryContext, allThreadsForChat, recentEmails);
         const chatUser = buildChatUserPrompt(trigger.message);
         const model = watcher.model || process.env.VIGIL_MODEL || "gpt-4.1-mini";
 

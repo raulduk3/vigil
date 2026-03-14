@@ -411,8 +411,8 @@ export function buildChatSystemPrompt(
             const subject = e.subject ?? "(no subject)";
             const summary = analysis?.summary ?? "";
             const urgency = analysis?.urgency ?? "low";
-            const received = e.received_at ?? e.created_at;
-            return `- [${urgency}] "${subject}" from ${from} (${received}) — ${summary}`;
+            const threadId = e.thread_id ?? "none";
+            return `- [thread:${threadId}] [${urgency}] "${subject}" from ${from} — ${summary}`;
         }).join("\n")
         : "No emails received yet.";
 
@@ -440,7 +440,7 @@ ${threadStats.active} active threads, ${threadStats.watching} watching, ${thread
 ### Recent Emails (${recentEmails.length})
 ${inboxSummary}
 
-## Active Threads
+## All Threads (use these exact thread IDs in action blocks)
 ${threadContext}
 
 ## Your Memories
