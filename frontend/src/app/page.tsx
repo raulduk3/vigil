@@ -12,7 +12,6 @@ const heroPromptSamples = [
 function useScrollReveal() {
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
   const observerRef = useRef<IntersectionObserver | null>(null);
-
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
       (entries) => {
@@ -31,7 +30,6 @@ function useScrollReveal() {
     elements.forEach((el) => observerRef.current?.observe(el));
     return () => observerRef.current?.disconnect();
   }, []);
-
   return (id: string) => revealed.has(id);
 }
 
@@ -40,6 +38,17 @@ function Section({ children, className = '', id }: { children: React.ReactNode; 
     <section id={id} className={className}>
       <div className="max-w-6xl mx-auto px-6 lg:px-8">{children}</div>
     </section>
+  );
+}
+
+function SectionHeader({ eyebrow, title, description, align = 'left' }: { eyebrow: string; title: string; description: string; align?: 'left' | 'center' }) {
+  const cls = align === 'center' ? 'text-center items-center mx-auto' : 'text-left items-start';
+  return (
+    <div className={`landing-section-header ${cls}`}>
+      <div className="landing-section-kicker">{eyebrow}</div>
+      <h2 className="landing-section-title" style={{ wordSpacing: '0.08em' }}>{title}</h2>
+      <p className="landing-section-copy">{description}</p>
+    </div>
   );
 }
 
@@ -58,32 +67,45 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-surface-page">
+      <svg aria-hidden="true" className="absolute w-0 h-0">
+        <defs>
+          <filter id="noise">
+            <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch" />
+            <feColorMatrix type="saturate" values="0" />
+            <feComponentTransfer>
+              <feFuncA type="discrete" tableValues="0 0 0 0.05 0" />
+            </feComponentTransfer>
+            <feBlend mode="multiply" in="SourceGraphic" />
+          </filter>
+        </defs>
+      </svg>
+
       <PublicHeader />
 
-      {/* Hero — action first */}
-      <header className="pt-36 pb-10 md:pt-44 md:pb-14 relative overflow-hidden bg-surface-page z-[2]">
-        <div
-          aria-hidden="true"
-          className="hero-texture absolute inset-0 z-0"
-          style={{ backgroundImage: 'url(/hero-texture.png)', backgroundSize: 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', opacity: 0.19 }}
-        />
+      {/* Hero */}
+      <header className="pt-36 pb-14 md:pt-44 md:pb-16 relative overflow-hidden bg-surface-page z-[2]">
+        <div aria-hidden="true" className="hero-texture absolute inset-0 z-0" style={{ backgroundImage: 'url(/hero-texture.png)', backgroundSize: 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', opacity: 0.19 }} />
         <div className="absolute inset-0 z-0 bg-[#E5E5E6]/10" />
         <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-b from-[#E5E5E6]/35 via-[#E5E5E6]/20 to-transparent" />
 
         <div className="max-w-6xl mx-auto px-6 lg:px-8 relative z-10">
           <div className="relative max-w-5xl mx-auto text-center">
-            <h1 className="text-5xl md:text-6xl font-display font-semibold text-gray-900 tracking-tight mb-6 text-balance leading-[1.1]" style={{ wordSpacing: '0.08em' }}>
-              Forward your email.<br />
-              Vigil handles the rest.
-            </h1>
-            <p className="text-xl text-gray-600 mb-8 leading-relaxed mx-auto max-w-2xl">
-              An AI agent that reads your email, tracks conversations, and only interrupts you when something actually needs your attention.
+            <p className="text-base font-medium text-vigil-700 mb-5 uppercase tracking-wider">
+              AI email agent · Pay per use · No inbox access
             </p>
-
-            {/* Primary CTA — the input */}
-            <div className="w-full max-w-3xl mx-auto">
-              <div className="hero-prompt-suggestion mb-3 min-h-10">
-                <p key={heroPromptIndex} className="hero-prompt-copy text-sm text-gray-400">
+            <h1 className="text-5xl md:text-6xl font-display font-semibold text-gray-900 tracking-tight mb-7 text-balance leading-[1.1]" style={{ wordSpacing: '0.08em' }}>
+              An AI agent that reads<br />
+              your email and acts on it.
+            </h1>
+            <p className="landing-hero-copy text-xl text-gray-600 mb-8 leading-relaxed mx-auto">
+              Forward an email. Your agent reads it, remembers what matters, and does
+              whatever you told it to do. Send a text. Fire a webhook. Connect to another system.
+              Prompt it like you&apos;d prompt anything else. It works for you.
+            </p>
+            <div className="mt-10 w-full max-w-4xl mx-auto">
+              <div className="hero-prompt-suggestion mb-3 min-h-12 md:min-h-10">
+                <span className="text-[11px] md:text-xs uppercase tracking-[0.24em] text-vigil-700/70">Try this</span>
+                <p key={heroPromptIndex} className="hero-prompt-copy mt-2 text-sm md:text-base text-gray-500">
                   {heroPromptSamples[heroPromptIndex]}
                 </p>
               </div>
@@ -93,23 +115,21 @@ export default function HomePage() {
                   const encoded = encodeURIComponent(intent.trim());
                   window.location.href = encoded ? `/auth/register?intent=${encoded}` : '/auth/register';
                 }}
-                className="panel p-2 flex flex-col gap-2 md:flex-row md:items-stretch"
+                className="hero-prompt-shell panel p-2 flex flex-col gap-2 md:flex-row md:items-stretch"
               >
-                <input
-                  type="text"
-                  value={intent}
-                  onChange={(e) => setIntent(e.target.value)}
-                  placeholder="What should Vigil watch for?"
-                  className="hero-prompt-input flex-1 bg-transparent px-4 py-4 text-base md:text-lg text-gray-900 outline-none"
-                />
-                <button type="submit" className="btn btn-primary py-4 px-8 text-base md:min-w-[10rem] shrink-0">
+                <div className="relative flex-1">
+                  <input type="text" value={intent} onChange={(e) => setIntent(e.target.value)}
+                    placeholder="What do you want Vigil to watch?"
+                    className="hero-prompt-input w-full bg-transparent px-4 py-4 text-base md:text-lg text-gray-900 outline-none" />
+                </div>
+                <button type="submit" className="btn btn-primary py-4 px-8 text-base md:min-w-[12rem] shrink-0">
                   Get started free
                 </button>
               </form>
-              <p className="text-sm text-gray-400 mt-3 text-center">50 emails free every month. No credit card.</p>
+              <p className="text-sm text-gray-400 mt-3 text-center">50 emails free every month. No credit card needed.</p>
             </div>
 
-            {/* Three-step quick path */}
+            {/* Quick-start steps under the hero */}
             <div className="mt-8 grid gap-3 sm:grid-cols-3 text-left max-w-3xl mx-auto">
               <Link href="/auth/register" className="panel p-4 group hover:-translate-y-0.5 transition-transform">
                 <p className="text-[11px] uppercase tracking-[0.2em] text-vigil-700/70 font-medium">Step 1</p>
@@ -130,95 +150,260 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* Hero demo */}
+        <div className="relative z-10 mt-12 md:mt-16 mb-8 mx-auto w-full max-w-[96rem] px-3 sm:px-5 lg:px-8">
+          <div className="panel hero-demo-stage w-full overflow-hidden p-1.5">
+            <div className="hero-demo-surface relative aspect-[16/10] md:aspect-[16/8.8] overflow-hidden rounded-md">
+              <div className="hero-demo-grid absolute inset-0" />
+              <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/55 via-white/20 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#d4dde0]/85 via-[#d4dde0]/25 to-transparent" />
+              <div className="relative z-10 flex h-full flex-col justify-between p-5 md:p-8 lg:p-10">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] md:text-xs font-semibold uppercase tracking-[0.24em] text-vigil-700/80">What it looks like</p>
+                    <p className="text-sm md:text-base text-gray-600 mt-1">Forward, analyze, remember, decide.</p>
+                  </div>
+                  <div className="hero-demo-pill rounded-full px-3 py-1.5 text-[11px] md:text-xs font-medium text-vigil-800">No inbox access</div>
+                </div>
+                <div className="grid gap-4 md:grid-cols-[1.45fr_0.85fr] md:gap-6 lg:gap-8 items-end">
+                  <div className="hero-demo-window rounded-[1.1rem] p-3 md:p-4 lg:p-5">
+                    <div className="flex items-center gap-2 mb-3 md:mb-4">
+                      <span className="h-2.5 w-2.5 rounded-full bg-[#c96e61]" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-[#d7b45d]" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-[#7faa73]" />
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-[0.95fr_1.3fr]">
+                      <div className="rounded-xl bg-white/72 p-3 md:p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.45)]">
+                        <p className="text-[11px] uppercase tracking-[0.22em] text-gray-500 mb-2">Watcher</p>
+                        <p className="text-sm md:text-base font-semibold text-gray-900">Vendor follow-up</p>
+                        <p className="text-xs md:text-sm text-gray-600 mt-2">Prompts, webhooks, and memory all configured per watcher.</p>
+                      </div>
+                      <div className="rounded-xl bg-[#0d202c] p-4 md:p-5 text-left shadow-[0_12px_40px_rgba(11,31,42,0.18)]">
+                        <p className="text-[11px] uppercase tracking-[0.2em] text-vigil-300 mb-2">Email analysis</p>
+                        <p className="text-sm md:text-base text-white font-medium">Invoice 4521 is due tomorrow. Alert Richard and POST to accounting webhook.</p>
+                        <div className="mt-4 space-y-2 text-xs md:text-sm text-vigil-200/90">
+                          <p>Summary: Vendor invoice requires immediate attention.</p>
+                          <p>Memory surfaced: Payment normally lands on the 14th.</p>
+                          <p>Action: Send alert + trigger overdue prevention workflow.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-3 md:space-y-4">
+                    <div className="hero-float-card hero-float-card-delay-1 rounded-2xl p-4 md:p-5">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-gray-500 mb-2">Thread state</p>
+                      <p className="text-sm md:text-base text-gray-900 font-medium">3 emails grouped, 1 new obligation detected.</p>
+                    </div>
+                    <div className="hero-float-card hero-float-card-delay-2 rounded-2xl p-4 md:p-5">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-gray-500 mb-2">Agent output</p>
+                      <p className="text-sm md:text-base text-gray-900 font-medium">Text notification queued. Webhook payload prepared.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
       </header>
 
-      {/* What you get — not how it works, what it does for you */}
-      <Section id="what-you-get" className="landing-section py-16 md:py-20">
-        <div className="mb-10" data-reveal id="wyg-header" style={{ opacity: 0, animation: isRevealed('wyg-header') ? 'slideUpIn 0.6s ease-out forwards' : 'none' }}>
-          <div className="landing-section-header text-left items-start">
-            <div className="landing-section-kicker">What you get</div>
-            <h2 className="landing-section-title" style={{ wordSpacing: '0.08em' }}>An agent that earns its keep on the first email.</h2>
-            <p className="landing-section-copy">Every email is analyzed, threaded, and remembered. Most stay quiet. The ones that matter surface.</p>
+      {/* How It Works */}
+      <Section id="how-it-works" className="landing-section py-16 md:py-24">
+        <div className="mb-10 md:mb-16" data-reveal id="hiw-header" style={{ opacity: 0, animation: isRevealed('hiw-header') ? 'slideUpIn 0.6s ease-out forwards' : 'none' }}>
+          <SectionHeader eyebrow="How it works" title="Analyze. Remember. Act." description="Create a watcher, connect your email, and Vigil reads each message with the full thread and memory context already loaded. Most emails stay quiet. The important ones surface." />
+        </div>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8 lg:gap-10">
+          <div data-reveal id="hiw-1" className="landing-step-card panel p-7 md:p-8 flex flex-col gap-6 opacity-0" style={{ animation: isRevealed('hiw-1') ? 'slideUpIn 0.6s ease-out 0.1s forwards' : 'none' }}>
+            <div className="flex items-center gap-4">
+              <span className="landing-step-index">1</span>
+              <h3 className="text-lg font-semibold text-gray-900">Connect your email</h3>
+            </div>
+            <p className="text-base text-gray-600 leading-relaxed flex-grow">
+              Install the <Link href="/extension" className="text-vigil-700 font-medium hover:underline">Chrome extension</Link> and
+              it walks you through forwarding setup in under 30 seconds. Or set up a forwarding rule manually.
+            </p>
+            <div className="panel-inset p-5 rounded-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-mono text-sm text-gray-500 mb-1">Forward to:</p>
+                  <p className="font-mono text-base text-vigil-700">work-a7f3k9@vigil.run</p>
+                </div>
+                <Link href="/extension" className="text-xs font-medium text-vigil-700 hover:text-vigil-800 whitespace-nowrap">Auto-setup →</Link>
+              </div>
+            </div>
+          </div>
+          <div data-reveal id="hiw-2" className="landing-step-card panel p-7 md:p-8 flex flex-col gap-6 opacity-0" style={{ animation: isRevealed('hiw-2') ? 'slideUpIn 0.6s ease-out 0.2s forwards' : 'none' }}>
+            <div className="flex items-center gap-4">
+              <span className="landing-step-index">2</span>
+              <h3 className="text-lg font-semibold text-gray-900">Agent analyzes</h3>
+            </div>
+            <p className="text-base text-gray-600 leading-relaxed flex-grow">
+              The AI agent reads the email, groups it into a conversation thread, extracts what matters, and stores relevant context in its memory. The email body is then discarded.
+            </p>
+            <div className="panel-inset p-5 rounded-md space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="badge badge-sm badge-ok">analyzed</span>
+                <span className="text-sm text-gray-600">Invoice #4521 — $5,000 due Mar 10</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="badge badge-sm badge-neutral">memory</span>
+                <span className="text-sm text-gray-500">Vendor payment pattern noted</span>
+              </div>
+            </div>
+          </div>
+          <div data-reveal id="hiw-3" className="landing-step-card panel p-7 md:p-8 flex flex-col gap-6 opacity-0" style={{ animation: isRevealed('hiw-3') ? 'slideUpIn 0.6s ease-out 0.3s forwards' : 'none' }}>
+            <div className="flex items-center gap-4">
+              <span className="landing-step-index">3</span>
+              <h3 className="text-lg font-semibold text-gray-900">You get alerted</h3>
+            </div>
+            <p className="text-base text-gray-600 leading-relaxed flex-grow">
+              When something needs your attention, the agent sends an alert. Urgent requests, stale threads, payment deadlines. No noise. Only signal.
+            </p>
+            <div className="panel-inset p-4 rounded-md">
+              <p className="text-sm text-gray-500 mb-1">From: Vigil &lt;notifications@vigil.run&gt;</p>
+              <p className="text-sm font-medium text-gray-900">Payment of $5,000 due tomorrow</p>
+              <p className="text-sm text-gray-600 mt-1">Invoice #4521 from vendor@example.com requires immediate payment...</p>
+            </div>
           </div>
         </div>
+      </Section>
 
-        <div className="grid md:grid-cols-3 gap-6">
+      {/* Why Vigil */}
+      <Section id="features" className="landing-section landing-section-banded border-y border-gray-200 py-14 md:py-20">
+        <div className="mb-8 md:mb-12" data-reveal id="feat-header" style={{ opacity: 0, animation: isRevealed('feat-header') ? 'slideUpIn 0.6s ease-out forwards' : 'none' }}>
+          <SectionHeader eyebrow="Why Vigil" title="Your agent. Your rules. Your data stays yours." description="Google and Microsoft help you read email. Vigil makes sure you never drop an obligation. Privacy by architecture, not policy." />
+        </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {[
-            { title: 'Reads and summarizes', desc: 'Every forwarded email gets a structured analysis. Summary, sender intent, urgency, key entities. Stored as a thread update, not a notification.' },
-            { title: 'Remembers across emails', desc: 'The agent builds memory over time. Vendor payment patterns, response times, recurring topics. Context surfaces automatically for future decisions.' },
-            { title: 'Alerts only when it matters', desc: 'Most emails end as quiet updates. When a deadline is inside 24 hours or a thread has gone cold, Vigil sends one email or fires one webhook.' },
+            { icon: 'PI', title: 'No inbox access', description: 'You forward what you want watched — Vigil never connects to your email account.' },
+            { icon: 'MEM', title: 'Persistent memory', description: 'The agent builds context across emails: sender patterns, recurring topics, your preferences.' },
+            { icon: 'SHA', title: 'Bodies discarded', description: 'Email content is processed in memory and never stored — only a SHA-256 hash proves receipt.' },
+            { icon: 'THR', title: 'Thread tracking', description: 'Conversations are grouped automatically; the agent tracks which threads are active, stale, or resolved.' },
+            { icon: 'EXT', title: 'Extensible', description: 'Webhooks, APIs, external systems. The agent triggers whatever you connect.' },
+            { icon: 'CFG', title: 'Your agent', description: 'Your prompt, your rules, your model. An agent you control completely.' },
+          ].map((feature, idx) => (
+            <div key={feature.title} data-reveal id={`feature-${idx}`} className="landing-feature-card panel p-5 opacity-0" style={{ animation: isRevealed(`feature-${idx}`) ? `slideUpIn 0.6s ease-out ${0.1 + idx * 0.05}s forwards` : 'none' }}>
+              <div className="landing-feature-icon">{feature.icon}</div>
+              <h3 className="font-semibold text-gray-900 mb-2">{feature.title}</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">{feature.description}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* Agent capabilities */}
+      <Section id="agent" className="landing-section py-14 md:py-20">
+        <div className="mb-8 md:mb-12" data-reveal id="agent-header" style={{ opacity: 0, animation: isRevealed('agent-header') ? 'slideUpIn 0.6s ease-out forwards' : 'none' }}>
+          <SectionHeader eyebrow="The agent" title="More than a filter. An actual agent." description="Not a rules engine. Not a keyword matcher. Each watcher runs an AI agent with its own prompt, memory, and tools." />
+        </div>
+        <div className="grid md:grid-cols-3 gap-8">
+          <div data-reveal id="cap-analyze" className="landing-capability-card panel p-6 opacity-0" style={{ animation: isRevealed('cap-analyze') ? 'slideUpIn 0.6s ease-out 0.1s forwards' : 'none' }}>
+            <h3 className="font-semibold text-gray-900 mb-3">Analyze</h3>
+            <p className="text-base text-gray-600 leading-relaxed mb-4">Every email gets a structured analysis: summary, sender intent, urgency, and key entities.</p>
+            <div className="panel-inset p-4 rounded-md text-sm space-y-1.5">
+              <p><span className="text-gray-500">Summary:</span> <span className="text-gray-800">Request for deployment config</span></p>
+              <p><span className="text-gray-500">Intent:</span> <span className="text-gray-800">Needs config file by Wednesday</span></p>
+              <p><span className="text-gray-500">Urgency:</span> <span className="badge badge-sm badge-warning">high</span></p>
+            </div>
+          </div>
+          <div data-reveal id="cap-remember" className="landing-capability-card panel p-6 opacity-0" style={{ animation: isRevealed('cap-remember') ? 'slideUpIn 0.6s ease-out 0.2s forwards' : 'none' }}>
+            <h3 className="font-semibold text-gray-900 mb-3">Remember</h3>
+            <p className="text-base text-gray-600 leading-relaxed mb-4">The agent builds memory over time — relevant context surfaces automatically for each new email.</p>
+            <div className="panel-inset p-4 rounded-md text-sm space-y-1.5">
+              <p className="text-gray-600">Cory usually follows up within 24h</p>
+              <p className="text-gray-600">Vendor invoices average $2,400/mo</p>
+              <p className="text-gray-600">Client prefers Tuesday meetings</p>
+              <p className="text-gray-400 text-xs mt-2">3 of 47 memories surfaced for this email</p>
+            </div>
+          </div>
+          <div data-reveal id="cap-act" className="landing-capability-card panel p-6 opacity-0" style={{ animation: isRevealed('cap-act') ? 'slideUpIn 0.6s ease-out 0.3s forwards' : 'none' }}>
+            <h3 className="font-semibold text-gray-900 mb-3">Act</h3>
+            <p className="text-base text-gray-600 leading-relaxed mb-4">The agent does what you told it to do. Send an email. Fire a webhook. Connect to external systems.</p>
+            <div className="panel-inset p-4 rounded-md text-sm space-y-1.5">
+              <p><span className="badge badge-sm badge-critical">alert</span> <span className="text-gray-600 ml-1">Payment overdue — notify immediately</span></p>
+              <p><span className="badge badge-sm badge-warning">webhook</span> <span className="text-gray-600 ml-1">POST to Slack, Discord, or your own API</span></p>
+              <p><span className="badge badge-sm badge-ok">integrate</span> <span className="text-gray-600 ml-1">Trigger a workflow in any connected system</span></p>
+            </div>
+          </div>
+        </div>
+      </Section>
+
+      {/* Use Cases */}
+      <Section id="use-cases" className="landing-section landing-section-banded border-y border-gray-200 py-14 md:py-18">
+        <div className="mb-8 md:mb-10">
+          <SectionHeader eyebrow="Use cases" title="Set up a watcher. Forward what matters." description="Each watcher is a separate agent with its own prompt, memory, and behavior. Create one per context — each learns independently." />
+        </div>
+        <ul className="space-y-4 md:space-y-5">
+          {[
+            { id: 'uc-vendor', role: 'Vendor follow-up', text: 'Track invoices, flag overdue payments. Webhook to your accounting system when a payment is due.' },
+            { id: 'uc-client', role: 'Client communications', text: 'Know when conversations go cold. Trigger a Slack message when a client is waiting.' },
+            { id: 'uc-ops', role: 'Ops and alerts', text: 'Connect to PagerDuty, Discord, or any API. The agent reads the email and triggers the right action.' },
+            { id: 'uc-billing', role: 'Bills and deadlines', text: 'The agent remembers payment patterns and fires webhooks before deadlines slip.' },
+            { id: 'uc-freelance', role: 'Freelancers', text: 'One watcher per client. Each tracks obligations independently. Connect to your CRM or project tool.' },
+            { id: 'uc-custom', role: 'Anything you can prompt', text: 'Write the prompt. Connect the tools. If it has an API, the agent can reach it.' },
           ].map((item, idx) => (
-            <div
-              key={item.title}
-              data-reveal id={`wyg-${idx}`}
-              className="panel p-6 opacity-0"
-              style={{ animation: isRevealed(`wyg-${idx}`) ? `slideUpIn 0.6s ease-out ${0.1 + idx * 0.06}s forwards` : 'none' }}
-            >
-              <h3 className="font-semibold text-gray-900 mb-3">{item.title}</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">{item.desc}</p>
-            </div>
+            <li key={item.id} data-reveal id={item.id} className="opacity-0" style={{ animation: isRevealed(item.id) ? `slideUpIn 0.5s ease-out ${0.1 + idx * 0.05}s forwards` : 'none' }}>
+              <div className="flex items-start gap-3 md:gap-4">
+                <span className="text-gray-400 text-lg md:text-xl pt-0.5 flex-shrink-0">→</span>
+                <div className="space-y-0.5 md:space-y-1">
+                  <p className="text-base md:text-lg font-semibold text-gray-900">{item.role}</p>
+                  <p className="text-sm md:text-base text-gray-600 leading-relaxed">{item.text}</p>
+                </div>
+              </div>
+            </li>
           ))}
+        </ul>
+        <div className="text-center mt-8 md:mt-10">
+          <Link href="/auth/register" className="btn btn-primary btn-lg">Create your first watcher</Link>
         </div>
       </Section>
 
-      {/* Privacy — short and structural */}
-      <Section className="landing-section landing-section-banded border-y border-gray-200 py-14 md:py-18">
-        <div className="max-w-3xl">
-          <div className="landing-section-kicker">Privacy</div>
-          <h2 className="landing-section-title mt-3" style={{ wordSpacing: '0.08em' }}>No inbox access. No stored bodies. No OAuth.</h2>
-          <p className="text-base text-gray-600 mt-4 leading-relaxed">
-            Vigil works through forwarding rules you set up yourself. It never connects to your email account.
-            Email bodies are processed in memory and discarded. Only a SHA-256 hash proves receipt.
-            If you delete the forwarding rule, Vigil sees nothing more.
-          </p>
-          <div className="mt-6 flex gap-4">
-            <Link href="/privacy" className="text-sm text-vigil-700 font-medium hover:text-vigil-800">Privacy policy →</Link>
-            <Link href="/learn/security" className="text-sm text-vigil-700 font-medium hover:text-vigil-800">Security details →</Link>
+      {/* Architecture */}
+      <Section id="architecture" className="landing-section py-14 md:py-20">
+        <div className="mb-8 md:mb-6">
+          <SectionHeader eyebrow="Architecture" title="Simple by design." description="No OAuth. No inbox connection. No email bodies stored. Vigil works through forwarding rules. The privacy model isn't a feature. It's the architecture." />
+        </div>
+        <div className="text-left mb-8 md:mb-10">
+          <Link href="/learn/architecture" className="text-sm text-vigil-700 hover:text-vigil-800 font-medium">Read the full technical design →</Link>
+        </div>
+        <div data-reveal id="arch-flow" className="landing-architecture-shell panel max-w-5xl mx-auto p-4 md:p-5 mb-2 opacity-0" style={{ animation: isRevealed('arch-flow') ? 'scaleIn 0.6s ease-out forwards' : 'none' }}>
+          <div className="landing-architecture-grid">
+            {[
+              { icon: '01', label: 'Your email', sub: 'forwarding rule' },
+              { icon: '02', label: 'Cloudflare', sub: 'receives at MX' },
+              { icon: '03', label: 'Agent', sub: 'reads + decides' },
+              { icon: '04', label: 'Memory', sub: 'learns patterns' },
+              { icon: '05', label: 'Alert', sub: 'notifies you' },
+            ].map((step, idx, steps) => (
+              <div key={step.label} className="landing-architecture-step">
+                <div className="landing-architecture-node text-center">
+                  <div className="landing-architecture-index">{step.icon}</div>
+                  <p className="font-semibold text-gray-900">{step.label}</p>
+                  <p className="text-xs text-gray-500">{step.sub}</p>
+                </div>
+                {idx < steps.length - 1 && (
+                  <span aria-hidden className="landing-architecture-separator">
+                    <span className="md:hidden">↓</span>
+                    <span className="hidden md:inline">→</span>
+                  </span>
+                )}
+              </div>
+            ))}
           </div>
+          <p className="landing-architecture-note mt-4 text-center text-xs text-gray-500">Forwarded email in, decision out. No inbox access and no stored email bodies.</p>
         </div>
       </Section>
 
-      {/* Use cases — lightweight */}
-      <Section id="use-cases" className="landing-section py-14 md:py-20">
-        <div className="mb-8">
-          <div className="landing-section-header text-left items-start">
-            <div className="landing-section-kicker">Use cases</div>
-            <h2 className="landing-section-title" style={{ wordSpacing: '0.08em' }}>One watcher per context. Each learns independently.</h2>
-          </div>
-        </div>
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[
-            { title: 'Vendor follow-up', desc: 'Track invoices. Flag overdue payments. Webhook to accounting.' },
-            { title: 'Client communications', desc: 'Know when conversations go cold. Slack when a client is waiting.' },
-            { title: 'Ops and alerts', desc: 'Read ops email. Only escalate what clears your bar.' },
-            { title: 'Bills and deadlines', desc: 'Remember payment patterns. Fire before deadlines slip.' },
-            { title: 'Freelancers', desc: 'One watcher per client. Each tracks obligations independently.' },
-            { title: 'Your own prompt', desc: 'Write the instructions. Connect the tools. Your agent.' },
-          ].map((item) => (
-            <div key={item.title} className="panel-inset rounded-md p-4">
-              <p className="font-semibold text-gray-900 text-sm">{item.title}</p>
-              <p className="text-xs text-gray-600 mt-1 leading-relaxed">{item.desc}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-8">
-          <Link href="/auth/register" className="btn btn-primary">Create your first watcher</Link>
-        </div>
-      </Section>
-
-      {/* Pricing — inline, no separate section needed */}
-      <Section className="landing-section landing-section-banded border-y border-gray-200 py-14 md:py-18">
-        <div className="grid md:grid-cols-[1.2fr_0.8fr] gap-8 items-center">
+      {/* Pricing — inline */}
+      <Section className="landing-section landing-section-banded border-y border-gray-200 py-14 md:py-20">
+        <div className="grid md:grid-cols-[1.2fr_0.8fr] gap-10 items-center">
           <div>
             <div className="landing-section-kicker">Pricing</div>
-            <h2 className="landing-section-title mt-3" style={{ wordSpacing: '0.08em' }}>Half a cent per email. That&apos;s it.</h2>
+            <h2 className="landing-section-title mt-3" style={{ wordSpacing: '0.08em' }}>Half a cent per email. No tiers.</h2>
             <p className="text-base text-gray-600 mt-4 leading-relaxed">
-              No tiers. No seat pricing. No annual contracts. 50 emails free every month.
-              After that, $0.005 per processed email plus model token costs (marked up 20% from provider rates).
-              Alerts cost $0.005 each.
+              50 emails free every month. After that, $0.005 per processed email plus model token costs at provider rates
+              (GPT-4.1 at $3/$12 per million tokens, GPT-4.1-mini at $0.40/$1.60, GPT-4.1-nano at $0.10/$0.40).
+              Alerts cost $0.005 each. No seat pricing. No annual contracts.
             </p>
             <div className="mt-6 flex gap-4">
               <Link href="/auth/register" className="btn btn-primary">Start free</Link>
@@ -229,7 +414,7 @@ export default function HomePage() {
             {[
               ['50 free emails', 'Every month, no card needed'],
               ['$0.005 per email', 'Platform fee per processed email'],
-              ['Token costs + 20%', 'Passed through from the model provider'],
+              ['Model costs at provider rates', 'GPT-4.1-nano from $0.10/M tokens'],
               ['$0.005 per alert', 'Only when the agent decides to notify you'],
               ['Unlimited watchers', 'As many email streams as you need'],
             ].map(([label, desc]) => (
@@ -247,29 +432,23 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* Docs — compact */}
-      <Section id="docs" className="landing-section py-14 md:py-18">
-        <div className="mb-8">
-          <div className="landing-section-kicker">Documentation</div>
-          <h2 className="landing-section-title mt-3" style={{ wordSpacing: '0.08em' }}>Dig deeper when you want to.</h2>
+      {/* Documentation */}
+      <Section id="docs" className="landing-section py-14 md:py-20">
+        <div className="mb-8 md:mb-12">
+          <SectionHeader eyebrow="Documentation" title="Understand what it does." description="Every decision is logged. Every action is traceable. Read how it works, what it stores, and why you can trust it." />
         </div>
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
           {[
             { href: '/extension', title: 'Chrome Extension', desc: '30-second setup for Gmail and Outlook.' },
             { href: '/learn/watchers', title: 'Watchers', desc: 'Prompts, tools, and alert thresholds.' },
             { href: '/learn/agent', title: 'The Agent', desc: 'Analysis, memory, and decision logic.' },
-            { href: '/learn/integrations', title: 'Integrations', desc: 'API, webhooks, and agent frameworks.' },
+            { href: '/learn/integrations', title: 'Integrations', desc: 'REST API, webhooks, agent frameworks.' },
             { href: '/learn/memory', title: 'Memory', desc: 'How context builds across emails.' },
-            { href: '/learn/architecture', title: 'Architecture', desc: 'Data flow and the privacy model.' },
+            { href: '/learn/email-ingestion', title: 'Email Setup', desc: 'Forwarding rules and filter setup.' },
+            { href: '/learn/architecture', title: 'Architecture', desc: 'Data flow and privacy model.' },
             { href: '/learn/security', title: 'Security', desc: 'What gets stored. What gets discarded.' },
-            { href: '/learn/email-ingestion', title: 'Email Setup', desc: 'Manual forwarding and filter rules.' },
           ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="panel p-4 hover:-translate-y-0.5 transition-transform group"
-            >
+            <Link key={item.href} href={item.href} className="panel p-4 hover:-translate-y-0.5 transition-transform group">
               <h3 className="text-sm font-semibold text-gray-900 group-hover:text-vigil-800">{item.title}</h3>
               <p className="text-xs text-gray-500 mt-1">{item.desc}</p>
             </Link>
@@ -277,18 +456,36 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* Final CTA */}
+      {/* CTA */}
       <Section className="landing-section py-14 md:py-20">
-        <div className="panel max-w-2xl mx-auto p-8 md:p-10 text-center">
-          <h2 className="text-2xl md:text-3xl font-display font-semibold text-gray-900">Start with one email.</h2>
-          <p className="text-base text-gray-600 mt-4 leading-relaxed">
-            Create an account. Forward one email. See what Vigil does with it. If it&apos;s useful, forward more.
-          </p>
-          <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/auth/register" className="btn btn-primary btn-lg">Create free account</Link>
-            <Link href="/extension" className="btn btn-secondary btn-lg">Chrome extension</Link>
+        <div className="landing-cta-shell panel overflow-hidden max-w-4xl mx-auto">
+          <div className="grid gap-0 md:grid-cols-[1.15fr_0.85fr]">
+            <div className="px-6 py-8 md:px-10 md:py-10 text-left">
+              <SectionHeader eyebrow="Start now" title="Start with one email." description="Create an account, forward one email, and let Vigil prove itself. Use the Chrome extension for the fastest path." />
+              <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                <Link href="/auth/register" className="btn btn-primary btn-lg">Create free account</Link>
+                <Link href="/extension" className="btn btn-secondary btn-lg">Chrome extension</Link>
+              </div>
+              <p className="mt-4 text-sm text-gray-500 max-w-none">No credit card. Cancel by deleting the forwarding rule.</p>
+            </div>
+            <div className="landing-cta-pricing px-6 py-8 md:px-8 md:py-10 text-white">
+              <p className="text-vigil-200 text-sm uppercase tracking-[0.22em] mb-4">Pay per use</p>
+              <ul className="text-sm space-y-2 text-vigil-100 text-left">
+                {['50 free emails every month', '$0.005 per processed email', 'Model tokens at provider rates', '$0.005 per alert sent', 'Full audit trail and memory'].map((item) => (
+                  <li key={item} className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-vigil-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <div className="landing-cta-footnote mt-6">
+                <p className="text-vigil-100 text-sm font-medium">Already have an account?</p>
+                <Link href="/auth/login" className="inline-flex mt-2 text-sm text-white/85 hover:text-white font-medium">Sign in →</Link>
+              </div>
+            </div>
           </div>
-          <p className="text-xs text-gray-400 mt-4">No credit card. No inbox access. Cancel by deleting the forwarding rule.</p>
         </div>
       </Section>
 
