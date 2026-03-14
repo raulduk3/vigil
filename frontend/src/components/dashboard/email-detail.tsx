@@ -213,36 +213,42 @@ export function EmailDetail({ thread, watcherId, onClose, onStatusChange }: Emai
               {threadActions.length === 0 && (
                 <p className="text-xs text-gray-400">No actions recorded yet for this thread.</p>
               )}
-              {threadActions.map((action) => (
-                <div key={action.id} className="panel-inset px-3 py-2 text-xs">
-                  <div className="flex items-center justify-between gap-2 mb-0.5">
-                    <span className="font-medium text-gray-700 capitalize">{action.tool || action.trigger_type}</span>
-                    <span className={`badge badge-sm ${action.result === 'success' ? 'badge-ok' : 'badge-critical'}`}>
-                      {action.result}
-                    </span>
+              {threadActions.map((action) => {
+                const params = typeof action.tool_params === 'string' ? (() => { try { return JSON.parse(action.tool_params); } catch { return {}; } })() : (action.tool_params ?? {});
+                const description = action.tool === 'send_alert' ? `Alert sent: "${(params.message || '').slice(0, 80)}"` 
+                  : action.tool === 'ignore_thread' ? `Thread ignored${params.reason ? `: ${params.reason}` : ''}`
+                  : action.tool === 'update_thread' ? `Thread set to ${params.status || 'updated'}`
+                  : action.tool === 'memory_store' ? `Remembered: "${(params.content || '').slice(0, 80)}"`
+                  : action.tool === 'memory_obsolete' ? 'Retired a memory'
+                  : !action.tool ? 'Analyzed email'
+                  : action.tool;
+                const badgeLabel = action.tool === 'send_alert' ? 'alert' : action.tool === 'ignore_thread' ? 'ignored' : action.tool === 'memory_store' ? 'memory' : action.tool || 'analysis';
+                const badgeClass = action.tool === 'send_alert' ? 'badge-critical' : action.result === 'failed' ? 'badge-critical' : 'badge-neutral';
+
+                return (
+                  <div key={action.id} className="panel-inset px-3 py-2.5 text-xs">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <div className="flex items-start gap-2">
+                        <span className={`badge badge-sm ${badgeClass} shrink-0 mt-0.5`}>{badgeLabel}</span>
+                        <span className="text-gray-700">{description}</span>
+                      </div>
+                      <span className="text-gray-400 shrink-0 tabular-nums">{formatFullTimestamp(action.created_at, timezone)}</span>
+                    </div>
+                    {action.reasoning && (
+                      <p className="text-gray-500 mt-1 pl-6 leading-relaxed">{action.reasoning}</p>
+                    )}
+                    {action.error && (
+                      <p className="text-red-600 mt-1 pl-6">{action.error}</p>
+                    )}
+                    {(action.model || action.cost_usd) && (
+                      <div className="flex gap-3 text-gray-400 mt-1 pl-6">
+                        {action.model && <span className="font-mono">{action.model}</span>}
+                        {action.cost_usd != null && action.cost_usd > 0 && <span>${Number(action.cost_usd).toFixed(4)}</span>}
+                      </div>
+                    )}
                   </div>
-                  <div className="text-gray-500 mb-1">{formatFullTimestamp(action.created_at, timezone)}</div>
-                  <div className="text-gray-500 mb-1 flex flex-wrap gap-x-2 gap-y-0.5">
-                    <span>trigger: {action.trigger_type}</span>
-                    {action.model && <span>model: {action.model}</span>}
-                    {action.duration_ms !== null && action.duration_ms !== undefined && <span>duration: {action.duration_ms}ms</span>}
-                    {action.context_tokens !== null && action.context_tokens !== undefined && <span>tokens: {action.context_tokens}</span>}
-                    {action.cost_usd !== null && action.cost_usd !== undefined && <span>cost: ${Number(action.cost_usd).toFixed(4)}</span>}
-                  </div>
-                  {action.decision && (
-                    <p className="text-gray-600">decision: {action.decision}</p>
-                  )}
-                  {action.memory_delta && (
-                    <p className="text-gray-500 mt-0.5">memory: {action.memory_delta}</p>
-                  )}
-                  {action.error && (
-                    <p className="text-red-600 mt-0.5">error: {action.error}</p>
-                  )}
-                  {action.tool_params && (
-                    <pre className="text-gray-500 mt-1 whitespace-pre-wrap break-words">params: {JSON.stringify(action.tool_params)}</pre>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

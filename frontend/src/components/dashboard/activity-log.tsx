@@ -62,8 +62,17 @@ function isMeaningfulAction(action: Action): boolean {
   return false;
 }
 
+function parseParams(raw: unknown): Record<string, unknown> {
+  if (!raw) return {};
+  if (typeof raw === 'string') {
+    try { return JSON.parse(raw); } catch { return {}; }
+  }
+  if (typeof raw === 'object') return raw as Record<string, unknown>;
+  return {};
+}
+
 function getActionLabel(action: Action): { label: string; badge: string; badgeClass: string } {
-  const p = action.tool_params ?? {};
+  const p = parseParams(action.tool_params);
 
   if (action.tool === 'send_alert') {
     const msg = (p as any).message || (p as any).subject || '';
