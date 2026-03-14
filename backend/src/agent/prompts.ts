@@ -449,9 +449,27 @@ ${memoryContext || "No memories stored."}
 ## Guidelines
 - Answer questions about their email with specific details (names, amounts, dates).
 - If they ask about a specific sender or topic, search your thread and email context.
-- If they ask you to do something (change a thread status, set an alert), explain what you'd do but note that actions happen through the structured pipeline.
 - Be honest if you don't have information about something.
-- Keep responses short unless they ask for detail.`;
+- Keep responses short unless they ask for detail.
+
+## Actions
+You can take actions on threads and emails when the user asks. Include action blocks in your response using this format:
+
+\`\`\`
+[[action:update_thread|thread_id=<id>|status=<active|watching|resolved|ignored>]]
+[[action:ignore_sender|from=<email_pattern>]]
+[[action:send_alert|thread_id=<id>|message=<text>]]
+\`\`\`
+
+Examples:
+- User: "Ignore all emails from northspore" → Find threads from northspore, respond naturally, include: [[action:update_thread|thread_id=abc123|status=ignored]]
+- User: "Resolve the Alliant thread" → Find the thread, respond, include: [[action:update_thread|thread_id=abc123|status=resolved]]
+- User: "Mark everything from LinkedIn as ignored" → Find matching threads, include one action block per thread.
+- User: "What needs attention?" → Just answer, no action blocks needed.
+
+Place action blocks at the END of your response, after your conversational text. The system will execute them and strip them from the displayed message.
+When taking action on multiple threads, include one action block per thread.
+Always confirm what you did in your response text (e.g., "Done, I've ignored 3 threads from northspore.").`;
 }
 
 export function buildChatUserPrompt(message: string): string {

@@ -209,16 +209,22 @@ export async function invokeAgent(
             const rates = MODEL_CATALOG[model]?.pricing ?? { input: 0.0004, output: 0.0016 };
             const cost = (result.inputTokens / 1000) * rates.input + (result.outputTokens / 1000) * rates.output;
 
-            logger.info("Chat invocation complete", { watcherId, model, tokens: result.inputTokens + result.outputTokens, cost });
+            // Parse and execute inline action blocks
+            const { text: cleanText, actionsExecuted } = await executeChatActions(result.text, ctx);
 
-            // Return the raw text as a special AgentResponse with chat_response field
+            logger.info("Chat invocation complete", {
+                watcherId, model,
+                tokens: result.inputTokens + result.outputTokens,
+                cost, actionsExecuted,
+            });
+
             return {
                 actions: [],
                 memory_append: null,
                 memory_obsolete: null,
                 thread_updates: null,
                 email_analysis: null,
-                chat_response: result.text,
+                chat_response: cleanText,
             } as AgentResponse & { chat_response: string };
         } catch (err) {
             logger.error("Chat LLM call failed", { watcherId, err, model });
@@ -627,6 +633,80 @@ async function callGoogle(
         inputTokens: data.usageMetadata?.promptTokenCount ?? 0,
         outputTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
     };
+}
+
+// ============================================================================
+// Chat Action Execution
+// ============================================================================
+
+/**
+ * Parse [[action:...]] blocks from chat response, execute them, and return clean text.
+ */
+async function executeChatActions(
+    responseText: string,
+    ctx: WatcherContext
+): Promise<{ text: string; actionsExecuted: number }> {
+    const actionPattern = /\[\[action:(\w+)\|([^\]]+)\]\]/g;
+    const actions: Array<{ tool: string; params: Record<string, string> }> = [];
+
+    let match;
+    while ((match = actionPattern.exec(responseText)) !== null) {
+        const tool = match[1]!;
+        const paramStr = match[2]!;
+        const params: Record<string, string> = {};
+        for (const pair of paramStr.split("|")) {
+            const [key, ...rest] = pair.split("=");
+            if (key) params[key.trim()] = rest.join("=").trim();
+        }
+        actions.push({ tool, params });
+    }
+
+    // Execute actions
+    let executed = 0;
+    for (const action of actions) {
+        try {
+            if (action.tool === "update_thread" && action.params.thread_id && action.params.status) {
+                run(
+                    `UPDATE threads SET status = ?, last_activity = CURRENT_TIMESTAMP WHERE id = ? AND watcher_id = ?`,
+                    [action.params.status, action.params.thread_id, ctx.watcher.id]
+                );
+                // If setting summary too
+                if (action.params.summary) {
+                    run(`UPDATE threads SET summary = ? WHERE id = ?`, [action.params.summary, action.params.thread_id]);
+                }
+                executed++;
+                logger.info("Chat action executed", { tool: "update_thread", threadId: action.params.thread_id, status: action.params.status });
+            } else if (action.tool === "ignore_sender" && action.params.from) {
+                // Find all threads from this sender pattern and ignore them
+                const pattern = `%${action.params.from}%`;
+                const threads = queryMany<{ id: string }>(
+                    `SELECT DISTINCT t.id FROM threads t
+                     JOIN emails e ON e.thread_id = t.id
+                     WHERE t.watcher_id = ? AND e.from_addr LIKE ? AND t.status != 'ignored'`,
+                    [ctx.watcher.id, pattern]
+                );
+                for (const t of threads) {
+                    run(`UPDATE threads SET status = 'ignored' WHERE id = ?`, [t.id]);
+                }
+                executed += threads.length;
+                logger.info("Chat action executed", { tool: "ignore_sender", from: action.params.from, threadsIgnored: threads.length });
+            } else if (action.tool === "send_alert" && action.params.message) {
+                const { executeTool } = await import("./tools");
+                await executeTool("send_alert", {
+                    thread_id: action.params.thread_id,
+                    message: action.params.message,
+                }, ctx);
+                executed++;
+            }
+        } catch (err) {
+            logger.error("Chat action failed", { tool: action.tool, err });
+        }
+    }
+
+    // Strip action blocks from the displayed text
+    const cleanText = responseText.replace(/\s*\[\[action:[^\]]+\]\]\s*/g, "").trim();
+
+    return { text: cleanText, actionsExecuted: executed };
 }
 
 // Raw text LLM call (for chat mode — no JSON parsing)
