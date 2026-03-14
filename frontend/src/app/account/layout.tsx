@@ -13,6 +13,7 @@ function AccountLayout({ children }: { children: React.ReactNode }) {
     { href: '/account', label: 'Profile', icon: UserIcon },
     { href: '/account/security', label: 'Security', icon: ShieldIcon },
     { href: '/account/billing', label: 'Billing', icon: CreditCardIcon },
+    { href: '/account/developer', label: 'Developer', icon: CodeIcon },
   ];
 
   return (
@@ -142,6 +143,14 @@ function CreditCardIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5z" />
+    </svg>
+  );
+}
+
+function CodeIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
     </svg>
   );
 }
