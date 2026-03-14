@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { PublicHeader } from '@/components/layout';
+import { PublicHeader, Footer } from '@/components/layout';
 import { notFound } from 'next/navigation';
 
 const posts: Record<string, { title: string; date: string; tag: string; content: string }> = {
@@ -234,11 +234,7 @@ export default async function BlogPost({ params }: { params: Promise<{ slug: str
         </div>
       </main>
 
-      <footer className="border-t border-gray-200 bg-surface-page">
-        <div className="max-w-3xl mx-auto px-6 py-8 text-center text-sm text-gray-500">
-          © {new Date().getFullYear()} Vigil. All rights reserved.
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
