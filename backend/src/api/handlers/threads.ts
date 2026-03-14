@@ -64,7 +64,7 @@ export const threadHandlers = {
 
         // Load email metadata for this thread (no body — just analysis + metadata)
         const emails = queryMany<EmailRow>(
-            `SELECT id, message_id, from_addr, to_addr, subject, received_at, original_date, analysis, processed, created_at
+            `SELECT id, message_id, from_addr, to_addr, subject, received_at, original_date, recipient_received_at, analysis, processed, created_at
              FROM emails WHERE thread_id = ? ORDER BY received_at ASC`,
             [threadId]
         );

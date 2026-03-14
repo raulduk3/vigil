@@ -136,8 +136,27 @@ async function parseRawEmail(raw: string) {
     const parsed = await parser.parse(raw);
 
     const headers: Record<string, string> = {};
+    const receivedHeaders: string[] = [];
     for (const h of parsed.headers ?? []) {
         headers[h.key.toLowerCase()] = h.value;
+        if (h.key.toLowerCase() === "received") {
+            receivedHeaders.push(h.value);
+        }
+    }
+
+    // Extract the time the original recipient's mail server received the email.
+    // In Gmail auto-forwarding, the earliest "Received" header with a parseable
+    // date is typically when Gmail first accepted delivery.
+    let recipientReceivedAt: string | undefined;
+    for (const rh of receivedHeaders.reverse()) {
+        const dateMatch = rh.match(/;\s*(.+)$/);
+        if (dateMatch?.[1]) {
+            const d = new Date(dateMatch[1].trim());
+            if (!isNaN(d.getTime())) {
+                recipientReceivedAt = d.toISOString();
+                break;
+            }
+        }
     }
 
     return {
@@ -148,6 +167,7 @@ async function parseRawEmail(raw: string) {
         body: parsed.text ?? parsed.html ?? "",
         inReplyTo: headers["in-reply-to"] ?? undefined,
         headers,
+        recipientReceivedAt,
     };
 }
 
@@ -164,7 +184,7 @@ export const ingestionHandlers = {
 
             // Determine if raw MIME or JSON based on content type
             const contentType = c.req.header("content-type") ?? "";
-            let messageId: string, from: string, to: string, subject: string, emailBody: string, headers: Record<string, string>, inReplyTo: string | undefined, originalFrom: string | undefined;
+            let messageId: string, from: string, to: string, subject: string, emailBody: string, headers: Record<string, string>, inReplyTo: string | undefined, originalFrom: string | undefined, recipientReceivedAt: string | undefined;
 
             if (contentType.includes("text/plain") || contentType.includes("message/rfc822")) {
                 // Raw MIME from Cloudflare Worker
@@ -177,6 +197,7 @@ export const ingestionHandlers = {
                 emailBody = parsed.body;
                 headers = parsed.headers;
                 inReplyTo = parsed.inReplyTo;
+                recipientReceivedAt = parsed.recipientReceivedAt;
 
                 // Fallback: use Cloudflare headers if MIME parsing missed them
                 if (from === "unknown") from = c.req.header("x-cloudflare-email-from") ?? "unknown";
@@ -291,6 +312,7 @@ export const ingestionHandlers = {
                 receivedAt: Date.now(),
                 originalFrom,
                 originalDate: headers["date"] ? new Date(headers["date"]).getTime() || undefined : undefined,
+                recipientReceivedAt: parsed.recipientReceivedAt,
             });
 
             return c.json({

@@ -181,7 +181,10 @@ export function EmailDetail({ thread, watcherId, onClose, onStatusChange, onDele
                       {email.original_date && (
                         <span>Sent: {formatFullTimestamp(email.original_date, timezone)}</span>
                       )}
-                      <span>Received by Vigil: {formatFullTimestamp(email.received_at, timezone)}</span>
+                      {email.recipient_received_at && (
+                        <span>Delivered: {formatFullTimestamp(email.recipient_received_at, timezone)}</span>
+                      )}
+                      <span>Vigil: {formatFullTimestamp(email.received_at, timezone)}</span>
                     </div>
                   </div>
                 ))}

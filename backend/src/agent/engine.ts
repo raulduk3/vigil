@@ -118,8 +118,8 @@ export async function invokeAgent(
         emailId = crypto.randomUUID();
         run(
             `INSERT INTO emails
-             (id, watcher_id, message_id, from_addr, to_addr, subject, received_at, original_date, body_hash, processed, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE, CURRENT_TIMESTAMP)`,
+             (id, watcher_id, message_id, from_addr, to_addr, subject, received_at, original_date, recipient_received_at, body_hash, processed, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE, CURRENT_TIMESTAMP)`,
             [
                 emailId,
                 watcherId,
@@ -129,6 +129,7 @@ export async function invokeAgent(
                 email.subject,
                 new Date(email.receivedAt).toISOString(),
                 email.originalDate ? new Date(email.originalDate).toISOString() : null,
+                email.recipientReceivedAt ?? null,
                 bodyHash,
             ]
         );

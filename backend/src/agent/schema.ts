@@ -98,7 +98,8 @@ export interface ParsedEmail {
     headers: Record<string, string>;
     receivedAt: number;
     originalFrom?: string;
-    originalDate?: number; // original Date header (when sender sent it)
+    originalDate?: number;
+    recipientReceivedAt?: string;
 }
 
 export type InvocationTrigger =

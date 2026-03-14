@@ -26,7 +26,8 @@ export interface IngestEmailInput {
     inReplyTo?: string;
     receivedAt: number;
     originalFrom?: string;
-    originalDate?: number; // original Date header timestamp (when sender sent it)
+    originalDate?: number;
+    recipientReceivedAt?: string; // when the original recipient's mail server accepted it
 }
 
 export interface IngestEmailResult {
@@ -69,6 +70,7 @@ export async function ingestEmail(
                 receivedAt: input.receivedAt,
                 originalFrom: input.originalFrom,
                 originalDate: input.originalDate,
+                recipientReceivedAt: input.recipientReceivedAt,
             },
         });
 
