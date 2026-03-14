@@ -439,7 +439,7 @@ export default function HomePage() {
           />
         </div>
 
-        <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <ul className="space-y-4 md:space-y-5">
           {[
             { id: 'uc-vendor', role: 'Vendor follow-up', text: 'Track invoices, flag overdue payments. Webhook to your accounting system when a payment is due.' },
             { id: 'uc-client', role: 'Client communications', text: 'Know when conversations go cold. Trigger a Slack message when a client is waiting.' },
@@ -455,12 +455,12 @@ export default function HomePage() {
               className="opacity-0"
               style={{ animation: isRevealed(item.id) ? `slideUpIn 0.5s ease-out ${0.1 + idx * 0.05}s forwards` : 'none' }}
             >
-              <div className="landing-use-case-card panel p-5 md:p-6 h-full">
-                <div className="flex items-start justify-between gap-3 mb-4">
+              <div className="flex items-start gap-3 md:gap-4">
+                <span className="text-gray-400 text-lg md:text-xl pt-0.5 flex-shrink-0">→</span>
+                <div className="space-y-0.5 md:space-y-1">
                   <p className="text-base md:text-lg font-semibold text-gray-900">{item.role}</p>
-                  <span className="landing-use-case-arrow" aria-hidden>→</span>
+                  <p className="text-sm md:text-base text-gray-600 leading-relaxed">{item.text}</p>
                 </div>
-                <p className="text-sm md:text-base text-gray-700 leading-relaxed">{item.text}</p>
               </div>
             </li>
           ))}
