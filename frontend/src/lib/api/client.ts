@@ -60,6 +60,7 @@ export interface Thread {
   email_count: number;
   summary: string | null;
   flags: Record<string, unknown>;
+  original_date: string | null;
   created_at: string;
 }
 

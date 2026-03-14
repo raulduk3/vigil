@@ -32,7 +32,16 @@ export const threadHandlers = {
 
         sql += ` ORDER BY last_activity DESC`;
 
-        const threads = queryMany<ThreadRow>(sql, params);
+        const rawThreads = queryMany<ThreadRow>(sql, params);
+
+        // Enrich with original_date from the earliest email in each thread
+        const threads = rawThreads.map(t => {
+            const earliest = queryOne<{ original_date: string | null }>(
+                `SELECT original_date FROM emails WHERE thread_id = ? AND original_date IS NOT NULL ORDER BY original_date ASC LIMIT 1`,
+                [t.id]
+            );
+            return { ...t, original_date: earliest?.original_date ?? null };
+        });
         return c.json({ threads: threads.map(formatThread) });
     },
 

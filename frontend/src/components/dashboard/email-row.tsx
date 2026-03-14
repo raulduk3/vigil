@@ -57,7 +57,7 @@ export function EmailRow({ thread, isSelected, onClick }: EmailRowProps) {
             {thread.subject || 'No subject'}
           </span>
           <span className="shrink-0 text-xs text-gray-400 tabular-nums">
-            {formatFullTime(thread.last_activity)}
+            {thread.original_date ? formatFullTime(thread.original_date) : formatFullTime(thread.last_activity)}
           </span>
         </div>
 
