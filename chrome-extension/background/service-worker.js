@@ -2,24 +2,11 @@
  * Vigil Extension — Background Service Worker
  */
 
-// Open side panel when extension icon clicked on supported pages
-chrome.action.onClicked.addListener(async (tab) => {
-    if (tab.id) {
-        await chrome.sidePanel.open({ tabId: tab.id });
-    }
-});
+// Set side panel to open on action click
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(console.error);
 
-// Listen for messages from content scripts and popup
+// Listen for messages from content scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === "OPEN_SIDE_PANEL") {
-        chrome.sidePanel.open({ tabId: sender.tab?.id }).then(() => {
-            sendResponse({ ok: true });
-        }).catch((err) => {
-            sendResponse({ ok: false, error: err.message });
-        });
-        return true; // async
-    }
-
     if (message.type === "DETECT_PROVIDER") {
         const url = sender.tab?.url || "";
         if (url.includes("mail.google.com")) {
@@ -29,22 +16,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         } else {
             sendResponse({ provider: null });
         }
-        return false; // sync
+        return false;
     }
 
-    if (message.type === "NAVIGATE_TAB") {
-        chrome.tabs.update(sender.tab?.id, { url: message.url }).then(() => {
-            sendResponse({ ok: true });
-        }).catch((err) => {
-            sendResponse({ ok: false, error: err.message });
-        });
-        return true; // async
-    }
-
-    // Unknown message — respond immediately to avoid channel leak
     sendResponse({ error: "unknown message type" });
     return false;
 });
-
-// Set side panel behavior
-chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });

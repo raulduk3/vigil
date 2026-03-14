@@ -139,5 +139,14 @@
 
     <script src="../lib/api.js"></script>
     <script src="panel.js"></script>
+    <script>
+        window.onerror = function(msg, src, line, col, err) {
+            console.error("[vigil] UNCAUGHT:", msg, "at", src, line, col, err);
+            const el = document.createElement("div");
+            el.style.cssText = "position:fixed;bottom:0;left:0;right:0;padding:12px;background:#8b4242;color:white;font-size:12px;z-index:9999;";
+            el.textContent = "Error: " + msg + " (line " + line + ")";
+            document.body.appendChild(el);
+        };
+    </script>
 </body>
 </html>
