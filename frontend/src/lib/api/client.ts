@@ -276,6 +276,13 @@ export const api = {
     });
   },
 
+  async chatWithAgent(id: string, message: string): Promise<{ watcher_id: string; message: string }> {
+    return request(`/api/watchers/${id}/invoke`, {
+      method: 'POST',
+      body: JSON.stringify({ message }),
+    });
+  },
+
   async sendDigest(id: string): Promise<{ digest_sent: boolean }> {
     return request(`/api/watchers/${id}/digest`, { method: 'POST' });
   },

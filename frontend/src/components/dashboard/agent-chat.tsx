@@ -46,9 +46,8 @@ export function AgentChat({ watcherId }: AgentChatProps) {
     setSending(true);
 
     try {
-      const res = await api.invokeWatcher(watcherId, query);
-      const responseText = extractResponseText(res.response);
-      const agentMsg: Message = { role: 'agent', content: responseText, timestamp: new Date() };
+      const res = await api.chatWithAgent(watcherId, query);
+      const agentMsg: Message = { role: 'agent', content: res.message, timestamp: new Date() };
       setMessages((prev) => [...prev, agentMsg]);
     } catch (err) {
       const errMsg: Message = {
