@@ -248,7 +248,7 @@ export default function BillingPage() {
 
       {/* Pricing note */}
       <div className="rounded-lg bg-gray-50 border border-gray-200 px-4 py-3">
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-500 max-w-none">
           <span className="font-medium text-gray-700">Pay-per-use, no tiers.</span>{' '}
           $0.005 per email processed. Billed monthly through Stripe. No charge during your {billing?.trial_emails_total ?? 50}-email free trial.
         </p>
