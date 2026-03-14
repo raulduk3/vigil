@@ -15,10 +15,10 @@ interface SettingsModalProps {
 }
 
 const TOOLS = [
-  { id: 'send_alert', label: 'Send Alert', description: 'Email when something needs attention' },
-  { id: 'update_thread', label: 'Update Thread', description: 'Change thread status or summary' },
-  { id: 'ignore_thread', label: 'Ignore Thread', description: 'Mark thread as noise' },
-  { id: 'webhook', label: 'Webhook', description: 'POST to a configured URL' },
+  { id: 'send_alert', label: 'Send Alert', description: 'The agent sends you an email when something needs your attention. Controlled by your reactivity level. You don\'t need to mention this in your prompt — the agent decides when to alert based on urgency.' },
+  { id: 'update_thread', label: 'Update Thread', description: 'The agent tracks conversations by setting their status: active (monitoring for silence), watching (tracking quietly), resolved (done), or ignored (noise). This happens automatically on every email.' },
+  { id: 'ignore_thread', label: 'Ignore Thread', description: 'The agent marks irrelevant threads as noise — marketing, newsletters, spam. These stop being monitored entirely.' },
+  { id: 'webhook', label: 'Webhook', description: 'The agent sends structured data to any URL you configure. Use this to connect Vigil to Slack, Jira, Notion, or any system with an API. The agent decides when to fire it based on your prompt.' },
 ];
 
 const MEMORY_SENSITIVITY_LEVELS = [
@@ -475,6 +475,11 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
           {/* Prompt tab */}
           {tab === 'prompt' && (
             <div className="space-y-3">
+              <div className="panel-inset p-3 text-xs text-gray-600 leading-relaxed space-y-1.5">
+                <p><strong>Tell your agent what to care about.</strong> You don&apos;t need to mention tools here. The agent automatically uses Send Alert, Update Thread, and other enabled tools based on what you describe.</p>
+                <p>Good prompt: &quot;Monitor client emails. Alert me when deadlines approach or someone is waiting for a response.&quot;</p>
+                <p>The agent handles the rest: which emails to alert on, which to track silently, what to remember.</p>
+              </div>
               <div className="form-group">
                 <label className="form-label text-sm">System Prompt</label>
                 <textarea
