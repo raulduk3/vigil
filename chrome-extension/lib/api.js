@@ -33,28 +33,46 @@ class VigilAPI {
 
     async request(path, options = {}) {
         const auth = this._getAuthHeader();
-        console.log("[vigil] request", path, { hasAuth: !!auth });
+        console.log("[vigil] request", path, { hasAuth: !!auth, keyPrefix: _apiKey?.slice(0,6), tokenPrefix: _token?.slice(0,10) });
         if (!auth) throw new Error("Not authenticated");
 
         const url = `${API_BASE}${path}`;
-        const resp = await fetch(url, {
-            ...options,
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": auth,
-                ...(options.headers || {}),
-            },
-        });
+        console.log("[vigil] fetching:", url);
 
-        console.log("[vigil] response", path, resp.status);
+        let resp;
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 10000);
+
+            resp = await fetch(url, {
+                ...options,
+                signal: controller.signal,
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": auth,
+                    ...(options.headers || {}),
+                },
+            });
+
+            clearTimeout(timeout);
+        } catch (fetchErr) {
+            console.error("[vigil] fetch error:", fetchErr.name, fetchErr.message);
+            throw new Error(`Network error: ${fetchErr.message}`);
+        }
+
+        console.log("[vigil] response", path, resp.status, resp.statusText);
+
         if (!resp.ok) {
             const body = await resp.text();
+            console.error("[vigil] error body:", body);
             let msg;
             try { msg = JSON.parse(body).error; } catch { msg = body || resp.statusText; }
             throw new Error(msg || `API error ${resp.status}`);
         }
 
-        return resp.json();
+        const data = await resp.json();
+        console.log("[vigil] parsed response", path, typeof data);
+        return data;
     }
 
     // Auth — email/password
