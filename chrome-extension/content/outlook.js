@@ -36,6 +36,32 @@
         element.style.borderRadius = "4px";
     }
 
+    function attachHint(element, message) {
+        if (!element || element.dataset.vigilHintAttached === "true") return;
+        const hint = document.createElement("div");
+        hint.textContent = message;
+        hint.style.cssText = [
+            "margin-top: 6px",
+            "padding: 6px 10px",
+            "background: #0B1F2A",
+            "color: #f8f8f7",
+            "border-radius: 4px",
+            "font-size: 12px",
+            "font-weight: 600",
+            "width: fit-content",
+            "max-width: 320px",
+            "box-shadow: 0 2px 8px rgba(0,0,0,0.15)",
+        ].join(";");
+
+        const parent = element.parentElement || element;
+        parent.appendChild(hint);
+        element.dataset.vigilHintAttached = "true";
+        setTimeout(() => {
+            hint.remove();
+            element.dataset.vigilHintAttached = "false";
+        }, 10000);
+    }
+
     function setNativeValue(element, value) {
         const prototype = element instanceof HTMLTextAreaElement
             ? HTMLTextAreaElement.prototype
@@ -51,7 +77,7 @@
         return toggles.find((toggle) => {
             if (!isVisible(toggle)) return false;
             const contextText = textOf(toggle.closest('label, div, section, form') || toggle.parentElement);
-            return /forward/.test(contextText);
+            return /forward/.test(contextText) && !/keep a copy|keep copy|forwarded messages/.test(contextText);
         }) || null;
     }
 
@@ -128,26 +154,31 @@
 
         if (toggleOn(toggle)) {
             highlight(toggle);
+            attachHint(toggle, "Forwarding was enabled for this Outlook account.");
             actions.push('Enabled forwarding.');
         }
 
         if (input && address) {
             setNativeValue(input, address);
             highlight(input);
+            attachHint(input, 'Vigil filled your forwarding address.');
             actions.push('Filled the forwarding address.');
         }
 
         if (toggleOn(keepCopy)) {
             highlight(keepCopy);
+            attachHint(keepCopy, 'Outlook will keep a copy of forwarded messages.');
             actions.push('Enabled keep a copy.');
         }
 
         if (shouldSave && saveButton) {
             highlight(saveButton);
+            attachHint(saveButton, 'Outlook is saving the forwarding settings now.');
             saveButton.click();
             actions.push('Saved the forwarding settings.');
         } else if (saveButton) {
             highlight(saveButton);
+            attachHint(saveButton, 'Use Save to finish the Outlook forwarding flow.');
         }
 
         return {

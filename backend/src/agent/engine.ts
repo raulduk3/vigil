@@ -740,14 +740,19 @@ async function executeChatActions(
     let executed = 0;
     for (const action of actions) {
         try {
+            const VALID_STATUSES = ["active", "watching", "ignored", "resolved", "stale"];
             if (action.tool === "update_thread" && action.params.thread_id && action.params.status) {
+                if (!VALID_STATUSES.includes(action.params.status)) {
+                    logger.warn("Chat action rejected: invalid status", { status: action.params.status });
+                    continue;
+                }
                 run(
                     `UPDATE threads SET status = ?, last_activity = CURRENT_TIMESTAMP WHERE id = ? AND watcher_id = ?`,
                     [action.params.status, action.params.thread_id, ctx.watcher.id]
                 );
                 // If setting summary too
                 if (action.params.summary) {
-                    run(`UPDATE threads SET summary = ? WHERE id = ?`, [action.params.summary, action.params.thread_id]);
+                    run(`UPDATE threads SET summary = ? WHERE id = ? AND watcher_id = ?`, [action.params.summary, action.params.thread_id, ctx.watcher.id]);
                 }
                 executed++;
                 logger.info("Chat action executed", { tool: "update_thread", threadId: action.params.thread_id, status: action.params.status });

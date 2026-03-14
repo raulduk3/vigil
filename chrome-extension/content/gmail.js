@@ -5,7 +5,11 @@
  */
 
 (function() {
-    const GMAIL_FORWARDING_URL = "https://mail.google.com/mail/u/0/#settings/fwdandpop";
+    function getForwardingUrl() {
+        const match = window.location.pathname.match(/^\/mail\/u\/[^/]+\//);
+        const basePath = match?.[0] || "/mail/u/0/";
+        return `${window.location.origin}${basePath}#settings/fwdandpop`;
+    }
 
     function isForwardingPage() {
         return window.location.href.includes("#settings/fwdandpop");
@@ -131,7 +135,7 @@
 
     function applySetup(address, confirmCode) {
         if (!isForwardingPage()) {
-            window.location.href = GMAIL_FORWARDING_URL;
+            window.location.href = getForwardingUrl();
             return { ok: true, navigating: true, message: "Opened Gmail forwarding settings." };
         }
 
@@ -187,7 +191,7 @@
         }
 
         if (message.type === "NAVIGATE_TO_FORWARDING") {
-            window.location.href = GMAIL_FORWARDING_URL;
+            window.location.href = getForwardingUrl();
             sendResponse({ ok: true, navigating: true });
             return false;
         }

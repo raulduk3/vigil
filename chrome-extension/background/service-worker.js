@@ -21,7 +21,18 @@ function getProviderFromUrl(url = "") {
     return null;
 }
 
+function getGmailSettingsUrl(destination = "forwarding", activeUrl = "") {
+    const match = activeUrl.match(/https:\/\/mail\.google\.com(\/mail\/u\/[^/]+\/)/);
+    const basePath = match?.[1] || "/mail/u/0/";
+    const suffix = destination === "filters" ? "#settings/filters" : "#settings/fwdandpop";
+    return `https://mail.google.com${basePath}${suffix}`;
+}
+
 function getProviderUrl(provider, destination = "forwarding", activeUrl = "") {
+    if (provider === "gmail") {
+        return getGmailSettingsUrl(destination, activeUrl);
+    }
+
     if (provider === "outlook" && activeUrl.includes("outlook.office.com")) {
         if (destination === "forwarding") {
             return "https://outlook.office.com/mail/options/mail/forwarding";

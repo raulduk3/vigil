@@ -7,12 +7,13 @@
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { bodyLimit } from "hono/body-limit";
 
 import { createRouter } from "./api/router";
 import { initializeDatabase } from "./db/client";
 import { logger } from "./logger";
 import { invokeAgent } from "./agent/engine";
-import { queryMany, queryOne } from "./db/client";
+import { queryMany, queryOne, run } from "./db/client";
 import { pruneMemories } from "./agent/memory";
 import { sendDigest } from "./agent/digest";
 import type { WatcherRow } from "./agent/schema";
@@ -30,6 +31,9 @@ app.use(
         credentials: true,
     })
 );
+
+// Body size limit (2MB max — covers large emails with headroom)
+app.use("*", bodyLimit({ maxSize: 2 * 1024 * 1024 }));
 
 // Security headers
 app.use("*", async (c, next) => {
@@ -157,6 +161,15 @@ async function main() {
 
     startScheduledTicks();
     startWeeklyDigest();
+
+    // Cleanup expired/revoked refresh tokens every hour
+    setInterval(() => {
+        try {
+            run(`DELETE FROM refresh_tokens WHERE expires_at < datetime('now') OR revoked = TRUE`);
+        } catch (err) {
+            logger.error("Refresh token cleanup error", { err });
+        }
+    }, 60 * 60 * 1000);
 
     logger.info(`Vigil V2 starting on port ${port}`);
 

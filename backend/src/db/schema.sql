@@ -183,3 +183,12 @@ CREATE TABLE IF NOT EXISTS api_keys (
 );
 CREATE INDEX IF NOT EXISTS idx_api_keys_account ON api_keys(account_id);
 CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
+
+-- Gmail forwarding confirmation codes (Chrome extension support)
+CREATE TABLE IF NOT EXISTS confirm_codes (
+  id              TEXT PRIMARY KEY,
+  watcher_id      TEXT NOT NULL,
+  code            TEXT NOT NULL,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_confirm_codes_watcher ON confirm_codes(watcher_id);
