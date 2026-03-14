@@ -218,19 +218,19 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
                   className="input py-2"
                 >
                   <optgroup label="OpenAI">
-                    <option value="gpt-4.1-nano">GPT-4.1 Nano — $0.10/M in</option>
-                    <option value="gpt-4o-mini">GPT-4o Mini — $0.15/M in</option>
-                    <option value="gpt-4.1-mini">GPT-4.1 Mini — $0.40/M in</option>
-                    <option value="gpt-4.1">GPT-4.1 — $2.00/M in</option>
-                    <option value="gpt-4o">GPT-4o — $2.50/M in</option>
+                    <option value="gpt-4.1-nano">GPT-4.1 Nano — $0.12/M in</option>
+                    <option value="gpt-4o-mini">GPT-4o Mini — $0.18/M in</option>
+                    <option value="gpt-4.1-mini">GPT-4.1 Mini — $0.48/M in</option>
+                    <option value="gpt-4.1">GPT-4.1 — $2.40/M in</option>
+                    <option value="gpt-4o">GPT-4o — $3.00/M in</option>
                   </optgroup>
                   <optgroup label="Anthropic">
-                    <option value="claude-haiku-4">Claude Haiku 4 — $0.80/M in</option>
-                    <option value="claude-sonnet-4">Claude Sonnet 4 — $3.00/M in</option>
+                    <option value="claude-haiku-4">Claude Haiku 4 — $0.96/M in</option>
+                    <option value="claude-sonnet-4">Claude Sonnet 4 — $3.60/M in</option>
                   </optgroup>
                   <optgroup label="Google">
-                    <option value="gemini-2.5-flash">Gemini 2.5 Flash — $0.15/M in</option>
-                    <option value="gemini-2.5-pro">Gemini 2.5 Pro — $1.25/M in</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash — $0.18/M in</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro — $1.50/M in</option>
                   </optgroup>
                 </select>
                 <p className="text-xs text-gray-400 mt-1">Affects both email triage and chat. Cheaper models are faster but less nuanced.</p>

@@ -456,44 +456,44 @@ export const MODEL_CATALOG: Record<string, {
     maxTokens: number;
 }> = {
     // OpenAI
-    // Pricing includes 40% hosting markup on base provider costs
+    // Pricing: 20% markup on base provider costs + $0.001 platform fee per invocation
     "gpt-4.1-nano": {
         provider: "openai", label: "GPT-4.1 Nano", tier: "nano",
-        pricing: { input: 0.00014, output: 0.00056 }, maxTokens: 1024,
+        pricing: { input: 0.00012, output: 0.00048 }, maxTokens: 1024,
     },
     "gpt-4.1-mini": {
         provider: "openai", label: "GPT-4.1 Mini", tier: "mini",
-        pricing: { input: 0.00056, output: 0.00224 }, maxTokens: 1024,
+        pricing: { input: 0.00048, output: 0.00192 }, maxTokens: 1024,
     },
     "gpt-4.1": {
         provider: "openai", label: "GPT-4.1", tier: "standard",
-        pricing: { input: 0.0028, output: 0.0112 }, maxTokens: 2048,
+        pricing: { input: 0.0024, output: 0.0096 }, maxTokens: 2048,
     },
     "gpt-4o": {
         provider: "openai", label: "GPT-4o", tier: "standard",
-        pricing: { input: 0.0035, output: 0.014 }, maxTokens: 2048,
+        pricing: { input: 0.003, output: 0.012 }, maxTokens: 2048,
     },
     "gpt-4o-mini": {
         provider: "openai", label: "GPT-4o Mini", tier: "mini",
-        pricing: { input: 0.00021, output: 0.00084 }, maxTokens: 1024,
+        pricing: { input: 0.00018, output: 0.00072 }, maxTokens: 1024,
     },
     // Anthropic
     "claude-haiku-4": {
         provider: "anthropic", label: "Claude Haiku 4", tier: "mini",
-        pricing: { input: 0.00112, output: 0.0056 }, maxTokens: 1024,
+        pricing: { input: 0.00096, output: 0.0048 }, maxTokens: 1024,
     },
     "claude-sonnet-4": {
         provider: "anthropic", label: "Claude Sonnet 4", tier: "standard",
-        pricing: { input: 0.0042, output: 0.021 }, maxTokens: 2048,
+        pricing: { input: 0.0036, output: 0.018 }, maxTokens: 2048,
     },
     // Google
     "gemini-2.5-flash": {
         provider: "google", label: "Gemini 2.5 Flash", tier: "mini",
-        pricing: { input: 0.00021, output: 0.00084 }, maxTokens: 1024,
+        pricing: { input: 0.00018, output: 0.00072 }, maxTokens: 1024,
     },
     "gemini-2.5-pro": {
         provider: "google", label: "Gemini 2.5 Pro", tier: "standard",
-        pricing: { input: 0.00175, output: 0.014 }, maxTokens: 2048,
+        pricing: { input: 0.0015, output: 0.012 }, maxTokens: 2048,
     },
 };
 

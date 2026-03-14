@@ -4,22 +4,22 @@ import Link from 'next/link';
 import { PublicHeader } from '@/components/layout';
 
 const models = [
-  { name: 'GPT-4.1 Nano', cost: '$0.14', speed: 'Fastest', quality: 'Basic triage', recommended: false },
-  { name: 'GPT-4o Mini', cost: '$0.21', speed: 'Fast', quality: 'Good balance', recommended: false },
-  { name: 'Gemini 2.5 Flash', cost: '$0.21', speed: 'Fast', quality: 'Good balance', recommended: false },
-  { name: 'GPT-4.1 Mini', cost: '$0.56', speed: 'Fast', quality: 'Good balance', recommended: true },
-  { name: 'Claude Haiku 4', cost: '$1.12', speed: 'Fast', quality: 'Strong reasoning', recommended: false },
-  { name: 'Gemini 2.5 Pro', cost: '$1.75', speed: 'Moderate', quality: 'High accuracy', recommended: false },
-  { name: 'GPT-4.1', cost: '$2.80', speed: 'Moderate', quality: 'High accuracy', recommended: false },
-  { name: 'GPT-4o', cost: '$3.50', speed: 'Moderate', quality: 'High accuracy', recommended: false },
-  { name: 'Claude Sonnet 4', cost: '$4.20', speed: 'Moderate', quality: 'Strongest reasoning', recommended: false },
+  { name: 'GPT-4.1 Nano', cost: '$0.12', speed: 'Fastest', quality: 'Basic triage', recommended: false },
+  { name: 'GPT-4o Mini', cost: '$0.18', speed: 'Fast', quality: 'Good balance', recommended: false },
+  { name: 'Gemini 2.5 Flash', cost: '$0.18', speed: 'Fast', quality: 'Good balance', recommended: false },
+  { name: 'GPT-4.1 Mini', cost: '$0.48', speed: 'Fast', quality: 'Good balance', recommended: true },
+  { name: 'Claude Haiku 4', cost: '$0.96', speed: 'Fast', quality: 'Strong reasoning', recommended: false },
+  { name: 'Gemini 2.5 Pro', cost: '$1.50', speed: 'Moderate', quality: 'High accuracy', recommended: false },
+  { name: 'GPT-4.1', cost: '$2.40', speed: 'Moderate', quality: 'High accuracy', recommended: false },
+  { name: 'GPT-4o', cost: '$3.00', speed: 'Moderate', quality: 'High accuracy', recommended: false },
+  { name: 'Claude Sonnet 4', cost: '$3.60', speed: 'Moderate', quality: 'Strongest reasoning', recommended: false },
 ];
 
 const examples = [
-  { emails: 10, label: '10 emails/day', monthly: '~$0.50/mo', model: 'GPT-4.1 Mini' },
-  { emails: 50, label: '50 emails/day', monthly: '~$2.40/mo', model: 'GPT-4.1 Mini' },
-  { emails: 200, label: '200 emails/day', monthly: '~$9.60/mo', model: 'GPT-4.1 Mini' },
-  { emails: 50, label: '50 emails/day', monthly: '~$5.70/mo', model: 'GPT-4.1 (full)' },
+  { emails: 10, label: '10 emails/day', monthly: '~$0.45/mo', model: 'GPT-4.1 Mini' },
+  { emails: 50, label: '50 emails/day', monthly: '~$2.20/mo', model: 'GPT-4.1 Mini' },
+  { emails: 200, label: '200 emails/day', monthly: '~$8.90/mo', model: 'GPT-4.1 Mini' },
+  { emails: 50, label: '50 emails/day', monthly: '~$5.10/mo', model: 'GPT-4.1 (full)' },
 ];
 
 export default function PricingPage() {
