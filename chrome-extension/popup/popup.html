@@ -32,7 +32,7 @@
                 <button id="btn-login" class="btn primary">Sign In</button>
             </div>
 
-            <p class="help">Get your API key at <a href="https://vigil.run/account/developer" target="_blank">vigil.run</a></p>
+            <p class="help">Get your API key at <a href="https://vigil.run/account/developer" target="_blank" rel="noopener noreferrer">vigil.run</a></p>
             <div id="auth-error" class="error hidden"></div>
         </div>
 
@@ -41,8 +41,13 @@
             <div class="status-badge connected">
                 <span class="dot"></span> Connected
             </div>
-            <p class="desc">Open Gmail or Outlook, then click the Vigil icon to set up forwarding.</p>
+            <p id="active-context" class="desc">Open Gmail or Outlook, then continue in the setup panel.</p>
             <button id="btn-setup" class="btn primary">Open Setup Wizard</button>
+            <div class="quick-actions">
+                <button id="btn-open-gmail" class="btn secondary">Open Gmail</button>
+                <button id="btn-open-outlook" class="btn secondary">Open Outlook</button>
+            </div>
+            <a class="help-link" href="../getting-started.html" target="_blank" rel="noopener noreferrer">Install guide</a>
             <button id="btn-logout" class="btn secondary">Disconnect</button>
         </div>
     </div>

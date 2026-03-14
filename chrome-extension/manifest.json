@@ -1,22 +1,24 @@
 {
   "manifest_version": 3,
   "name": "Vigil — Email Intelligence",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Connect your email to Vigil. Set up forwarding automatically in Gmail or Outlook.",
   "permissions": [
     "storage",
     "sidePanel",
-    "scripting",
-    "activeTab",
     "tabs"
   ],
   "host_permissions": [
     "https://api.vigil.run/*",
+    "http://localhost:3001/*",
+    "http://127.0.0.1:3001/*",
     "https://mail.google.com/*",
     "https://outlook.live.com/*",
     "https://outlook.office.com/*"
   ],
   "action": {
+    "default_title": "Vigil",
+    "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",

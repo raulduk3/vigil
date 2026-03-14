@@ -249,9 +249,9 @@ export default function HomePage() {
 
       {/* Use cases — who this is for */}
       <Section id="use-cases" className="landing-section landing-section-banded border-y border-gray-200 py-14 md:py-18">
-        <div className="mb-8">
-          <p className="landing-section-kicker">Who it&apos;s for</p>
-          <h2 className="landing-section-title mt-3" style={{ wordSpacing: '0.08em' }}>Anyone who can&apos;t afford to miss what matters.</h2>
+        <div className="mb-8 text-center">
+          <p className="landing-section-kicker text-center">Who it&apos;s for</p>
+          <h2 className="landing-section-title text-center mt-3" style={{ wordSpacing: '0.08em' }}>Anyone who can&apos;t afford to miss what matters.</h2>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {[
@@ -268,7 +268,7 @@ export default function HomePage() {
             </div>
           ))}
         </div>
-        <div className="mt-8">
+        <div className="mt-8 text-center">
           <Link href="/auth/register" className="btn btn-primary">Start free</Link>
         </div>
       </Section>
@@ -313,9 +313,9 @@ export default function HomePage() {
 
       {/* Docs */}
       <Section id="docs" className="landing-section landing-section-banded border-y border-gray-200 py-14 md:py-18">
-        <div className="mb-8">
-          <p className="landing-section-kicker">Learn more</p>
-          <h2 className="landing-section-title mt-3" style={{ wordSpacing: '0.08em' }}>Everything is documented. Nothing is hidden.</h2>
+        <div className="mb-8 text-center">
+          <p className="landing-section-kicker text-center">Learn more</p>
+          <h2 className="landing-section-title text-center mt-3" style={{ wordSpacing: '0.08em' }}>Everything is documented. Nothing is hidden.</h2>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[

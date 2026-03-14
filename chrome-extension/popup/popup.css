@@ -156,6 +156,26 @@ input::placeholder {
     text-decoration: none;
 }
 
+.help-link {
+    text-align: center;
+    color: #2d5261;
+    font-size: 12px;
+    text-decoration: none;
+}
+
+.help-link:hover {
+    text-decoration: underline;
+}
+
+.quick-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.quick-actions .btn {
+    flex: 1;
+}
+
 .help a:hover {
     text-decoration: underline;
 }

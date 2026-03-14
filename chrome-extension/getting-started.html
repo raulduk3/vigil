@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vigil Extension Setup</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+            background: #f8f8f7;
+            color: #1a1a18;
+        }
+
+        main {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 48px 24px 64px;
+        }
+
+        h1 {
+            margin: 0 0 12px;
+            font-size: 36px;
+            line-height: 1.1;
+            color: #0B1F2A;
+        }
+
+        p {
+            line-height: 1.6;
+            color: #4b4b47;
+        }
+
+        .card {
+            background: #ffffff;
+            border: 1px solid #e4e4e1;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 18px;
+        }
+
+        ol {
+            padding-left: 20px;
+            line-height: 1.7;
+        }
+
+        code {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 6px;
+            background: #f0f0ee;
+            color: #0B1F2A;
+        }
+
+        a {
+            color: #2d5261;
+        }
+    </style>
+</head>
+<body>
+    <main>
+        <h1>Install the Vigil extension</h1>
+        <p>Vigil only assists with forwarding setup in Gmail and Outlook. It does not request inbox read permissions and it does not inspect message bodies.</p>
+
+        <div class="card">
+            <h2>Load it in Chrome</h2>
+            <ol>
+                <li>Open <code>chrome://extensions</code>.</li>
+                <li>Enable <code>Developer mode</code>.</li>
+                <li>Click <code>Load unpacked</code>.</li>
+                <li>Select the <code>chrome-extension</code> folder from this repository.</li>
+                <li>Pin the Vigil extension so the popup is always one click away.</li>
+            </ol>
+        </div>
+
+        <div class="card">
+            <h2>Connect and configure</h2>
+            <ol>
+                <li>Click the Vigil extension icon and sign in with your Vigil account or API key.</li>
+                <li>If you do not have a watcher yet, open the setup panel and create one there.</li>
+                <li>Open Gmail or Outlook. The popup can jump directly to each provider's forwarding settings.</li>
+                <li>Use <code>Assist On Current Page</code> from the setup panel to fill the forwarding address and guide the remaining confirmation steps.</li>
+                <li>For Gmail, keep the setup panel open while Vigil polls for the forwarding confirmation code.</li>
+            </ol>
+        </div>
+
+        <div class="card">
+            <h2>Backend detection</h2>
+            <p>The extension prefers <code>https://api.vigil.run/api</code> and automatically falls back to a local backend on <code>http://localhost:3001/api</code> when it is available.</p>
+        </div>
+
+        <div class="card">
+            <h2>Troubleshooting</h2>
+            <ol>
+                <li>Reload the extension after pulling changes so the service worker and content scripts refresh.</li>
+                <li>If Gmail or Outlook already had the settings page open, refresh that tab once so the helper attaches cleanly.</li>
+                <li>If the setup panel cannot detect your page, use the provider buttons to reopen the forwarding settings and try again.</li>
+            </ol>
+            <p>Account help and product docs live at <a href="https://vigil.run" target="_blank" rel="noopener noreferrer">vigil.run</a>.</p>
+        </div>
+    </main>
+</body>
+</html>

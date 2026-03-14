@@ -6,6 +6,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     const authSection = document.getElementById("auth-section");
     const connectedSection = document.getElementById("connected-section");
     const authError = document.getElementById("auth-error");
+    const activeContext = document.getElementById("active-context");
+
+    async function getActiveContext() {
+        return chrome.runtime.sendMessage({ type: "GET_ACTIVE_CONTEXT" });
+    }
+
+    async function refreshContextCopy() {
+        try {
+            const context = await getActiveContext();
+            if (context?.provider === "gmail") {
+                activeContext.textContent = "Gmail detected in your active tab. Open the setup panel to finish forwarding.";
+            } else if (context?.provider === "outlook") {
+                activeContext.textContent = "Outlook detected in your active tab. Open the setup panel to finish forwarding.";
+            } else {
+                activeContext.textContent = "Open Gmail or Outlook, or jump there directly from below.";
+            }
+        } catch {
+            activeContext.textContent = "Open Gmail or Outlook, then continue in the setup panel.";
+        }
+    }
 
     // Tab switching
     document.querySelectorAll(".tab").forEach(tab => {
@@ -22,6 +42,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (authed) {
         authSection.classList.add("hidden");
         connectedSection.classList.remove("hidden");
+        await refreshContextCopy();
     }
 
     // API Key login
@@ -34,6 +55,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             await vigilAPI.loginWithApiKey(key);
             authSection.classList.add("hidden");
             connectedSection.classList.remove("hidden");
+            await refreshContextCopy();
         } catch (err) {
             authError.textContent = err.message;
             authError.classList.remove("hidden");
@@ -51,6 +73,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             await vigilAPI.login(email, password);
             authSection.classList.add("hidden");
             connectedSection.classList.remove("hidden");
+            await refreshContextCopy();
         } catch (err) {
             authError.textContent = err.message;
             authError.classList.remove("hidden");
@@ -59,16 +82,26 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Open setup wizard
     document.getElementById("btn-setup").addEventListener("click", async () => {
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tab?.id) {
-            await chrome.sidePanel.open({ tabId: tab.id });
-            window.close();
+        const context = await getActiveContext();
+        if (context?.tabId) {
+            await chrome.runtime.sendMessage({ type: "OPEN_SIDE_PANEL", tabId: context.tabId });
         }
+        window.close();
+    });
+
+    document.getElementById("btn-open-gmail").addEventListener("click", async () => {
+        await chrome.runtime.sendMessage({ type: "OPEN_PROVIDER_PAGE", provider: "gmail", destination: "forwarding" });
+        await refreshContextCopy();
+    });
+
+    document.getElementById("btn-open-outlook").addEventListener("click", async () => {
+        await chrome.runtime.sendMessage({ type: "OPEN_PROVIDER_PAGE", provider: "outlook", destination: "forwarding" });
+        await refreshContextCopy();
     });
 
     // Logout
     document.getElementById("btn-logout").addEventListener("click", async () => {
-        await vigilAPI.logout();
+        await vigilAPI.logout({ preserveApiBase: true });
         connectedSection.classList.add("hidden");
         authSection.classList.remove("hidden");
     });

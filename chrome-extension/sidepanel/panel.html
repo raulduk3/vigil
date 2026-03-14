@@ -37,7 +37,7 @@
             <input type="email" id="panel-email" placeholder="Email">
             <input type="password" id="panel-password" placeholder="Password">
             <button id="panel-btn-login" class="btn primary">Sign In</button>
-            <p class="help">Don't have an account? <a href="https://vigil.run" target="_blank">Sign up at vigil.run</a></p>
+            <p class="help">Don't have an account? <a href="https://vigil.run" target="_blank" rel="noopener noreferrer">Sign up at vigil.run</a></p>
             <div id="panel-auth-error" class="error hidden"></div>
         </div>
 
@@ -86,9 +86,28 @@
 
         <!-- Setup View (forwarding + watcher config) -->
         <div class="view" id="view-setup">
-            <div id="setup-content" style="padding:20px 16px;overflow-y:auto;flex:1;">
+            <div id="setup-content" class="setup-content">
+                <div id="watcher-empty-state" class="setup-empty hidden">
+                    <h2>Create Your First Watcher</h2>
+                    <p class="step-desc">A watcher gives you the forwarding address and instructions Vigil needs to process mail.</p>
+                    <input id="new-watcher-name" type="text" placeholder="Watcher name, for example Work or Clients">
+                    <textarea id="new-watcher-notes" rows="4" placeholder="Optional: tell Vigil what this watcher should prioritize."></textarea>
+                    <button id="btn-create-watcher" class="btn primary">Create Watcher</button>
+                    <div id="create-watcher-status" class="setup-status hidden"></div>
+                </div>
+
+                <div id="watcher-setup-sections" class="watcher-required">
                 <h2>Forwarding</h2>
                 <p class="step-desc">Connect your email to this watcher.</p>
+
+                <div id="provider-status-card" class="provider-status-card">
+                    <div class="provider-status-header">
+                        <span class="provider-status-title">Current page</span>
+                        <button id="btn-refresh-setup-context" class="btn secondary">Refresh Status</button>
+                    </div>
+                    <div id="provider-status-text" class="provider-status-text">Checking your active tab…</div>
+                    <div id="provider-status-detail" class="provider-status-detail"></div>
+                </div>
 
                 <div class="forwarding-address-box">
                     <label>Your Vigil forwarding address:</label>
@@ -98,7 +117,16 @@
                     </div>
                 </div>
 
-                <div class="setup-steps" style="margin-top:16px;">
+                <div id="gmail-confirm-box" class="gmail-confirm-box hidden">
+                    <div class="provider-status-header">
+                        <span class="provider-status-title">Gmail confirmation code</span>
+                        <button id="btn-insert-confirm-code" class="btn secondary" disabled>Insert Code</button>
+                    </div>
+                    <div id="gmail-confirm-status" class="provider-status-text">Waiting for Gmail to send the confirmation email.</div>
+                    <code id="gmail-confirm-code" class="gmail-confirm-code">Not available yet</code>
+                </div>
+
+                <div class="setup-steps">
                     <div class="step-item">
                         <span class="step-num">1</span>
                         <div><p>Open your email settings (Gmail: Settings, Forwarding and POP/IMAP. Outlook: Settings, Mail, Forwarding)</p></div>
@@ -113,19 +141,22 @@
                     </div>
                 </div>
 
-                <div style="display:flex;gap:8px;margin-top:16px;">
-                    <button id="btn-open-gmail-settings" class="btn secondary" style="flex:1;text-align:center;">Open Gmail Settings</button>
-                    <button id="btn-open-gmail-filters" class="btn secondary" style="flex:1;text-align:center;">Gmail Filters</button>
+                <div class="setup-actions">
+                    <button id="btn-open-gmail-settings" class="btn secondary">Open Gmail</button>
+                    <button id="btn-open-outlook-settings" class="btn secondary">Open Outlook</button>
+                    <button id="btn-assist-setup" class="btn primary">Assist On Current Page</button>
                 </div>
 
-                <a href="https://vigil.run/extension" target="_blank" class="btn secondary" style="margin-top:8px;display:block;text-align:center;">Full setup guide</a>
+                <div id="setup-automation-status" class="setup-status hidden"></div>
 
-                <div style="margin-top:24px;">
+                <a href="../getting-started.html" target="_blank" rel="noopener noreferrer" class="btn secondary setup-guide-link">Full setup guide</a>
+
+                <div class="watcher-config-section">
                     <h2>Watcher Config</h2>
-                    <p class="step-desc" style="margin-bottom:12px;">Edit the agent's instructions for this watcher.</p>
-                    <textarea id="setup-prompt" rows="5" placeholder="Agent instructions..." style="width:100%;resize:vertical;padding:11px 14px;border:none;border-radius:4px;background:#f0f0ee;color:#3d3d3a;font-size:13px;font-family:inherit;outline:none;box-shadow:inset 0 1px 2px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(0,0,0,0.08);"></textarea>
-                    <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
-                        <select id="setup-model" style="flex:1;padding:8px;border:none;border-radius:4px;background:#f0f0ee;font-size:12px;box-shadow:inset 0 1px 1px rgba(0,0,0,0.04);">
+                    <p class="step-desc watcher-config-desc">Edit the agent's instructions for this watcher.</p>
+                    <textarea id="setup-prompt" rows="5" placeholder="Agent instructions..." class="setup-prompt"></textarea>
+                    <div class="watcher-config-controls">
+                        <select id="setup-model" class="setup-model">
                             <option value="gpt-4.1">GPT-4.1 ($3/$12 per M tokens)</option>
                             <option value="gpt-4.1-mini">GPT-4.1 Mini ($0.40/$1.60)</option>
                             <option value="gpt-4.1-nano">GPT-4.1 Nano ($0.10/$0.40)</option>
@@ -134,11 +165,13 @@
                         </select>
                         <button id="btn-save-config" class="btn primary">Save</button>
                     </div>
-                    <div id="config-status" class="hidden" style="margin-top:8px;font-size:12px;color:#3d6b4f;"></div>
+                    <div id="config-status" class="setup-status hidden"></div>
                 </div>
 
-                <div style="margin-top:24px;">
-                    <button id="btn-logout" class="btn secondary" style="width:100%;text-align:center;color:#8b4242;">Disconnect account</button>
+                <div class="disconnect-section">
+                    <button id="btn-logout" class="btn secondary disconnect-button">Disconnect account</button>
+                </div>
+                </div>
                 </div>
             </div>
         </div>
@@ -146,14 +179,5 @@
 
     <script src="../lib/api.js"></script>
     <script src="panel.js"></script>
-    <script>
-        window.onerror = function(msg, src, line, col, err) {
-            console.error("[vigil] UNCAUGHT:", msg, "at", src, line, col, err);
-            const el = document.createElement("div");
-            el.style.cssText = "position:fixed;bottom:0;left:0;right:0;padding:12px;background:#8b4242;color:white;font-size:12px;z-index:9999;";
-            el.textContent = "Error: " + msg + " (line " + line + ")";
-            document.body.appendChild(el);
-        };
-    </script>
 </body>
 </html>
