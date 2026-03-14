@@ -312,7 +312,7 @@ export const ingestionHandlers = {
                 receivedAt: Date.now(),
                 originalFrom,
                 originalDate: headers["date"] ? new Date(headers["date"]).getTime() || undefined : undefined,
-                recipientReceivedAt: parsed.recipientReceivedAt,
+                recipientReceivedAt: recipientReceivedAt,
             });
 
             return c.json({
@@ -320,7 +320,7 @@ export const ingestionHandlers = {
                 agent_invoked: result.agentInvoked,
             });
         } catch (err) {
-            logger.error("Email ingestion failed", { err });
+            logger.error("Email ingestion failed", { err: String(err), stack: err instanceof Error ? err.stack : undefined });
             return c.json({ error: "Ingestion failed" }, 500);
         }
     },
