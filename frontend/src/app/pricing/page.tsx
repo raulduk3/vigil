@@ -86,7 +86,7 @@ export default function PricingPage() {
           {/* Model pricing table */}
           <div className="mb-8">
             <h2 className="text-xl font-display font-semibold text-gray-900 mb-1">Choose your model</h2>
-            <p className="text-sm text-gray-500 mb-4">Cost per 1M input tokens. Each email uses ~500-2000 tokens.</p>
+            <p className="text-sm text-gray-500 mb-5 leading-relaxed">Cost per 1M input tokens. Each email uses ~500–2000 tokens.</p>
             <div className="panel overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
@@ -117,7 +117,7 @@ export default function PricingPage() {
           {/* Cost examples */}
           <div className="mb-14">
             <h2 className="text-xl font-display font-semibold text-gray-900 mb-1">What it actually costs</h2>
-            <p className="text-sm text-gray-500 mb-4">Real monthly estimates based on email volume.</p>
+            <p className="text-sm text-gray-500 mb-5 leading-relaxed">Real monthly estimates based on email volume.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               {examples.map((ex) => (
                 <div key={ex.label + ex.model} className="panel p-5">
@@ -149,7 +149,7 @@ export default function PricingPage() {
               ].map((faq) => (
                 <div key={faq.q} className="panel p-5">
                   <h3 className="font-medium text-gray-900 mb-2">{faq.q}</h3>
-                  <p className="text-sm text-gray-600">{faq.a}</p>
+                  <p className="text-sm text-gray-600 leading-relaxed">{faq.a}</p>
                 </div>
               ))}
             </div>

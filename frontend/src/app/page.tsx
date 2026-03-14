@@ -91,9 +91,9 @@ export default function HomePage() {
               an email obligation.
             </h1>
             <p className="text-xl text-gray-600 mb-8 leading-relaxed max-w-2xl">
-              Forward emails to Vigil. An AI agent tracks your conversations, remembers deadlines,
-              and alerts you when someone is waiting or a thread has gone quiet.
-              Pay only for what you use. No subscriptions.
+              Forward an email. Your agent analyzes it, remembers what matters, and alerts you
+              when something needs action. No inbox access. No subscriptions.
+              Never drop an obligation.
             </p>
             <div className="flex items-center gap-4">
               <Link href="/auth/register" className="btn btn-primary btn-lg">
@@ -114,11 +114,11 @@ export default function HomePage() {
         <div className="mb-8 md:mb-12">
           <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">How it works</p>
           <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4">
-            Forward. Watch. Alert.
+            Analyze. Remember. Act.
           </h2>
           <p className="text-lg text-gray-600 leading-relaxed max-w-none">
-            Set up a forwarding rule. Vigil's agent reads each email, decides what matters,
-            remembers context across conversations, and alerts you only when action is needed.
+            Set up a forwarding rule. Your agent reads each email, builds context across conversations,
+            and alerts you only when something needs action.
           </p>
         </div>
 
@@ -183,46 +183,45 @@ export default function HomePage() {
         <div className="mb-8 md:mb-12">
           <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Why Vigil</p>
           <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4">
-            Your obligations, tracked automatically.
+            Your agent. Your rules. Your data stays yours.
           </h2>
           <p className="text-lg text-gray-600 leading-relaxed max-w-none">
-            Vigil doesn't just filter email. It tracks what you owe people, what people owe you,
-            and what conversations have gone quiet. When a thread needs your attention, 
-            or when a deadline is approaching without confirmation, you'll know.
+            Google and Microsoft help you read email. Vigil makes sure you never drop an obligation.
+            Privacy by architecture, not policy. Configurable by design, not as an afterthought.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           {[
             {
               icon: 'PI',
               title: 'No inbox access',
-              description: 'Vigil never connects to your email. You forward what you want watched. Nothing else is visible.',
+              description: 'You forward what you want watched — Vigil never connects to your email account.',
             },
             {
               icon: 'MEM',
               title: 'Persistent memory',
-              description: 'The agent remembers context across emails. Who sends what, patterns, preferences. It gets smarter over time.',
+              description: 'The agent builds context across emails: sender patterns, recurring topics, your preferences.',
             },
             {
               icon: 'SHA',
               title: 'Bodies discarded',
-              description: 'Email content is processed in memory and never stored. Only a SHA-256 hash proves receipt. No full-text archive.',
+              description: 'Email content is processed in memory and never stored — only a SHA-256 hash proves receipt.',
             },
             {
               icon: 'THR',
               title: 'Thread tracking',
-              description: 'Emails are grouped into conversations automatically. The agent tracks which threads are active, resolved, or going cold.',
+              description: 'Conversations are grouped automatically; the agent tracks which threads are active, stale, or resolved.',
             },
             {
               icon: 'CFG',
               title: 'Configurable agent',
-              description: 'Write your own system prompt. Enable the tools you want. Set silence thresholds. Each watcher is a custom agent.',
+              description: 'Write your own prompt, enable specific tools, set silence thresholds — each watcher is yours to define.',
             },
             {
               icon: 'LOG',
               title: 'Full audit trail',
-              description: 'Every agent decision is logged: what tool was called, why, what it cost, how long it took. Complete transparency.',
+              description: 'Every decision is logged: tool called, reason given, cost incurred, duration.',
             },
           ].map((feature, idx) => (
             <div
@@ -250,13 +249,11 @@ export default function HomePage() {
             More than a filter. An actual agent.
           </h2>
           <p className="text-lg text-gray-600 leading-relaxed max-w-none">
-            Vigil isn't a rules engine or keyword matcher. Each watcher runs an AI agent with its own
-            prompt, memory, and tools. It reads email like a person would, builds context over time,
-            and takes action when something needs your attention.
+            Not a rules engine. Not a keyword matcher. Each watcher runs an AI agent with its own prompt, memory, and tools — your agent, configured your way.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-3 gap-8">
           <div
             data-reveal id="cap-analyze"
             className="panel p-6 opacity-0"
@@ -264,8 +261,7 @@ export default function HomePage() {
           >
             <h3 className="font-semibold text-gray-900 mb-3">Analyze</h3>
             <p className="text-base text-gray-600 leading-relaxed mb-4">
-              Every email gets a structured analysis: one-sentence summary, sender intent,
-              urgency level, and key entities (names, amounts, dates).
+              Every email gets a structured analysis: summary, sender intent, urgency, and key entities.
             </p>
             <div className="panel-inset p-4 rounded-md text-sm space-y-1.5">
               <p><span className="text-gray-500">Summary:</span> <span className="text-gray-800">Request for deployment config</span></p>
@@ -282,8 +278,7 @@ export default function HomePage() {
           >
             <h3 className="font-semibold text-gray-900 mb-3">Remember</h3>
             <p className="text-base text-gray-600 leading-relaxed mb-4">
-              The agent builds memory over time. Sender patterns, recurring topics,
-              your preferences. Relevant memories surface automatically for each new email.
+              The agent builds memory over time — relevant context surfaces automatically for each new email.
             </p>
             <div className="panel-inset p-4 rounded-md text-sm space-y-1.5">
               <p className="text-gray-600">• Cory usually follows up within 24h</p>
@@ -300,8 +295,7 @@ export default function HomePage() {
           >
             <h3 className="font-semibold text-gray-900 mb-3">Act</h3>
             <p className="text-base text-gray-600 leading-relaxed mb-4">
-              When something needs attention, the agent uses its tools: send an alert,
-              update a thread, fire a webhook. Each action is logged with full reasoning.
+              When something needs attention, the agent acts: alert, thread update, or webhook — each logged with reasoning.
             </p>
             <div className="panel-inset p-4 rounded-md text-sm space-y-1.5">
               <p><span className="badge badge-sm badge-critical">send_alert</span> <span className="text-gray-600 ml-1">Payment overdue, service at risk</span></p>
@@ -320,19 +314,18 @@ export default function HomePage() {
             Set up a watcher. Forward what matters.
           </h2>
           <p className="text-lg text-gray-600 leading-relaxed max-w-none">
-            Each watcher is a separate agent with its own prompt, memory, and behavior.
-            Create one for work, one for billing, one for client comms. Each learns independently.
+            Each watcher is a separate agent with its own prompt, memory, and behavior. Create one per context — each learns independently.
           </p>
         </div>
 
         <ul className="space-y-4 md:space-y-6">
           {[
-            { id: 'uc-vendor', role: 'Vendor follow-up', text: 'Forward vendor emails. The agent tracks invoices, flags overdue payments, and alerts when requests go unanswered.' },
-            { id: 'uc-client', role: 'Client communications', text: 'Monitor client threads. Get alerted when conversations go cold or when action items surface in long email chains.' },
-            { id: 'uc-billing', role: 'Bills and renewals', text: 'Forward invoices and confirmations. The agent remembers payment patterns and alerts before deadlines.' },
-            { id: 'uc-legal', role: 'Sensitive correspondence', text: 'Track legal, HR, or compliance threads. Full audit trail of every agent decision. Nothing stored, everything logged.' },
-            { id: 'uc-freelance', role: 'Freelancers', text: 'Manage multiple clients. Each watcher handles a different client, remembers their patterns, and keeps you on top of deliverables.' },
-            { id: 'uc-custom', role: 'Build your own', text: 'Write a custom prompt. Enable the tools you need. The agent does what you tell it to do.' },
+            { id: 'uc-vendor', role: 'Vendor follow-up', text: 'Track invoices, flag overdue payments, and get alerted when requests go unanswered.' },
+            { id: 'uc-client', role: 'Client communications', text: 'Know when conversations go cold or when action items surface in long email chains.' },
+            { id: 'uc-billing', role: 'Bills and renewals', text: 'The agent remembers payment patterns and alerts before deadlines slip.' },
+            { id: 'uc-legal', role: 'Sensitive correspondence', text: 'Full audit trail on every decision. Nothing stored, everything logged.' },
+            { id: 'uc-freelance', role: 'Freelancers', text: 'Each watcher handles a separate client, remembers their patterns, keeps you on deliverables.' },
+            { id: 'uc-custom', role: 'Build your own', text: 'Write the prompt. Enable the tools. The agent does what you tell it.' },
           ].map((item, idx) => (
             <li
               key={item.id}
