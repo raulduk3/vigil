@@ -10,15 +10,10 @@ import { api } from '@/lib/api';
 const NAME_SUGGESTIONS = ['Work', 'Personal', 'Freelance', 'Bills', 'Newsletters', 'Support'];
 
 const MODELS = [
-  { id: 'gpt-4.1-nano', label: 'GPT-4.1 Nano', costPer1M: '$0.14', costPerEmail: '~$0.0001', speed: 'Fastest', quality: 'Basic triage' },
-  { id: 'gpt-4o-mini', label: 'GPT-4o Mini', costPer1M: '$0.21', costPerEmail: '~$0.0002', speed: 'Fast', quality: 'Good balance' },
-  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', costPer1M: '$0.21', costPerEmail: '~$0.0002', speed: 'Fast', quality: 'Good balance' },
-  { id: 'gpt-4.1-mini', label: 'GPT-4.1 Mini', costPer1M: '$0.56', costPerEmail: '~$0.0006', speed: 'Fast', quality: 'Recommended', default: true },
-  { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4', costPer1M: '$1.12', costPerEmail: '~$0.001', speed: 'Fast', quality: 'Strong reasoning' },
-  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', costPer1M: '$1.75', costPerEmail: '~$0.002', speed: 'Moderate', quality: 'High accuracy' },
-  { id: 'gpt-4.1', label: 'GPT-4.1', costPer1M: '$2.80', costPerEmail: '~$0.003', speed: 'Moderate', quality: 'High accuracy' },
-  { id: 'gpt-4o', label: 'GPT-4o', costPer1M: '$3.50', costPerEmail: '~$0.004', speed: 'Moderate', quality: 'High accuracy' },
-  { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4', costPer1M: '$4.20', costPerEmail: '~$0.004', speed: 'Moderate', quality: 'Strongest reasoning' },
+  { id: 'gpt-4.1', label: 'GPT-4.1', costPer1M: '$2.40', costPerEmail: '~$0.003', speed: 'Fast', quality: 'Recommended — strong reasoning', default: true },
+  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', costPer1M: '$1.50', costPerEmail: '~$0.002', speed: 'Fast', quality: 'High accuracy, good value' },
+  { id: 'gpt-4o', label: 'GPT-4o', costPer1M: '$3.00', costPerEmail: '~$0.003', speed: 'Fast', quality: 'Multimodal, strong analysis' },
+  { id: 'claude-sonnet-4', label: 'Claude Sonnet 4', costPer1M: '$3.60', costPerEmail: '~$0.004', speed: 'Moderate', quality: 'Best reasoning and judgment' },
 ];
 
 const TOOLS = [
@@ -142,7 +137,7 @@ function NewWatcherContent() {
     }
   }, [intentParam]);
   const [reactivity, setReactivity] = useState(3);
-  const [model, setModel] = useState('gpt-4.1-mini');
+  const [model, setModel] = useState('gpt-4.1');
   const [tools, setTools] = useState(['send_alert', 'update_thread', 'ignore_thread']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -191,7 +186,7 @@ function NewWatcherContent() {
     }
   };
 
-  const selectedModel = MODELS.find((m) => m.id === model) ?? MODELS[3];
+  const selectedModel = MODELS.find((m) => m.id === model) ?? MODELS[0];
 
   if (created) {
     return (

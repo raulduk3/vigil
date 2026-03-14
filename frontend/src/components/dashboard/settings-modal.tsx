@@ -363,19 +363,14 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
                   className="input py-2"
                 >
                   <optgroup label="OpenAI">
-                    <option value="gpt-4.1-nano">GPT-4.1 Nano — $0.12/M in</option>
-                    <option value="gpt-4o-mini">GPT-4o Mini — $0.18/M in</option>
-                    <option value="gpt-4.1-mini">GPT-4.1 Mini — $0.48/M in</option>
-                    <option value="gpt-4.1">GPT-4.1 — $2.40/M in</option>
-                    <option value="gpt-4o">GPT-4o — $3.00/M in</option>
+                    <option value="gpt-4.1">GPT-4.1 — Recommended, strong reasoning</option>
+                    <option value="gpt-4o">GPT-4o — Multimodal, fast</option>
                   </optgroup>
                   <optgroup label="Anthropic">
-                    <option value="claude-haiku-4">Claude Haiku 4 — $0.96/M in</option>
-                    <option value="claude-sonnet-4">Claude Sonnet 4 — $3.60/M in</option>
+                    <option value="claude-sonnet-4">Claude Sonnet 4 — Best reasoning</option>
                   </optgroup>
                   <optgroup label="Google">
-                    <option value="gemini-2.5-flash">Gemini 2.5 Flash — $0.18/M in</option>
-                    <option value="gemini-2.5-pro">Gemini 2.5 Pro — $1.50/M in</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro — Strong analysis</option>
                   </optgroup>
                 </select>
                 <p className="text-xs text-gray-400 mt-1">Affects both email triage and chat. Cheaper models are faster but less nuanced.</p>
@@ -502,6 +497,22 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
           {/* Channels tab */}
           {tab === 'channels' && (
             <div className="space-y-4">
+              <div className="panel-inset p-3 text-xs text-gray-600 leading-relaxed space-y-2">
+                <p><strong>Channels are where alerts get delivered.</strong> When the agent decides to send an alert, it goes to your account email plus any channels you add here.</p>
+                <p><strong>Email channels</strong> receive the same formatted alert email you get in your inbox.</p>
+                <p><strong>Webhook channels</strong> receive a JSON POST with the alert data. Payload shape:</p>
+                <pre className="bg-surface-sunken rounded p-2 text-xs font-mono text-gray-500 overflow-x-auto mt-1">{`{
+  "event": "send_alert",
+  "subject": "Alert subject",
+  "body": "What needs attention",
+  "urgency": "normal",
+  "watcher": "Watcher Name",
+  "thread_subject": "Original email subject",
+  "watcher_id": "...",
+  "timestamp": 1234567890
+}`}</pre>
+                <p>Channels are different from <strong>custom tools</strong>. Channels route alerts. Tools let the agent take custom actions (like creating a Jira ticket or posting to Slack) based on the email content, not just when alerting.</p>
+              </div>
               {loadingChannels ? (
                 <div className="flex items-center gap-2 text-sm text-gray-400">
                   <span className="spinner-sm" /> Loading channels...

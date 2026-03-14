@@ -210,7 +210,7 @@ export async function invokeAgent(
         );
         const chatSystem = buildChatSystemPrompt(watcher, memoryContext, allThreadsForChat, recentEmails);
         const chatUser = buildChatUserPrompt(trigger.message);
-        const model = watcher.model || process.env.VIGIL_MODEL || "gpt-4.1-mini";
+        const model = watcher.model || process.env.VIGIL_MODEL || "gpt-4.1";
 
         try {
             const result = await callLLMRaw(chatSystem, chatUser, model);
@@ -317,7 +317,7 @@ export async function invokeAgent(
     let costUsd = 0;
 
     // Use watcher's configured model (fallback to env var, then default)
-    const model = watcher.model || process.env.VIGIL_MODEL || "gpt-4.1-mini";
+    const model = watcher.model || process.env.VIGIL_MODEL || "gpt-4.1";
 
     try {
         const result = await callLLM(systemPrompt, userPrompt, model);
@@ -539,7 +539,7 @@ export const MODEL_CATALOG: Record<string, {
 async function callLLM(
     systemPrompt: string,
     userPrompt: string,
-    model: string = "gpt-4.1-mini"
+    model: string = "gpt-4.1"
 ): Promise<{ response: AgentResponse; inputTokens: number; outputTokens: number }> {
     const catalog = MODEL_CATALOG[model];
     const provider = catalog?.provider ?? "openai";
@@ -779,7 +779,7 @@ async function executeChatActions(
 async function callLLMRaw(
     systemPrompt: string,
     userPrompt: string,
-    model: string = "gpt-4.1-mini"
+    model: string = "gpt-4.1"
 ): Promise<{ text: string; inputTokens: number; outputTokens: number }> {
     const catalog = MODEL_CATALOG[model];
     const provider = catalog?.provider ?? "openai";

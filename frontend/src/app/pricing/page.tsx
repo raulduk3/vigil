@@ -4,22 +4,17 @@ import Link from 'next/link';
 import { PublicHeader } from '@/components/layout';
 
 const models = [
-  { name: 'GPT-4.1 Nano', cost: '$0.12', speed: 'Fastest', quality: 'Basic triage', recommended: false },
-  { name: 'GPT-4o Mini', cost: '$0.18', speed: 'Fast', quality: 'Good balance', recommended: false },
-  { name: 'Gemini 2.5 Flash', cost: '$0.18', speed: 'Fast', quality: 'Good balance', recommended: false },
-  { name: 'GPT-4.1 Mini', cost: '$0.48', speed: 'Fast', quality: 'Good balance', recommended: true },
-  { name: 'Claude Haiku 4', cost: '$0.96', speed: 'Fast', quality: 'Strong reasoning', recommended: false },
-  { name: 'Gemini 2.5 Pro', cost: '$1.50', speed: 'Moderate', quality: 'High accuracy', recommended: false },
-  { name: 'GPT-4.1', cost: '$2.40', speed: 'Moderate', quality: 'High accuracy', recommended: false },
-  { name: 'GPT-4o', cost: '$3.00', speed: 'Moderate', quality: 'High accuracy', recommended: false },
-  { name: 'Claude Sonnet 4', cost: '$3.60', speed: 'Moderate', quality: 'Strongest reasoning', recommended: false },
+  { name: 'GPT-4.1', cost: '$2.40', speed: 'Fast', quality: 'Strong reasoning, reliable triage', recommended: true },
+  { name: 'GPT-4o', cost: '$3.00', speed: 'Fast', quality: 'Multimodal, strong analysis', recommended: false },
+  { name: 'Gemini 2.5 Pro', cost: '$1.50', speed: 'Fast', quality: 'High accuracy, good value', recommended: false },
+  { name: 'Claude Sonnet 4', cost: '$3.60', speed: 'Moderate', quality: 'Best reasoning and judgment', recommended: false },
 ];
 
 const examples = [
-  { emails: 10, label: '10 emails/day', monthly: '~$0.45/mo', model: 'GPT-4.1 Mini' },
-  { emails: 50, label: '50 emails/day', monthly: '~$2.20/mo', model: 'GPT-4.1 Mini' },
-  { emails: 200, label: '200 emails/day', monthly: '~$8.90/mo', model: 'GPT-4.1 Mini' },
-  { emails: 50, label: '50 emails/day', monthly: '~$5.10/mo', model: 'GPT-4.1 (full)' },
+  { emails: 10, label: '10 emails/day', monthly: '~$1.00/mo', model: 'GPT-4.1' },
+  { emails: 50, label: '50 emails/day', monthly: '~$5.10/mo', model: 'GPT-4.1' },
+  { emails: 200, label: '200 emails/day', monthly: '~$19/mo', model: 'GPT-4.1' },
+  { emails: 50, label: '50 emails/day', monthly: '~$6.50/mo', model: 'Claude Sonnet 4' },
 ];
 
 export default function PricingPage() {
@@ -70,7 +65,7 @@ export default function PricingPage() {
                 'Agent chat',
                 'Obligation tracking',
                 'Webhook integrations',
-                '9 AI models, 3 providers',
+                '4 premium models, 3 providers',
                 'Reactivity control',
               ].map((item) => (
                 <div key={item} className="flex items-center gap-2 text-sm text-vigil-100">

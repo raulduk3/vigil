@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS watchers (
   tools           TEXT NOT NULL DEFAULT '["send_alert"]',
   silence_hours   INTEGER DEFAULT 48,
   tick_interval   INTEGER DEFAULT 60,
-  model           TEXT DEFAULT 'gpt-4.1-mini',
+  model           TEXT DEFAULT 'gpt-4.1',
   status          TEXT DEFAULT 'active',
   template_id     TEXT,
   last_tick_at    TIMESTAMP,
