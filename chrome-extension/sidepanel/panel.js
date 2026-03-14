@@ -22,13 +22,18 @@ function show(name) {
     if (name === "threads") loadThreads();
     if (name === "config") loadConfig();
     if (name === "chat" && chatHistory.length === 0) renderChat();
+    if (name === "setup") resetSetup();
 }
 
 function enterApp() {
     $("view-auth").classList.remove("active");
     $("header-controls").classList.remove("hidden");
     $("nav-tabs").classList.remove("hidden");
-    show("overview");
+    if (watchers.length === 0) {
+        show("setup");
+    } else {
+        show("overview");
+    }
 }
 
 // ============================================================================
@@ -102,11 +107,75 @@ document.addEventListener("DOMContentLoaded", async () => {
         $("view-auth").classList.add("active");
     });
 
+    // Setup: create watcher
+    $("btn-setup-create").addEventListener("click", async () => {
+        const name = $("setup-name").value.trim();
+        const intent = $("setup-intent").value.trim();
+        if (!name) { $("setup-create-error").textContent = "Name is required"; $("setup-create-error").classList.remove("hidden"); return; }
+        $("setup-create-error").classList.add("hidden");
+        $("btn-setup-create").disabled = true;
+        $("btn-setup-create").textContent = "Creating...";
+        try {
+            const prompt = intent
+                ? `You monitor emails related to: ${intent}. Track deadlines, obligations, and anything requiring action. Alert the user when someone is waiting on them or when a deadline is approaching. Ignore marketing and newsletters unless they contain something actionable.`
+                : `You monitor emails and focus on deadlines, obligations, and anything requiring action. Alert the user when something needs their attention. Ignore noise.`;
+            const watcher = await vigilAPI.createWatcher(name, prompt);
+            await loadWatchers();
+            current = watchers.find(w => w.id === watcher.id) || watchers[0];
+            $("watcher-select").value = current?.id || "";
+            // Show connect step
+            $("setup-step-create").classList.add("hidden");
+            $("setup-step-connect").classList.remove("hidden");
+            $("setup-fwd-address").textContent = watcher.ingestion_address || `${name.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${watcher.ingest_token}@vigil.run`;
+        } catch (e) {
+            $("setup-create-error").textContent = e.message;
+            $("setup-create-error").classList.remove("hidden");
+        }
+        $("btn-setup-create").disabled = false;
+        $("btn-setup-create").textContent = "Create watcher";
+    });
+
+    $("setup-name").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("setup-intent").focus(); } });
+
+    // Setup: copy address
+    $("btn-setup-copy").addEventListener("click", () => {
+        navigator.clipboard.writeText($("setup-fwd-address").textContent);
+        $("btn-setup-copy").textContent = "Copied"; setTimeout(() => $("btn-setup-copy").textContent = "Copy", 2000);
+    });
+
+    // Setup: provider tabs
+    document.querySelectorAll(".provider-tab").forEach(t => {
+        t.addEventListener("click", () => {
+            document.querySelectorAll(".provider-tab").forEach(p => p.classList.remove("active"));
+            t.classList.add("active");
+            $("setup-gmail").classList.toggle("hidden", t.dataset.provider !== "gmail");
+            $("setup-outlook").classList.toggle("hidden", t.dataset.provider !== "outlook");
+        });
+    });
+
+    // Setup: open email settings
+    $("btn-setup-gmail-fwd").addEventListener("click", () => openTab("https://mail.google.com/mail/u/0/#settings/fwdandpop"));
+    $("btn-setup-outlook-fwd").addEventListener("click", () => openTab("https://outlook.live.com/mail/0/options/mail/forwarding"));
+    $("btn-setup-gmail-filter").addEventListener("click", () => openTab("https://mail.google.com/mail/u/0/#settings/filters"));
+    $("btn-setup-outlook-rule").addEventListener("click", () => openTab("https://outlook.live.com/mail/0/options/mail/rules"));
+
+    // Setup: done / create another
+    $("btn-setup-done").addEventListener("click", () => show("overview"));
+    $("btn-setup-another").addEventListener("click", () => resetSetup());
+
     // Boot
     if (await vigilAPI.isAuthenticated()) { await loadWatchers(); enterApp(); }
 });
 
 function openTab(url) { chrome.tabs.query({ active: true, currentWindow: true }, ([t]) => { if (t?.id) chrome.tabs.update(t.id, { url }); }); }
+
+function resetSetup() {
+    $("setup-step-create").classList.remove("hidden");
+    $("setup-step-connect").classList.add("hidden");
+    $("setup-name").value = "";
+    $("setup-intent").value = "";
+    $("setup-create-error").classList.add("hidden");
+}
 
 // ============================================================================
 // Watchers

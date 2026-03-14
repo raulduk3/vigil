@@ -122,3 +122,17 @@ textarea { resize: vertical; }
 .error { font-size: 12px; color: #8b4242; text-align: center; padding: 10px; background: rgba(139,66,66,0.05); border-radius: 4px; }
 #config-content { padding: 16px; }
 #config-status { font-size: 12px; margin-top: 8px; text-align: center; }
+
+/* Setup flow */
+.setup-flow { padding: 20px 16px; }
+.setup-step { display: flex; flex-direction: column; gap: 10px; }
+.setup-step h2 { margin-bottom: 0; }
+.provider-tabs, .setup-provider-tabs { display: flex; gap: 0; background: #f0f0ee; border-radius: 4px; padding: 3px; margin: 8px 0; }
+.provider-tab { flex: 1; padding: 7px; border: none; background: transparent; color: #787874; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 3px; text-align: center; transition: all 0.15s; }
+.provider-tab.active { background: #fff; color: #0B1F2A; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+.provider-steps { display: flex; flex-direction: column; gap: 6px; }
+.step-row { display: flex; gap: 8px; padding: 8px; background: #fff; border-radius: 4px; box-shadow: 0 0 0 1px rgba(0,0,0,0.04); font-size: 12px; color: #5a5a56; line-height: 1.5; align-items: flex-start; }
+.step-n { width: 20px; height: 20px; border-radius: 50%; background: #0B1F2A; color: #f8f8f7; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.step-row p { margin: 0; }
+.btn-xs { padding: 4px 10px; font-size: 11px; margin-top: 4px; }
+.filter-section { padding: 8px 0; }

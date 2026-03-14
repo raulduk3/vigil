@@ -18,6 +18,7 @@
                 <button class="nav-tab active" data-view="overview">Overview</button>
                 <button class="nav-tab" data-view="threads">Threads</button>
                 <button class="nav-tab" data-view="chat">Chat</button>
+                <button class="nav-tab" data-view="setup">+ New</button>
                 <button class="nav-tab" data-view="config">Config</button>
             </div>
         </div>
@@ -35,6 +36,68 @@
                 <button id="btn-auth-login" class="btn primary w-full">Sign in</button>
                 <p class="muted small">No account? <a href="https://vigil.run/auth/register" target="_blank">Sign up at vigil.run</a></p>
                 <div id="auth-error" class="error hidden"></div>
+            </div>
+        </div>
+
+        <!-- Setup (create watcher + connect email) -->
+        <div class="view" id="view-setup">
+            <div class="scroll-content" id="setup-content">
+                <div class="setup-flow">
+                    <!-- Step 1: Create watcher -->
+                    <div id="setup-step-create" class="setup-step">
+                        <h2>Create a watcher</h2>
+                        <p class="muted">Give it a name and tell it what to focus on.</p>
+                        <input type="text" id="setup-name" placeholder="e.g. Work Email, Client Invoices, Support">
+                        <textarea id="setup-intent" rows="3" placeholder="What should this watcher focus on? e.g. Track invoices, alert me when clients haven't responded in 48 hours, ignore newsletters."></textarea>
+                        <button id="btn-setup-create" class="btn primary w-full">Create watcher</button>
+                        <div id="setup-create-error" class="error hidden"></div>
+                    </div>
+
+                    <!-- Step 2: Connect email -->
+                    <div id="setup-step-connect" class="setup-step hidden">
+                        <h2>Connect your email</h2>
+                        <p class="muted">Add this forwarding address in your email settings.</p>
+
+                        <div class="copy-row" style="margin:12px 0;">
+                            <code id="setup-fwd-address" style="font-size:12px;">loading...</code>
+                            <button id="btn-setup-copy" class="btn-sm">Copy</button>
+                        </div>
+
+                        <div class="setup-provider-tabs">
+                            <button class="provider-tab active" data-provider="gmail">Gmail</button>
+                            <button class="provider-tab" data-provider="outlook">Outlook</button>
+                        </div>
+
+                        <!-- Gmail -->
+                        <div id="setup-gmail" class="provider-steps">
+                            <div class="step-row"><span class="step-n">1</span><div><p>Open Gmail forwarding settings</p><button id="btn-setup-gmail-fwd" class="btn secondary btn-xs">Open Settings</button></div></div>
+                            <div class="step-row"><span class="step-n">2</span><p>Click "Add a forwarding address" and paste the address above</p></div>
+                            <div class="step-row"><span class="step-n">3</span><p>Gmail sends a confirmation email. Click the link in that email.</p></div>
+                            <div class="step-row"><span class="step-n">4</span><p>Back in settings, select "Forward a copy" and save. Or create a filter below.</p></div>
+                        </div>
+
+                        <!-- Outlook -->
+                        <div id="setup-outlook" class="provider-steps hidden">
+                            <div class="step-row"><span class="step-n">1</span><div><p>Open Outlook forwarding settings</p><button id="btn-setup-outlook-fwd" class="btn secondary btn-xs">Open Settings</button></div></div>
+                            <div class="step-row"><span class="step-n">2</span><p>Enable forwarding and paste the address above</p></div>
+                            <div class="step-row"><span class="step-n">3</span><p>Check "Keep a copy" and save</p></div>
+                        </div>
+
+                        <div class="divider" style="margin:12px 0;"><span>or use a filter</span></div>
+
+                        <!-- Filter setup -->
+                        <div class="filter-section">
+                            <p class="muted small">Forward only specific emails with a filter. Useful if you don't want to forward everything.</p>
+                            <div class="btn-row" style="margin-top:8px;">
+                                <button id="btn-setup-gmail-filter" class="btn secondary flex-1 btn-xs">Gmail: Create Filter</button>
+                                <button id="btn-setup-outlook-rule" class="btn secondary flex-1 btn-xs">Outlook: Create Rule</button>
+                            </div>
+                        </div>
+
+                        <button id="btn-setup-done" class="btn primary w-full" style="margin-top:16px;">Done, go to dashboard</button>
+                        <button id="btn-setup-another" class="btn secondary w-full" style="margin-top:6px;">Create another watcher</button>
+                    </div>
+                </div>
             </div>
         </div>
 

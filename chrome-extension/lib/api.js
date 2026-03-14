@@ -75,6 +75,10 @@ const vigilAPI = {
 
     // ---- Data ----
     async getWatchers() { return (await this._fetch("/watchers")).watchers || []; },
+    async createWatcher(name, systemPrompt, model) {
+        const d = await this._fetch("/watchers", { method: "POST", body: JSON.stringify({ name, system_prompt: systemPrompt, model: model || "gpt-4.1-mini" }) });
+        return d.watcher || d;
+    },
     async getWatcher(id) { return (await this._fetch(`/watchers/${id}`)).watcher; },
     async updateWatcher(id, u) { return (await this._fetch(`/watchers/${id}`, { method: "PATCH", body: JSON.stringify(u) })).watcher; },
     async getThreads(id) { const d = await this._fetch(`/watchers/${id}/threads?limit=50`); return d.threads || d || []; },
