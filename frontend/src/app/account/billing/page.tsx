@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api/client';
+import { ALERT_DELIVERY_COST, PLATFORM_FEE_PER_INVOCATION, formatUsd } from '@/lib/pricing';
 
 interface BillingStatus {
   has_payment_method: boolean;
@@ -212,7 +213,7 @@ export default function BillingPage() {
           <span className="text-sm text-gray-400">USD</span>
         </div>
         <p className="text-xs text-gray-400 mt-1">
-          {usage?.current_month?.invocations ?? 0} agent invocations · $0.005/email
+          {usage?.current_month?.invocations ?? 0} agent invocations · includes platform, token, and alert delivery charges
         </p>
       </div>
 
@@ -250,7 +251,7 @@ export default function BillingPage() {
       <div className="rounded-lg bg-gray-50 border border-gray-200 px-4 py-3">
         <p className="text-xs text-gray-500 max-w-none">
           <span className="font-medium text-gray-700">Pay-per-use, no tiers.</span>{' '}
-          $0.001 platform fee per invocation + model token costs (~$0.003/email on GPT-4.1) + $0.005 per alert sent. Billed monthly through Stripe.{!billing?.has_payment_method && ` ${billing?.trial_emails_remaining ?? 50} free trial emails remaining.`}
+          {formatUsd(PLATFORM_FEE_PER_INVOCATION)} platform fee per invocation plus model token usage. Alert deliveries cost {formatUsd(ALERT_DELIVERY_COST)} each. Billed monthly through Stripe.{!billing?.has_payment_method && ` ${billing?.trial_emails_remaining ?? 50} free trial emails remaining.`}
         </p>
       </div>
     </main>
