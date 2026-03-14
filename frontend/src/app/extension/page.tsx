@@ -41,10 +41,26 @@ const guarantees = [
 ];
 
 const setupFacts = [
-  { label: 'Works with', value: 'Gmail and Outlook' },
-  { label: 'Needs from Vigil', value: 'A watcher and forwarding address' },
-  { label: 'Handles for you', value: 'Provider routing and Gmail confirmation' },
-  { label: 'After setup', value: 'Your provider forwards natively' },
+  {
+    eyebrow: 'Works with',
+    title: 'Gmail and Outlook',
+    detail: 'The extension detects which provider is open and routes you to the correct forwarding settings.',
+  },
+  {
+    eyebrow: 'Bring first',
+    title: 'A watcher and forwarding address',
+    detail: 'Create the watcher in Vigil first so setup has a destination ready to paste into your provider.',
+  },
+  {
+    eyebrow: 'Handles for you',
+    title: 'Forwarding steps and Gmail confirmation',
+    detail: 'The awkward parts are automated so you do not have to hunt for Gmail verification messages manually.',
+  },
+  {
+    eyebrow: 'After setup',
+    title: 'Your provider forwards natively',
+    detail: 'Once the rule is saved, the extension is out of the path and your mail provider handles delivery to Vigil.',
+  },
 ];
 
 const installChoices = [
@@ -154,10 +170,21 @@ export default function ExtensionPage() {
                 <div className="grid gap-4 md:grid-cols-[1.05fr_0.95fr]">
                   <div className="panel-inset rounded-md p-5 md:p-6 text-left">
                     <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Setup facts</p>
-                    <div className="space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
                       {setupFacts.map((fact) => (
-                        <FlowRow key={fact.label} label={fact.label} value={fact.value} />
+                        <SetupFactCard
+                          key={fact.eyebrow}
+                          eyebrow={fact.eyebrow}
+                          title={fact.title}
+                          detail={fact.detail}
+                        />
                       ))}
+                    </div>
+                    <div className="mt-4 rounded-md border border-black/5 bg-white/65 px-4 py-3">
+                      <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">Best order</p>
+                      <p className="text-sm text-gray-700 mt-2 max-w-none">
+                        Create account, make a watcher, then open the extension and let it wire forwarding into Gmail or Outlook.
+                      </p>
                     </div>
                   </div>
 
