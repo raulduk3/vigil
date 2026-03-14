@@ -3,14 +3,12 @@
 import type { Thread, Action, Memory } from '@/lib/api/client';
 import { AgentChat } from './agent-chat';
 import { StatsCard } from './stats-card';
-import { MemoryPanel } from './memory-panel';
 
 interface ControlPanelProps {
   watcherId: string | null;
   threads: Thread[];
   actions: Action[];
   memories: Memory[];
-  onMemoriesChange: (memories: Memory[]) => void;
 }
 
 export function ControlPanel({
@@ -18,7 +16,6 @@ export function ControlPanel({
   threads,
   actions,
   memories,
-  onMemoriesChange,
 }: ControlPanelProps) {
   if (!watcherId) {
     return (
@@ -40,14 +37,7 @@ export function ControlPanel({
         <StatsCard threads={threads} actions={actions} memories={memories} />
       </div>
 
-      {/* Memory panel */}
-      <div className="shrink-0">
-        <MemoryPanel
-          watcherId={watcherId}
-          memories={memories}
-          onMemoriesChange={onMemoriesChange}
-        />
-      </div>
+
     </div>
   );
 }

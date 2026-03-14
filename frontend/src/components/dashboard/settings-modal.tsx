@@ -77,6 +77,7 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
         tools,
       } as any);
       onUpdate(res.watcher);
+      onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save');
     } finally {
@@ -90,6 +91,7 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
     try {
       const res = await api.updateWatcher(watcher.id, { system_prompt: systemPrompt });
       onUpdate(res.watcher);
+      onClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to save');
     } finally {

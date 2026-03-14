@@ -8,15 +8,10 @@ interface EmailRowProps {
   onClick: () => void;
 }
 
-function formatRelative(isoDate: string): string {
-  const diff = Date.now() - new Date(isoDate).getTime();
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m`;
-  if (hours < 24) return `${hours}h`;
-  return `${days}d`;
+function formatFullTime(isoDate: string): string {
+  return new Date(isoDate).toLocaleString('en-US', {
+    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
+  });
 }
 
 function urgencyDot(status: Thread['status']) {
@@ -62,7 +57,7 @@ export function EmailRow({ thread, isSelected, onClick }: EmailRowProps) {
             {thread.subject || 'No subject'}
           </span>
           <span className="shrink-0 text-xs text-gray-400 tabular-nums">
-            {formatRelative(thread.last_activity)}
+            {formatFullTime(thread.last_activity)}
           </span>
         </div>
 

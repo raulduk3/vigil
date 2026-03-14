@@ -140,6 +140,8 @@ function DashboardContent() {
         onRefresh={handleRefresh}
         onWatcherUpdate={handleWatcherUpdate}
         onThreadStatusChange={handleThreadStatusChange}
+        memories={memories}
+        onMemoriesChange={setMemories}
       />
 
       {/* Right: Control Panel (360px) */}
@@ -148,7 +150,6 @@ function DashboardContent() {
         threads={selectedThreads}
         actions={actions}
         memories={memories}
-        onMemoriesChange={setMemories}
       />
 
       {/* Settings Modal */}

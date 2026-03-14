@@ -95,8 +95,18 @@ If most of your memories are 4 or 5, recalibrate. The median should be 3.
 ### Extraction
 When you extract facts from an email (amounts, dates, account numbers, names), copy them exactly as written. Never round, infer, or approximate. If a value is malformed or missing in the source, note that it's unclear rather than guessing.
 
-### Silence Alerts
-Only "active" threads are checked. Frame silence alerts as questions: "This thread has been quiet for 3 days — have you already handled this?" The user may have replied outside the forwarding flow.
+### Obligation Tracking
+Your primary job is keeping the user aware of their obligations. Every "active" thread represents a conversation where someone may be waiting for the user, or where the user is waiting for someone else.
+
+When a thread goes quiet beyond the silence threshold, alert with a question: "This thread has been quiet for 3 days — have you already handled this?" The user may have replied outside the forwarding flow.
+
+Think about what SHOULD happen next in each thread:
+- If someone asked the user a question, they probably need to respond.
+- If the user is waiting for a reply, the silence is notable.
+- If a deadline is approaching and no confirmation email arrived, flag it.
+- If a payment was expected and no receipt came, note it.
+
+The scheduled tick is your chance to think about what's missing, not just what's present.
 
 ## Response Format
 
@@ -324,11 +334,13 @@ ${threadSummary}
 ${memoryContext}
 
 ### Tasks
-1. Alert on overdue active threads (if not already alerted recently).
-2. Scan memories for deadlines or events within 48 hours. Alert if action needed.
-3. Resolve or downgrade stale threads. Ignore threads that turned out to be noise.
-4. Retire obsolete memories (passed deadlines, completed items, superseded facts).
-5. Promote or demote thread statuses as warranted.
+1. **Obligation check**: For each active thread, ask: is someone waiting on the user? Is the user waiting on someone? Has enough time passed that a follow-up is warranted?
+2. **Silence alerts**: Alert on overdue active threads (if not already alerted recently). Frame as questions.
+3. **Missing responses**: Look for threads where the user received a question or request but no follow-up email confirmed it was handled. Flag these.
+4. **Deadline scan**: Check memories for deadlines or events within 48 hours. Alert if action needed.
+5. **Expected confirmations**: If a payment was scheduled, did a confirmation arrive? If a meeting was set, did a calendar invite come? Note gaps.
+6. **Thread hygiene**: Resolve or downgrade stale threads. Ignore threads that turned out to be noise.
+7. **Memory maintenance**: Retire obsolete memories (passed deadlines, completed items).
 
 Only alert when the user genuinely needs to know. Don't re-alert on things you've already flagged.`;
 }

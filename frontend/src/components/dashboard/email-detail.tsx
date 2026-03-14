@@ -22,15 +22,10 @@ const TIMEZONE_OPTIONS = [
   { value: 'Asia/Tokyo', label: 'Asia/Tokyo' },
 ];
 
-function formatRelative(isoDate: string): string {
-  const diff = Date.now() - new Date(isoDate).getTime();
-  const minutes = Math.floor(diff / 60000);
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  return `${days}d ago`;
+function formatFullTime(isoDate: string): string {
+  return new Date(isoDate).toLocaleString('en-US', {
+    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true
+  });
 }
 
 function formatFullTimestamp(isoDate: string, timezone: string): string {
@@ -140,7 +135,7 @@ export function EmailDetail({ thread, watcherId, onClose, onStatusChange }: Emai
             <span className={`badge badge-sm ${statusBadgeClass(thread.status)}`}>{thread.status}</span>
             <span className="text-xs text-gray-400">{thread.email_count} email{thread.email_count !== 1 ? 's' : ''}</span>
             <span className="text-xs text-gray-400">·</span>
-            <span className="text-xs text-gray-400">{formatRelative(thread.last_activity)}</span>
+            <span className="text-xs text-gray-400">{formatFullTime(thread.last_activity)}</span>
           </div>
         </div>
       </div>
@@ -164,8 +159,8 @@ export function EmailDetail({ thread, watcherId, onClose, onStatusChange }: Emai
             <div>
               <div className="data-label mb-1">Timeline</div>
               <div className="text-gray-600 space-y-0.5">
-                <div>First: {formatRelative(thread.first_seen)}</div>
-                <div>Last: {formatRelative(thread.last_activity)}</div>
+                <div>First: {formatFullTime(thread.first_seen)}</div>
+                <div>Last: {formatFullTime(thread.last_activity)}</div>
               </div>
             </div>
           </div>
