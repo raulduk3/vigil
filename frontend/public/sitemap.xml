@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://vigil.run/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://vigil.run/pricing</loc><changefreq>weekly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://vigil.run/privacy</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vigil.run/blog</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vigil.run/blog/why-vigil-exists</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vigil.run/blog/no-inbox-access</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vigil.run/blog/email-agents-vs-email-clients</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vigil.run/blog/obligation-tracking</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vigil.run/blog/vigil-for-developers</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vigil.run/blog/pay-per-use</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vigil.run/learn/watchers</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://vigil.run/learn/email-ingestion</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://vigil.run/learn/agent</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://vigil.run/learn/memory</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://vigil.run/learn/actions</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://vigil.run/learn/integrations</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://vigil.run/learn/architecture</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://vigil.run/learn/security</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://vigil.run/auth/register</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://vigil.run/auth/login</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+</urlset>
