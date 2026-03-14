@@ -11,6 +11,7 @@ const PAGES = [
   { href: '/learn/memory', label: 'Memory System' },
   { href: '/learn/architecture', label: 'Architecture' },
   { href: '/learn/security', label: 'Security & Privacy' },
+  { href: '/learn/api', label: 'API Reference' },
 ];
 
 function PageNav({ currentPath }: { currentPath: string }) {
