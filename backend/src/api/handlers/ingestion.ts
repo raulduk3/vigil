@@ -212,6 +212,12 @@ export const ingestionHandlers = {
             // Check for forwarding confirmation emails BEFORE watcher lookup.
             // These need to be relayed to the account owner so they can complete
             // the email provider's verification flow.
+            // Skip emails FROM Vigil itself (prevents relay loops when forwarding is active)
+            if (from.includes("vigil.run") || from.includes("notifications@vigil")) {
+                logger.debug("Skipping email from Vigil itself", { from, subject });
+                return c.json({ success: true, agent_invoked: false, message: "Skipped own email" });
+            }
+
             if (isForwardingConfirmation(from, subject)) {
                 // Rate limit: only relay one confirmation per token per hour
                 const now = Date.now();
