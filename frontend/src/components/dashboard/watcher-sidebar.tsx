@@ -34,11 +34,14 @@ export function WatcherSidebar({
       {/* Watcher list */}
       <div className="flex-1 overflow-y-auto py-1">
         {watchers.length === 0 && (
-          <div className="px-4 py-3 text-xs text-vigil-400">No watchers yet</div>
+          <div className="px-4 py-6 text-center">
+            <p className="text-sm text-gray-500 mb-3">No watchers yet</p>
+            <a href="/watchers/new" className="btn btn-primary text-xs px-4 py-2">Create your first watcher</a>
+          </div>
         )}
         {watchers.map((watcher) => {
           const watcherThreads = threads[watcher.id] || [];
-          const activeCount = watcherThreads.filter((t) => t.status === 'active').length;
+          const activeCount = watcherThreads.filter((t) => t.status === 'active' || t.status === 'watching').length;
           const isSelected = watcher.id === selectedId;
 
           return (

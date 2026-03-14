@@ -59,7 +59,7 @@ function RegisterContent() {
     try {
       const result = await register(email, password);
       if (result.success) {
-        router.push(intent ? `/watchers/new?intent=${encodeURIComponent(intent)}` : '/dashboard');
+        router.push(intent ? `/watchers/new?intent=${encodeURIComponent(intent)}` : '/watchers/new');
       } else {
         setError(result.error || 'Registration failed');
       }

@@ -45,7 +45,7 @@ export function InboxPanel({
     return t.status === filter;
   });
 
-  const activeCount = threads.filter((t) => t.status === 'active').length;
+  const activeCount = threads.filter((t) => t.status === 'active' || t.status === 'watching').length;
   const watchingCount = threads.filter((t) => t.status === 'watching').length;
   const ignoredCount = threads.filter((t) => t.status === 'ignored').length;
 
@@ -211,7 +211,7 @@ export function InboxPanel({
                 <div className="empty-state-title">No {filter !== 'all' ? filter : ''} threads</div>
                 <div className="empty-state-description">
                   {filter === 'all'
-                    ? 'Forward emails to your watcher address to start.'
+                    ? 'Forward emails to your watcher address to get started. Check the watcher settings for your forwarding address.'
                     : `No threads with status "${filter}".`}
                 </div>
               </div>

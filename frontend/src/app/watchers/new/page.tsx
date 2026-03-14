@@ -89,8 +89,14 @@ function SuccessView({ watcher }: { watcher: CreatedWatcher }) {
         </div>
       </div>
 
+      <div className="panel p-5 text-left mb-6">
+        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Fastest: Chrome extension</p>
+        <p className="text-sm text-gray-600 mb-3">The extension walks you through Gmail or Outlook forwarding in 30 seconds.</p>
+        <a href="/extension" target="_blank" className="btn btn-primary w-full text-center block">Get the Chrome extension</a>
+      </div>
+
       <div className="panel p-5 text-left mb-8">
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Set up forwarding</p>
+        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Manual setup</p>
         <div className="space-y-3 text-sm text-gray-600">
           <div>
             <span className="font-medium text-gray-800">Gmail:</span> Settings → See all settings → Forwarding and POP/IMAP → Add a forwarding address
@@ -99,7 +105,7 @@ function SuccessView({ watcher }: { watcher: CreatedWatcher }) {
             <span className="font-medium text-gray-800">Outlook:</span> Settings → Mail → Forwarding → Forward to
           </div>
           <div>
-            <span className="font-medium text-gray-800">Any email:</span> Or just BCC / forward individual emails manually to test.
+            <span className="font-medium text-gray-800">Quick test:</span> Forward or BCC a single email manually to see it work.
           </div>
         </div>
       </div>
