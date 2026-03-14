@@ -250,7 +250,7 @@ export default function BillingPage() {
       <div className="rounded-lg bg-gray-50 border border-gray-200 px-4 py-3">
         <p className="text-xs text-gray-500 max-w-none">
           <span className="font-medium text-gray-700">Pay-per-use, no tiers.</span>{' '}
-          $0.005 per email processed. Billed monthly through Stripe. No charge during your {billing?.trial_emails_total ?? 50}-email free trial.
+          $0.001 platform fee per invocation + model token costs (~$0.003/email on GPT-4.1) + $0.005 per alert sent. Billed monthly through Stripe.{!billing?.has_payment_method && ` ${billing?.trial_emails_remaining ?? 50} free trial emails remaining.`}
         </p>
       </div>
     </main>

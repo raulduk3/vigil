@@ -33,8 +33,9 @@ export async function reportInvocationCost(
     const costCents = costUsd * 100;
     try {
         await reportUsage(account.stripe_customer_id, costCents);
+        logger.info("Reported usage to Stripe", { accountId, costUsd, costCents, customerId: account.stripe_customer_id });
     } catch (err) {
-        logger.error("Failed to report usage to Stripe", { accountId, costUsd, err });
+        logger.error("Failed to report usage to Stripe", { accountId, costUsd, err: String(err) });
     }
 }
 

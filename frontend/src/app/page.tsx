@@ -124,7 +124,7 @@ export default function HomePage() {
                     window.location.href = `/auth/register?intent=${encodedIntent}`;
                   }
                 }}
-                className="hero-prompt-shell panel p-2 flex flex-col gap-2 md:flex-row md:items-stretch md:gap-0"
+                className="hero-prompt-shell panel p-2 flex flex-col gap-2 md:flex-row md:items-stretch"
               >
                 <div className="relative flex-1">
                   <input
@@ -137,7 +137,7 @@ export default function HomePage() {
                     required
                   />
                 </div>
-                <button type="submit" className="btn btn-primary py-4 px-8 text-base md:min-w-[12rem] md:rounded-l-none shrink-0">
+                <button type="submit" className="btn btn-primary py-4 px-8 text-base md:min-w-[12rem] shrink-0">
                   Start watching →
                 </button>
               </form>
