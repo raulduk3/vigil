@@ -94,7 +94,11 @@
                             </div>
                         </div>
 
-                        <button id="btn-setup-done" class="btn primary w-full" style="margin-top:16px;">Done, go to dashboard</button>
+                        <div style="margin-top:16px;">
+                            <button id="btn-setup-verify" class="btn secondary w-full">Verify: check for emails</button>
+                            <div id="setup-verify-status" class="hidden" style="margin-top:8px;font-size:12px;text-align:center;"></div>
+                        </div>
+                        <button id="btn-setup-done" class="btn primary w-full" style="margin-top:10px;">Done, go to dashboard</button>
                         <button id="btn-setup-another" class="btn secondary w-full" style="margin-top:6px;">Create another watcher</button>
                     </div>
                 </div>
@@ -119,6 +123,13 @@
         <!-- Config -->
         <div class="view" id="view-config">
             <div class="scroll-content" id="config-content">
+                <!-- Connection status -->
+                <div class="config-section">
+                    <h3>Connection</h3>
+                    <div id="config-connection-status" class="connection-status"></div>
+                </div>
+
+                <!-- Guided setup (always available) -->
                 <div class="config-section">
                     <h3>Forwarding Address</h3>
                     <div class="copy-row">
@@ -128,15 +139,39 @@
                 </div>
 
                 <div class="config-section">
-                    <h3>Quick Setup</h3>
-                    <p class="muted small">Open your email settings and add the forwarding address above.</p>
-                    <div class="btn-row">
-                        <button id="btn-gmail-fwd" class="btn secondary flex-1">Gmail Settings</button>
-                        <button id="btn-gmail-filter" class="btn secondary flex-1">Gmail Filters</button>
+                    <h3>Connect Email</h3>
+                    <div class="setup-provider-tabs">
+                        <button class="config-provider-tab active" data-provider="gmail">Gmail</button>
+                        <button class="config-provider-tab" data-provider="outlook">Outlook</button>
                     </div>
-                    <button id="btn-outlook-fwd" class="btn secondary w-full">Outlook Forwarding</button>
-                    <a href="https://vigil.run/extension" target="_blank" class="link small">Full setup guide</a>
+
+                    <div id="config-gmail" class="provider-steps">
+                        <div class="step-row"><span class="step-n">1</span><div><p>Open forwarding settings</p><button id="btn-cfg-gmail-fwd" class="btn secondary btn-xs">Open Gmail Settings</button></div></div>
+                        <div class="step-row"><span class="step-n">2</span><p>Click "Add a forwarding address" and paste the address above</p></div>
+                        <div class="step-row"><span class="step-n">3</span><p>Gmail sends a confirmation email. Click the link in that email to verify.</p></div>
+                        <div class="step-row"><span class="step-n">4</span><p>Select "Forward a copy of incoming mail" and save. Or create a filter below for specific senders.</p></div>
+                    </div>
+
+                    <div id="config-outlook" class="provider-steps hidden">
+                        <div class="step-row"><span class="step-n">1</span><div><p>Open forwarding settings</p><button id="btn-cfg-outlook-fwd" class="btn secondary btn-xs">Open Outlook Settings</button></div></div>
+                        <div class="step-row"><span class="step-n">2</span><p>Enable forwarding, paste the address, check "Keep a copy", save.</p></div>
+                    </div>
+
+                    <div class="btn-row" style="margin-top:8px;">
+                        <button id="btn-cfg-gmail-filter" class="btn secondary flex-1 btn-xs">Gmail: Create Filter</button>
+                        <button id="btn-cfg-outlook-rule" class="btn secondary flex-1 btn-xs">Outlook: Create Rule</button>
+                    </div>
                 </div>
+
+                <!-- Verify -->
+                <div class="config-section">
+                    <h3>Verify</h3>
+                    <p class="muted small">Send a test email to the forwarding address, or forward one manually. Vigil will detect it.</p>
+                    <button id="btn-verify" class="btn primary w-full">Check for emails</button>
+                    <div id="verify-status" class="hidden" style="margin-top:8px;font-size:12px;text-align:center;"></div>
+                </div>
+
+                <div class="divider"><span>agent config</span></div>
 
                 <div class="config-section">
                     <h3>Agent Instructions</h3>

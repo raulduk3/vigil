@@ -77,15 +77,59 @@ document.addEventListener("DOMContentLoaded", async () => {
     ci.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (ci.value.trim()) sendChat(); } });
     cs.addEventListener("click", sendChat);
 
-    // Config buttons
+    // Config: copy address
     $("btn-copy-addr").addEventListener("click", () => {
         navigator.clipboard.writeText($("config-address").textContent);
         $("btn-copy-addr").textContent = "Copied"; setTimeout(() => $("btn-copy-addr").textContent = "Copy", 2000);
     });
-    $("btn-gmail-fwd").addEventListener("click", () => openTab("https://mail.google.com/mail/u/0/#settings/fwdandpop"));
-    $("btn-gmail-filter").addEventListener("click", () => openTab("https://mail.google.com/mail/u/0/#settings/filters"));
-    $("btn-outlook-fwd").addEventListener("click", () => openTab("https://outlook.live.com/mail/0/options/mail/forwarding"));
 
+    // Config: provider tabs
+    document.querySelectorAll(".config-provider-tab").forEach(t => {
+        t.addEventListener("click", () => {
+            document.querySelectorAll(".config-provider-tab").forEach(p => p.classList.remove("active"));
+            t.classList.add("active");
+            $("config-gmail").classList.toggle("hidden", t.dataset.provider !== "gmail");
+            $("config-outlook").classList.toggle("hidden", t.dataset.provider !== "outlook");
+        });
+    });
+
+    // Config: open email settings
+    $("btn-cfg-gmail-fwd").addEventListener("click", () => openTab("https://mail.google.com/mail/u/0/#settings/fwdandpop"));
+    $("btn-cfg-outlook-fwd").addEventListener("click", () => openTab("https://outlook.live.com/mail/0/options/mail/forwarding"));
+    $("btn-cfg-gmail-filter").addEventListener("click", () => openTab("https://mail.google.com/mail/u/0/#settings/filters"));
+    $("btn-cfg-outlook-rule").addEventListener("click", () => openTab("https://outlook.live.com/mail/0/options/mail/rules"));
+
+    // Config: verify forwarding
+    $("btn-verify").addEventListener("click", async () => {
+        if (!current) return;
+        const btn = $("btn-verify"), st = $("verify-status");
+        btn.disabled = true; btn.textContent = "Checking...";
+        st.classList.remove("hidden");
+        st.style.color = "#787874";
+        st.textContent = "Polling for emails...";
+
+        let found = false;
+        for (let i = 0; i < 15; i++) {
+            try {
+                const status = await vigilAPI.getForwardingStatus(current.id);
+                if (status.forwarding_active) {
+                    st.style.color = "#3d6b4f";
+                    st.textContent = `Connected. ${status.emails_24h} emails in the last 24 hours. Last received ${ago(status.last_email_at)}.`;
+                    found = true;
+                    break;
+                }
+            } catch {}
+            st.textContent = `Checking... (${i + 1}/15)`;
+            await new Promise(r => setTimeout(r, 2000));
+        }
+        if (!found) {
+            st.style.color = "#8b7234";
+            st.textContent = "No emails detected yet. Forward a test email to the address above and try again.";
+        }
+        btn.disabled = false; btn.textContent = "Check for emails";
+    });
+
+    // Config: save
     $("btn-save-config").addEventListener("click", async () => {
         if (!current) return;
         const st = $("config-status");
@@ -99,6 +143,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         } catch (e) { st.textContent = e.message; st.style.color = "#8b4242"; st.classList.remove("hidden"); }
     });
 
+    // Logout
     $("btn-logout").addEventListener("click", async () => {
         await vigilAPI.logout();
         $("header-controls").classList.add("hidden");
@@ -158,6 +203,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("btn-setup-outlook-fwd").addEventListener("click", () => openTab("https://outlook.live.com/mail/0/options/mail/forwarding"));
     $("btn-setup-gmail-filter").addEventListener("click", () => openTab("https://mail.google.com/mail/u/0/#settings/filters"));
     $("btn-setup-outlook-rule").addEventListener("click", () => openTab("https://outlook.live.com/mail/0/options/mail/rules"));
+
+    // Setup: verify
+    $("btn-setup-verify").addEventListener("click", async () => {
+        if (!current) return;
+        const btn = $("btn-setup-verify"), st = $("setup-verify-status");
+        btn.disabled = true; btn.textContent = "Checking...";
+        st.classList.remove("hidden"); st.style.color = "#787874"; st.textContent = "Polling for emails...";
+        let found = false;
+        for (let i = 0; i < 15; i++) {
+            try {
+                const status = await vigilAPI.getForwardingStatus(current.id);
+                if (status.forwarding_active) {
+                    st.style.color = "#3d6b4f";
+                    st.textContent = `Connected. ${status.emails_24h} emails received. Forwarding is working.`;
+                    found = true; break;
+                }
+            } catch {}
+            st.textContent = `Waiting for first email... (${i + 1}/15)`;
+            await new Promise(r => setTimeout(r, 2000));
+        }
+        if (!found) {
+            st.style.color = "#8b7234";
+            st.textContent = "No emails yet. Forward a test email and try again.";
+        }
+        btn.disabled = false; btn.textContent = "Verify: check for emails";
+    });
 
     // Setup: done / create another
     $("btn-setup-done").addEventListener("click", () => show("overview"));
@@ -317,6 +388,22 @@ async function sendChat() {
 async function loadConfig() {
     if (!current) return;
     $("config-address").textContent = current.ingestion_address || `${current.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${current.ingest_token}@vigil.run`;
+
+    // Connection status
+    const csEl = $("config-connection-status");
+    csEl.innerHTML = '<span class="muted small">Checking...</span>';
+    try {
+        const status = await vigilAPI.getForwardingStatus(current.id);
+        if (status.forwarding_active) {
+            csEl.innerHTML = `<div class="conn-ok"><span class="conn-dot ok"></span> Connected — ${status.emails_24h} emails (24h), last ${ago(status.last_email_at)}</div>`;
+        } else {
+            csEl.innerHTML = `<div class="conn-waiting"><span class="conn-dot waiting"></span> Not connected — follow the steps below to set up forwarding</div>`;
+        }
+    } catch {
+        csEl.innerHTML = `<div class="conn-waiting"><span class="conn-dot waiting"></span> Not connected yet</div>`;
+    }
+
+    // Load watcher config
     try {
         const w = await vigilAPI.getWatcher(current.id);
         $("config-prompt").value = w?.system_prompt || "";
@@ -325,4 +412,7 @@ async function loadConfig() {
         $("config-prompt").value = current.system_prompt || "";
         $("config-model").value = current.model || "gpt-4.1-mini";
     }
+
+    // Reset verify status
+    $("verify-status").classList.add("hidden");
 }
