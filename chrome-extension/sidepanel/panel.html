@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+    <div class="panel">
+        <!-- Header -->
+        <div class="panel-header">
+            <div class="logo">👁️ Vigil</div>
+            <div class="step-indicator">
+                <span class="step active" data-step="1">1</span>
+                <span class="step-line"></span>
+                <span class="step" data-step="2">2</span>
+                <span class="step-line"></span>
+                <span class="step" data-step="3">3</span>
+                <span class="step-line"></span>
+                <span class="step" data-step="4">4</span>
+                <span class="step-line"></span>
+                <span class="step" data-step="5">5</span>
+            </div>
+        </div>
+
+        <!-- Step 1: Auth check -->
+        <div class="wizard-step active" id="step-1">
+            <h2>Connect Your Account</h2>
+            <p class="step-desc">Enter your Vigil API key to get started.</p>
+            
+            <input type="text" id="panel-api-key" placeholder="vk_your_api_key" spellcheck="false">
+            <button id="panel-btn-connect" class="btn primary">Connect</button>
+            
+            <div class="divider"><span>or</span></div>
+            
+            <input type="email" id="panel-email" placeholder="Email">
+            <input type="password" id="panel-password" placeholder="Password">
+            <button id="panel-btn-login" class="btn primary">Sign In</button>
+            
+            <p class="help">Don't have an account? <a href="https://vigil.run" target="_blank">Sign up at vigil.run</a></p>
+            <div id="panel-auth-error" class="error hidden"></div>
+        </div>
+
+        <!-- Step 2: Detect provider -->
+        <div class="wizard-step" id="step-2">
+            <h2>Open Your Email</h2>
+            <p class="step-desc">Navigate to Gmail or Outlook so Vigil can help set up forwarding.</p>
+            
+            <div id="provider-status" class="provider-detect">
+                <div class="detect-icon">🔍</div>
+                <p id="provider-message">Checking current page...</p>
+            </div>
+
+            <div class="provider-buttons">
+                <a href="https://mail.google.com" target="_blank" class="btn provider-btn gmail">
+                    <span>📧</span> Open Gmail
+                </a>
+                <a href="https://outlook.live.com" target="_blank" class="btn provider-btn outlook">
+                    <span>📬</span> Open Outlook
+                </a>
+            </div>
+        </div>
+
+        <!-- Step 3: Choose/create watcher -->
+        <div class="wizard-step" id="step-3">
+            <h2>Choose a Watcher</h2>
+            <p class="step-desc">Select an existing watcher or create a new one.</p>
+            
+            <div id="watcher-list" class="watcher-list"></div>
+            
+            <div class="divider"><span>or create new</span></div>
+            
+            <input type="text" id="watcher-name" placeholder="Watcher name (e.g., Work Email)">
+            <input type="text" id="watcher-intent" placeholder="What should it watch for? (e.g., deadlines, invoices)">
+            <button id="btn-create-watcher" class="btn primary">Create Watcher</button>
+            
+            <div id="watcher-error" class="error hidden"></div>
+        </div>
+
+        <!-- Step 4: Setup forwarding -->
+        <div class="wizard-step" id="step-4">
+            <h2>Set Up Forwarding</h2>
+            <p class="step-desc" id="forwarding-instructions">Follow these steps to forward emails to Vigil.</p>
+            
+            <div class="forwarding-address-box">
+                <label>Your Vigil forwarding address:</label>
+                <div class="copy-box">
+                    <code id="forwarding-address">loading...</code>
+                    <button id="btn-copy-address" class="btn-icon" title="Copy">📋</button>
+                </div>
+            </div>
+
+            <!-- Gmail steps -->
+            <div id="gmail-steps" class="setup-steps hidden">
+                <div class="step-item">
+                    <span class="step-num">1</span>
+                    <div>
+                        <p>Open Gmail Settings → Forwarding</p>
+                        <button id="btn-gmail-settings" class="btn secondary small">Open Settings</button>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <span class="step-num">2</span>
+                    <div>
+                        <p>Click "Add a forwarding address" and paste the address above</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <span class="step-num">3</span>
+                    <div>
+                        <p>Gmail will send a confirmation code. Vigil catches it automatically.</p>
+                        <div id="confirm-code-status" class="confirm-status">
+                            <div class="spinner"></div>
+                            <span>Waiting for confirmation code...</span>
+                        </div>
+                        <div id="confirm-code-found" class="confirm-found hidden">
+                            <span class="code-label">Code:</span>
+                            <code id="confirm-code"></code>
+                            <button id="btn-copy-code" class="btn-icon" title="Copy">📋</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <span class="step-num">4</span>
+                    <div>
+                        <p>Enter the code in Gmail, then select "Forward a copy" and save.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Outlook steps -->
+            <div id="outlook-steps" class="setup-steps hidden">
+                <div class="step-item">
+                    <span class="step-num">1</span>
+                    <div>
+                        <p>Open Outlook Settings → Mail → Forwarding</p>
+                        <button id="btn-outlook-settings" class="btn secondary small">Open Settings</button>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <span class="step-num">2</span>
+                    <div>
+                        <p>Enable "Enable forwarding"</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <span class="step-num">3</span>
+                    <div>
+                        <p>Paste the forwarding address above</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <span class="step-num">4</span>
+                    <div>
+                        <p>Check "Keep a copy of forwarded messages" and save</p>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btn-verify-forwarding" class="btn primary">Verify Forwarding</button>
+        </div>
+
+        <!-- Step 5: Done -->
+        <div class="wizard-step" id="step-5">
+            <div class="success-icon">✅</div>
+            <h2>You're Connected!</h2>
+            <p class="step-desc">Vigil is now watching your email. The agent will read, remember, and alert you when something needs attention.</p>
+            
+            <div id="forwarding-status" class="status-card">
+                <div class="status-row">
+                    <span>Status</span>
+                    <span class="status-value" id="status-active">Checking...</span>
+                </div>
+                <div class="status-row">
+                    <span>Last email</span>
+                    <span class="status-value" id="status-last-email">—</span>
+                </div>
+                <div class="status-row">
+                    <span>Emails (24h)</span>
+                    <span class="status-value" id="status-email-count">—</span>
+                </div>
+            </div>
+
+            <a href="https://vigil.run/dashboard" target="_blank" class="btn primary">Open Dashboard</a>
+            <button id="btn-restart" class="btn secondary">Set Up Another</button>
+        </div>
+    </div>
+
+    <script src="../lib/api.js"></script>
+    <script src="panel.js"></script>
+</body>
+</html>

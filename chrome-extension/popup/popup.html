@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="popup">
+        <div class="header">
+            <div class="logo">👁️ Vigil</div>
+            <div class="tagline">Email Intelligence</div>
+        </div>
+
+        <!-- Not authenticated -->
+        <div id="auth-section" class="section">
+            <p class="desc">Connect your Vigil account to set up email forwarding.</p>
+            
+            <div class="auth-tabs">
+                <button class="tab active" data-tab="apikey">API Key</button>
+                <button class="tab" data-tab="login">Email</button>
+            </div>
+
+            <div id="tab-apikey" class="tab-content active">
+                <input type="text" id="api-key" placeholder="vk_your_api_key" spellcheck="false">
+                <button id="btn-apikey" class="btn primary">Connect</button>
+            </div>
+
+            <div id="tab-login" class="tab-content">
+                <input type="email" id="email" placeholder="Email">
+                <input type="password" id="password" placeholder="Password">
+                <button id="btn-login" class="btn primary">Sign In</button>
+            </div>
+
+            <p class="help">Get your API key at <a href="https://vigil.run/account/developer" target="_blank">vigil.run</a></p>
+            <div id="auth-error" class="error hidden"></div>
+        </div>
+
+        <!-- Authenticated -->
+        <div id="connected-section" class="section hidden">
+            <div class="status-badge connected">
+                <span class="dot"></span> Connected
+            </div>
+            <p class="desc">Open Gmail or Outlook, then click the Vigil icon to set up forwarding.</p>
+            <button id="btn-setup" class="btn primary">Open Setup Wizard</button>
+            <button id="btn-logout" class="btn secondary">Disconnect</button>
+        </div>
+    </div>
+
+    <script src="../lib/api.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>
