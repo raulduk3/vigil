@@ -158,13 +158,60 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Video demo placeholder */}
-        <div className="max-w-6xl mx-auto px-6 lg:px-8 relative z-10 -mt-4 mb-8">
-          <div className="panel p-1 max-w-3xl mx-auto">
-            <div className="bg-surface-sunken rounded aspect-video flex items-center justify-center">
-              <div className="text-center">
-                <p className="text-sm font-medium text-gray-500 mb-1">Demo video coming soon</p>
-                <p className="text-xs text-gray-400">See Vigil analyze, remember, and act on real email</p>
+        <div className="relative z-10 mt-12 md:mt-16 mb-8 px-4 sm:px-6 lg:px-8">
+          <div className="panel hero-demo-stage mx-auto max-w-[88rem] overflow-hidden p-1.5">
+            <div className="hero-demo-surface relative aspect-[16/9] overflow-hidden rounded-md">
+              <div className="hero-demo-grid absolute inset-0" />
+              <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/55 via-white/20 to-transparent" />
+              <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#d4dde0]/85 via-[#d4dde0]/25 to-transparent" />
+
+              <div className="relative z-10 flex h-full flex-col justify-between p-5 md:p-8 lg:p-10">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] md:text-xs font-semibold uppercase tracking-[0.24em] text-vigil-700/80">Live product demo</p>
+                    <p className="text-sm md:text-base text-gray-600 mt-1">Full workflow view: ingest, analyze, remember, alert.</p>
+                  </div>
+                  <div className="hero-demo-pill rounded-full px-3 py-1.5 text-[11px] md:text-xs font-medium text-vigil-800">
+                    Coming soon
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-[1.3fr_0.9fr] md:gap-6 lg:gap-8 items-end">
+                  <div className="hero-demo-window rounded-[1.1rem] p-3 md:p-4 lg:p-5">
+                    <div className="flex items-center gap-2 mb-3 md:mb-4">
+                      <span className="h-2.5 w-2.5 rounded-full bg-[#c96e61]" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-[#d7b45d]" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-[#7faa73]" />
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-[0.95fr_1.3fr]">
+                      <div className="rounded-xl bg-white/72 p-3 md:p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.45)]">
+                        <p className="text-[11px] uppercase tracking-[0.22em] text-gray-500 mb-2">Watcher</p>
+                        <p className="text-sm md:text-base font-semibold text-gray-900">Vendor follow-up</p>
+                        <p className="text-xs md:text-sm text-gray-600 mt-2">Prompts, webhooks, and memory all configured per watcher.</p>
+                      </div>
+                      <div className="rounded-xl bg-[#0d202c] p-4 md:p-5 text-left shadow-[0_12px_40px_rgba(11,31,42,0.18)]">
+                        <p className="text-[11px] uppercase tracking-[0.2em] text-vigil-300 mb-2">Email analysis</p>
+                        <p className="text-sm md:text-base text-white font-medium">Invoice 4521 is due tomorrow. Alert Richard and POST to accounting webhook.</p>
+                        <div className="mt-4 space-y-2 text-xs md:text-sm text-vigil-200/90">
+                          <p>Summary: Vendor invoice requires immediate attention.</p>
+                          <p>Memory surfaced: Payment normally lands on the 14th.</p>
+                          <p>Action: Send alert + trigger overdue prevention workflow.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3 md:space-y-4">
+                    <div className="hero-float-card hero-float-card-delay-1 rounded-2xl p-4 md:p-5">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-gray-500 mb-2">Thread state</p>
+                      <p className="text-sm md:text-base text-gray-900 font-medium">3 emails grouped, 1 new obligation detected.</p>
+                    </div>
+                    <div className="hero-float-card hero-float-card-delay-2 rounded-2xl p-4 md:p-5">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-gray-500 mb-2">Agent output</p>
+                      <p className="text-sm md:text-base text-gray-900 font-medium">Text notification queued. Webhook payload prepared.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
