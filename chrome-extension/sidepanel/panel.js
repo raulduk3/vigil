@@ -231,156 +231,110 @@ async function loadDashboard() {
         const threads = threadsResult.status === "fulfilled" ? threadsResult.value : [];
         const memories = memoriesResult.status === "fulfilled" ? memoriesResult.value : [];
         const actions = actionsResult.status === "fulfilled" ? actionsResult.value : [];
-        const wu = usage?.watchers?.find(w => w.watcher_id === currentWatcher.id) || {};
+        const watcherUsage = usage?.watchers?.find((watcher) => watcher.watcher_id === currentWatcher.id) || {};
 
-        const activeThreads = threads.filter(t => t.status === "watching" || t.status === "active");
-        const recentAlerts = actions.filter(a => a.tool === "send_alert" && a.result === "success").slice(0, 5);
+        const activeThreads = threads.filter((thread) => thread.status === "watching" || thread.status === "active");
+        const recentAlerts = actions.filter((action) => action.tool === "send_alert" && action.result === "success").slice(0, 5);
         const recentActions = actions.slice(0, 8);
-
-        let html = '';
-
-        // Status bar
         const active = status.forwarding_active ?? false;
-        html += `<div class="dash-status-bar ${active ? 'dash-active' : 'dash-waiting'}">
-            <span>${active ? 'Active' : 'Waiting for emails'}</span>
-            <span>${(wu.emails ?? 0).toLocaleString()} emails · ${(wu.invocations ?? 0).toLocaleString()} invocations · $${(wu.cost ?? 0).toFixed(3)}</span>
-        </div>`;
 
-        // Active threads that need attention
+        let html = `
+            <div class="dash-status-bar ${active ? "dash-active" : "dash-waiting"}">
+                <span>${active ? "Active" : "Waiting for emails"}</span>
+                <span>${(watcherUsage.emails ?? 0).toLocaleString()} emails · ${(watcherUsage.invocations ?? 0).toLocaleString()} invocations · $${(watcherUsage.cost ?? 0).toFixed(3)}</span>
+            </div>
+        `;
+
         if (activeThreads.length > 0) {
-            html += `<div class="dash-section">
-                <div class="dash-section-header">Active threads <span class="dash-count">${activeThreads.length}</span></div>
-                ${activeThreads.slice(0, 6).map(t => `
-                    <div class="dash-thread">
-                        <div class="dash-thread-subject">${escapeHtml(t.subject || "No subject")}</div>
-                        <div class="dash-thread-meta">${t.email_count || 0} emails · ${t.last_activity ? timeAgo(t.last_activity) : ''}</div>
-                        ${t.summary ? `<div class="dash-thread-summary">${escapeHtml(t.summary)}</div>` : ''}
-                    </div>
-                `).join("")}
-            </div>`;
+            html += `
+                <div class="dash-section">
+                    <div class="dash-section-header">Active threads <span class="dash-count">${activeThreads.length}</span></div>
+                    ${activeThreads.slice(0, 6).map((thread) => `
+                        <div class="dash-thread">
+                            <div class="dash-thread-subject">${escapeHtml(thread.subject || "No subject")}</div>
+                            <div class="dash-thread-meta">${thread.email_count || 0} emails · ${thread.last_activity ? timeAgo(thread.last_activity) : ""}</div>
+                            ${thread.summary ? `<div class="dash-thread-summary">${escapeHtml(thread.summary)}</div>` : ""}
+                        </div>
+                    `).join("")}
+                </div>
+            `;
         }
 
-        // Recent alerts
         if (recentAlerts.length > 0) {
-            html += `<div class="dash-section">
-                <div class="dash-section-header">Recent alerts <span class="dash-count">${wu.alerts ?? 0}</span></div>
-                ${recentAlerts.map(a => `
-                    <div class="dash-alert">
-                        <div class="dash-alert-text">${escapeHtml(a.reasoning || a.decision || "Alert sent")}</div>
-                        <div class="dash-alert-meta">${a.created_at ? timeAgo(a.created_at) : ''}</div>
-                    </div>
-                `).join("")}
-            </div>`;
+            html += `
+                <div class="dash-section">
+                    <div class="dash-section-header">Recent alerts <span class="dash-count">${watcherUsage.alerts ?? 0}</span></div>
+                    ${recentAlerts.map((action) => `
+                        <div class="dash-alert">
+                            <div class="dash-alert-text">${escapeHtml(action.reasoning || action.decision || "Alert sent")}</div>
+                            <div class="dash-alert-meta">${action.created_at ? timeAgo(action.created_at) : ""}</div>
+                        </div>
+                    `).join("")}
+                </div>
+            `;
         }
 
-        // Recent agent decisions
         if (recentActions.length > 0) {
-            html += `<div class="dash-section">
-                <div class="dash-section-header">Agent activity</div>
-                ${recentActions.map(a => {
-                    const tool = a.tool || 'analyze';
-                    const toolClass = tool === 'send_alert' ? 'dash-tool-alert' : tool === 'ignore_thread' ? 'dash-tool-ignore' : 'dash-tool-default';
-                    return `<div class="dash-action">
-                        <span class="dash-tool ${toolClass}">${escapeHtml(tool)}</span>
-                        <span class="dash-action-text">${escapeHtml(a.decision || a.reasoning || '—')}</span>
-                        <span class="dash-action-time">${a.created_at ? timeAgo(a.created_at) : ''}</span>
-                    </div>`;
-                }).join("")}
-            </div>`;
+            html += `
+                <div class="dash-section">
+                    <div class="dash-section-header">Agent activity</div>
+                    ${recentActions.map((action) => {
+                        const tool = action.tool || "analyze";
+                        const toolClass = tool === "send_alert"
+                            ? "dash-tool-alert"
+                            : tool === "ignore_thread"
+                                ? "dash-tool-ignore"
+                                : "dash-tool-default";
+
+                        return `
+                            <div class="dash-action">
+                                <span class="dash-tool ${toolClass}">${escapeHtml(tool)}</span>
+                                <span class="dash-action-text">${escapeHtml(action.decision || action.reasoning || "—")}</span>
+                                <span class="dash-action-time">${action.created_at ? timeAgo(action.created_at) : ""}</span>
+                            </div>
+                        `;
+                    }).join("")}
+                </div>
+            `;
         }
 
-        // Key memories
         if (memories.length > 0) {
-            html += `<div class="dash-section">
-                <div class="dash-section-header">What the agent remembers <span class="dash-count">${memories.length}</span></div>
-                ${memories.slice(0, 6).map(m => `
-                    <div class="dash-memory">${escapeHtml(m.content)}</div>
-                `).join("")}
-            </div>`;
+            html += `
+                <div class="dash-section">
+                    <div class="dash-section-header">What the agent remembers <span class="dash-count">${memories.length}</span></div>
+                    ${memories.slice(0, 6).map((memory) => `
+                        <div class="dash-memory">${escapeHtml(memory.content)}</div>
+                    `).join("")}
+                </div>
+            `;
         }
 
-        // Empty state
         if (!activeThreads.length && !recentActions.length && !memories.length) {
-            html += `<div class="empty-state">
-                <p>No activity yet.</p>
-                <p style="margin-top:4px;">Forward an email to <strong>${escapeHtml(currentWatcher.ingestion_address || '')}</strong> to get started.</p>
-            </div>`;
+            html += `
+                <div class="empty-state">
+                    <p>No activity yet.</p>
+                    <p style="margin-top:4px;">Forward an email to <strong>${escapeHtml(getSetupAddress())}</strong> to get started.</p>
+                </div>
+            `;
         }
 
         container.innerHTML = html;
-    } catch (e) {
-        container.innerHTML = `<div class="error">${escapeHtml(e.message)}</div>`;
+    } catch (error) {
+        container.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
     }
 }
 
-// ============================================================================
-// Chat
-// ============================================================================
+async function loadInbox() {
+    const container = document.getElementById("inbox-list");
 
-function renderChat() {
-    const container = document.getElementById("chat-messages");
-    if (chatHistory.length === 0) {
-        container.innerHTML = `
-            <div class="chat-welcome">
-                <p class="chat-welcome-title">Talk to ${escapeHtml(currentWatcher?.name || "your watcher")}</p>
-                <p class="chat-welcome-desc">Ask about your inbox, set rules, check obligations, or tell it what to focus on.</p>
-                <div class="chat-suggestions">
-                    <button class="chat-suggestion" data-msg="What needs my attention today?">What needs my attention?</button>
-                    <button class="chat-suggestion" data-msg="Summarize my inbox this week">Summarize this week</button>
-                    <button class="chat-suggestion" data-msg="What deadlines are coming up?">Upcoming deadlines</button>
-                    <button class="chat-suggestion" data-msg="Ignore all emails from noreply addresses">Ignore noreply senders</button>
-                </div>
-            </div>
-        `;
-        // Re-wire dynamically created suggestions
-        container.querySelectorAll(".chat-suggestion").forEach(btn => {
-            btn.addEventListener("click", () => {
-                document.getElementById("chat-input").value = btn.dataset.msg;
-                document.getElementById("btn-send").disabled = false;
-                sendChat();
-            });
-        });
+    if (!currentWatcher) {
+        container.innerHTML = renderNoWatcherState(
+            "No threads yet.",
+            "Create a watcher first in Config."
+        );
         return;
     }
 
-    container.innerHTML = chatHistory.map(msg => `
-        <div class="chat-msg chat-msg-${msg.role}">
-            <div class="chat-msg-label">${msg.role === "user" ? "You" : escapeHtml(currentWatcher?.name || "Vigil")}</div>
-            <div class="chat-msg-body">${escapeHtml(msg.text)}</div>
-        </div>
-    `).join("");
-    container.scrollTop = container.scrollHeight;
-}
-
-async function sendChat() {
-    const input = document.getElementById("chat-input");
-    const msg = input.value.trim();
-    if (!msg || !currentWatcher) return;
-
-    input.value = "";
-    input.style.height = "auto";
-    document.getElementById("btn-send").disabled = true;
-
-    chatHistory.push({ role: "user", text: msg });
-    chatHistory.push({ role: "assistant", text: "Thinking..." });
-    renderChat();
-
-    try {
-        const response = await vigilAPI.chat(currentWatcher.id, msg);
-        chatHistory[chatHistory.length - 1].text = response;
-    } catch (e) {
-        chatHistory[chatHistory.length - 1].text = `Error: ${e.message}`;
-    }
-    renderChat();
-}
-
-// ============================================================================
-// Inbox
-// ============================================================================
-
-async function loadInbox() {
-    if (!currentWatcher) return;
-    const container = document.getElementById("inbox-list");
     container.innerHTML = '<div class="loading-state">Loading threads...</div>';
 
     try {
