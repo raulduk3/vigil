@@ -1,145 +1,295 @@
 'use client';
+
 import Link from 'next/link';
 import { PublicHeader, Footer } from '@/components/layout';
 
+const setupSteps = [
+  {
+    num: 1,
+    title: 'Sign in',
+    desc: 'Use your Vigil account or API key. Setup starts immediately and stays scoped to your account.',
+  },
+  {
+    num: 2,
+    title: 'Open Gmail or Outlook',
+    desc: 'The extension detects the provider automatically and walks you to the correct forwarding settings.',
+  },
+  {
+    num: 3,
+    title: 'Choose a watcher',
+    desc: 'Pick an existing watcher or create a new one for the stream you want Vigil to monitor.',
+  },
+  {
+    num: 4,
+    title: 'Complete forwarding',
+    desc: 'Vigil shows you where to paste the forwarding address and handles Gmail confirmation code retrieval.',
+  },
+  {
+    num: 5,
+    title: 'Let the agent run',
+    desc: 'After forwarding is enabled, your provider handles delivery natively and Vigil starts processing mail.',
+  },
+];
+
+const guarantees = [
+  'No inbox access or OAuth scopes',
+  'No email body storage',
+  'No background monitoring after setup',
+  'No analytics, cookies, or tracking',
+];
+
+const manualInstallSteps = [
+  <>
+    Download the extension from{' '}
+    <a
+      href="https://github.com/raulduk3/vigil.run/tree/main/chrome-extension"
+      target="_blank"
+      rel="noopener noreferrer"
+      className="text-vigil-700 hover:text-vigil-800 hover:underline"
+    >
+      GitHub
+    </a>
+  </>,
+  <>
+    Open <code className="rounded bg-surface-sunken px-1.5 py-0.5 text-2xs font-mono">chrome://extensions</code>
+  </>,
+  'Enable Developer mode in the top-right corner.',
+  <>
+    Click Load unpacked and select the <code className="rounded bg-surface-sunken px-1.5 py-0.5 text-2xs font-mono">chrome-extension</code> folder.
+  </>,
+  'Pin the Vigil icon and start setup from the toolbar.',
+];
+
+const providers = [
+  { name: 'Gmail', status: 'Full support', tone: 'ok' as const },
+  { name: 'Outlook', status: 'Full support', tone: 'ok' as const },
+  { name: 'Yahoo', status: 'Coming soon', tone: 'warning' as const },
+];
+
 export default function ExtensionPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-surface-page text-gray-700">
+    <div className="min-h-screen bg-surface-page text-gray-700">
       <PublicHeader />
-      <main className="flex-1 max-w-[800px] mx-auto px-6 py-16">
-        {/* Hero */}
-        <div className="text-center mb-12">
-          <h1 className="font-display text-4xl font-extrabold text-gray-900 mb-3">
-            Vigil for Chrome
-          </h1>
-          <p className="text-base text-gray-500 max-w-[500px] mx-auto leading-relaxed">
-            Set up email forwarding in under 30 seconds. No manual steps, no confirmation codes to hunt down.
-          </p>
-        </div>
 
-        {/* Install Button */}
-        <div className="text-center mb-12">
-          <a
-            href="https://chrome.google.com/webstore/detail/vigil-email-intelligence/EXTENSION_ID_HERE"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2.5 px-8 py-3.5 bg-accent text-gray-50 rounded-lg text-base font-bold no-underline hover:bg-accent-muted transition-colors"
-          >
-            <ChromeIcon />
-            Add to Chrome — Free
-          </a>
-          <p className="text-2xs text-gray-400 mt-2.5">
-            Works with Gmail and Outlook. Manifest V3. Zero email access.
-          </p>
-        </div>
+      <main className="pt-28 pb-20">
+        <section className="relative overflow-hidden px-6 lg:px-8">
+          <div className="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-[#dbe4e8]/70 via-white/35 to-transparent pointer-events-none" />
+          <div className="absolute left-1/2 top-8 h-56 w-[48rem] max-w-full -translate-x-1/2 rounded-full bg-[radial-gradient(circle,_rgba(45,82,97,0.12),_transparent_65%)] pointer-events-none" />
 
-        {/* How it works */}
-        <div className="mb-12">
-          <h2 className="font-display text-2xl font-bold text-gray-900 mb-6 text-center">
-            How it works
-          </h2>
-          <div className="flex flex-col gap-4">
-            <StepCard num={1} title="Sign in" desc="Enter your Vigil API key or sign in with email. Takes 5 seconds." />
-            <StepCard num={2} title="Open your email" desc="Navigate to Gmail or Outlook. The extension detects your provider automatically." />
-            <StepCard num={3} title="Pick a watcher" desc="Choose an existing watcher or create a new one. Tell it what to watch for." />
-            <StepCard num={4} title="Forwarding is set up for you" desc="The extension opens your email settings, shows you exactly where to paste the forwarding address, and auto-retrieves Gmail's confirmation code." />
-            <StepCard num={5} title="Done" desc="Emails start flowing. Vigil reads, remembers, and alerts you when something needs attention." />
+          <div className="max-w-6xl mx-auto relative z-10">
+            <div className="max-w-4xl mx-auto text-center mb-10">
+              <div className="landing-section-header text-center items-center mx-auto">
+                <div className="landing-section-kicker">Chrome Extension</div>
+                <h1 className="text-4xl md:text-6xl font-display font-semibold text-gray-900 tracking-tight leading-[1.05] text-balance">
+                  Set up forwarding without touching email OAuth.
+                </h1>
+                <p className="landing-hero-copy text-lg md:text-xl text-gray-600 leading-relaxed">
+                  The extension is a setup wizard for Gmail and Outlook. It gets forwarding configured in under 30 seconds,
+                  retrieves Gmail confirmation codes, and then gets out of the way.
+                </p>
+              </div>
+
+              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+                <a
+                  href="https://chrome.google.com/webstore/detail/vigil-email-intelligence/EXTENSION_ID_HERE"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn btn-primary btn-lg w-full sm:w-auto gap-2.5"
+                >
+                  <ChromeIcon />
+                  Add to Chrome
+                </a>
+                <Link href="/auth/register" className="btn btn-secondary btn-lg w-full sm:w-auto">
+                  Create free account
+                </Link>
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5 text-xs sm:text-sm text-gray-500">
+                <span className="badge badge-ok">Gmail</span>
+                <span className="badge badge-ok">Outlook</span>
+                <span className="badge">Manifest V3</span>
+                <span className="badge">Zero inbox access</span>
+              </div>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr] items-stretch">
+              <div className="landing-cta-shell panel p-4 md:p-5">
+                <div className="grid gap-4 md:grid-cols-[1.05fr_0.95fr]">
+                  <div className="panel-inset rounded-md p-5 md:p-6 text-left">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">What it does</p>
+                    <div className="space-y-3">
+                      <FlowRow label="Provider detection" value="Gmail or Outlook" />
+                      <FlowRow label="Forwarding address" value="Generated per watcher" />
+                      <FlowRow label="Gmail confirmation" value="Retrieved automatically" />
+                      <FlowRow label="After setup" value="Provider forwards natively" />
+                    </div>
+                  </div>
+
+                  <div className="rounded-md bg-vigil-900 p-5 md:p-6 text-left shadow-[0_18px_36px_rgba(11,31,42,0.14)]">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-300 mb-3">What it does not do</p>
+                    <ul className="space-y-3 text-sm text-vigil-100/92">
+                      {guarantees.map((item) => (
+                        <li key={item} className="flex items-start gap-2.5">
+                          <span className="mt-0.5 text-vigil-300">•</span>
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-5 text-sm leading-relaxed text-vigil-200/82">
+                      Vigil processes forwarded email server-side. The extension only helps you configure the forwarding rule.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="panel p-6 md:p-7 flex flex-col justify-between gap-6">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Why this exists</p>
+                  <h2 className="text-2xl font-display font-semibold text-gray-900 mb-3">Fast setup, same privacy model.</h2>
+                  <p className="text-sm md:text-base text-gray-600 leading-relaxed max-w-none">
+                    Vigil does not connect to your inbox. Forwarding keeps the architecture simple: your provider sends mail to Vigil,
+                    Vigil reads it, remembers what matters, and alerts you only when something needs attention.
+                  </p>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                  <MiniStat value="30 sec" label="Typical setup time" />
+                  <MiniStat value="0" label="Inbox permissions requested" />
+                  <MiniStat value="Native" label="Forwarding handled by provider" />
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        </section>
 
-        {/* What it doesn't do */}
-        <div className="bg-surface-raised shadow-panel rounded-lg p-7 mb-12">
-          <h3 className="text-sm font-bold text-accent-subtle mb-4">
-            What this extension does NOT do
-          </h3>
-          <div className="flex flex-col gap-2.5">
-            <NoItem text="Never reads your email content" />
-            <NoItem text="Never requests inbox access or OAuth permissions" />
-            <NoItem text="Never runs in the background after setup" />
-            <NoItem text="Never sends data anywhere except your Vigil account" />
-            <NoItem text="Zero tracking, zero analytics, zero cookies" />
+        <section className="landing-section px-6 lg:px-8 mt-18">
+          <div className="max-w-6xl mx-auto">
+            <div className="landing-section-header text-center items-center mx-auto mb-10">
+              <div className="landing-section-kicker">How It Works</div>
+              <h2 className="landing-section-title max-w-none">Five steps from install to active watcher.</h2>
+              <p className="landing-section-copy">
+                The extension handles the awkward parts of forwarding setup so you can get straight to the agent behavior you care about.
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+              {setupSteps.map((step) => (
+                <StepCard key={step.num} num={step.num} title={step.title} desc={step.desc} />
+              ))}
+            </div>
           </div>
-          <p className="text-xs text-gray-400 mt-4 leading-relaxed">
-            The extension is a setup wizard. It helps you create a forwarding rule in your email provider&apos;s own settings. 
-            After that, it&apos;s done. Your email provider handles the forwarding natively.
-          </p>
-        </div>
+        </section>
 
-        {/* Manual install */}
-        <div className="bg-surface-raised shadow-panel rounded-lg p-7 mb-12">
-          <h3 className="text-sm font-bold text-gray-900 mb-4">
-            Manual Install (Developer Mode)
-          </h3>
-          <p className="text-xs text-gray-500 leading-relaxed mb-4">
-            If the extension isn&apos;t on the Chrome Web Store yet, you can install it manually:
-          </p>
-          <ol className="text-xs text-gray-600 leading-loose pl-5 list-decimal">
-            <li>Download the extension from <a href="https://github.com/raulduk3/vigil.run/tree/main/chrome-extension" target="_blank" rel="noopener noreferrer" className="text-accent-subtle hover:underline">GitHub</a></li>
-            <li>Open <code className="bg-surface-sunken px-1.5 py-0.5 rounded text-2xs font-mono">chrome://extensions</code> in Chrome</li>
-            <li>Enable &quot;Developer mode&quot; (top right toggle)</li>
-            <li>Click &quot;Load unpacked&quot; and select the <code className="bg-surface-sunken px-1.5 py-0.5 rounded text-2xs font-mono">chrome-extension</code> folder</li>
-            <li>The Vigil icon appears in your toolbar. Click it to start.</li>
-          </ol>
-        </div>
+        <section className="landing-section px-6 lg:px-8 mt-18">
+          <div className="max-w-6xl mx-auto grid gap-6 lg:grid-cols-[0.95fr_1.05fr] items-start">
+            <div className="panel p-6 md:p-7">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Manual Install</p>
+              <h2 className="text-2xl font-display font-semibold text-gray-900 mb-3">Developer mode still works.</h2>
+              <p className="text-sm md:text-base text-gray-600 leading-relaxed mb-5 max-w-none">
+                If the Chrome Web Store listing is not live yet, you can load the extension locally in a few steps.
+              </p>
+              <ol className="space-y-3 text-sm text-gray-600">
+                {manualInstallSteps.map((step, index) => (
+                  <li key={index} className="flex items-start gap-3">
+                    <span className="landing-step-index h-8 w-8 rounded-full text-sm">{index + 1}</span>
+                    <span className="pt-1">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
 
-        {/* Supported providers */}
-        <div className="text-center mb-12">
-          <h3 className="text-sm font-bold text-gray-900 mb-4">Supported Providers</h3>
-          <div className="flex justify-center gap-6">
-            <ProviderBadge name="Gmail" status="Full support" />
-            <ProviderBadge name="Outlook" status="Full support" />
-            <ProviderBadge name="Yahoo" status="Coming soon" />
+            <div className="grid gap-6">
+              <div className="panel p-6 md:p-7">
+                <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Supported Providers</p>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {providers.map((provider) => (
+                    <ProviderCard key={provider.name} {...provider} />
+                  ))}
+                </div>
+              </div>
+
+              <div className="landing-cta-shell panel overflow-hidden">
+                <div className="grid gap-0 md:grid-cols-[1.1fr_0.9fr]">
+                  <div className="p-6 md:p-8">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Account Required</p>
+                    <h2 className="text-2xl font-display font-semibold text-gray-900 mb-3">Install the extension after you have a watcher.</h2>
+                    <p className="text-sm md:text-base text-gray-600 leading-relaxed max-w-none">
+                      The setup flow is faster when your watcher already exists. Create one first, then use the extension to wire forwarding in.
+                    </p>
+                  </div>
+                  <div className="landing-cta-pricing p-6 md:p-8 text-white flex flex-col justify-center">
+                    <p className="text-sm uppercase tracking-[0.2em] text-vigil-300 mb-2">Start free</p>
+                    <p className="text-3xl font-display font-semibold mb-2">50 emails included</p>
+                    <p className="text-sm text-vigil-100/82 leading-relaxed mb-5 max-w-none">
+                      No credit card required. Set up a watcher, install the extension, and let the agent start learning from the first thread.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      <Link href="/auth/register" className="btn btn-secondary">
+                        Create account
+                      </Link>
+                      <Link href="/learn/email-ingestion" className="btn btn-ghost text-white hover:bg-white/10 hover:text-white">
+                        Read setup docs
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
-
-        {/* CTA */}
-        <div className="text-center py-10">
-          <p className="text-sm text-gray-400 mb-4">
-            Don&apos;t have a Vigil account yet?
-          </p>
-          <Link
-            href="/auth/register"
-            className="inline-block px-7 py-3 bg-surface-raised text-accent-subtle rounded-lg shadow-panel text-sm font-semibold no-underline hover:shadow-panel-lg transition-shadow"
-          >
-            Create a free account
-          </Link>
-        </div>
+        </section>
       </main>
+
       <Footer />
+    </div>
+  );
+}
+
+function FlowRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-black/5 pb-3 last:border-b-0 last:pb-0">
+      <span className="text-sm text-gray-500">{label}</span>
+      <span className="text-sm font-medium text-gray-900 text-right">{value}</span>
+    </div>
+  );
+}
+
+function MiniStat({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="panel-inset rounded-md px-4 py-4">
+      <div className="text-2xl font-display font-semibold text-gray-900">{value}</div>
+      <div className="text-sm text-gray-500 mt-1">{label}</div>
     </div>
   );
 }
 
 function StepCard({ num, title, desc }: { num: number; title: string; desc: string }) {
   return (
-    <div className="flex gap-4 p-4 bg-surface-raised shadow-panel rounded-lg">
-      <div className="w-8 h-8 rounded-full bg-accent text-gray-50 flex items-center justify-center text-sm font-bold shrink-0">
-        {num}
-      </div>
+    <div className="landing-step-card panel p-6 flex flex-col gap-4">
+      <div className="landing-step-index h-10 w-10 rounded-full text-sm">{num}</div>
       <div>
-        <div className="font-bold text-sm text-gray-900 mb-1">{title}</div>
-        <div className="text-xs text-gray-500 leading-relaxed">{desc}</div>
+        <h3 className="text-lg font-display font-semibold text-gray-900 mb-2">{title}</h3>
+        <p className="text-sm text-gray-600 leading-relaxed max-w-none">{desc}</p>
       </div>
     </div>
   );
 }
 
-function NoItem({ text }: { text: string }) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <span className="text-status-critical text-sm font-bold">&times;</span>
-      <span className="text-xs text-gray-600">{text}</span>
-    </div>
-  );
-}
+function ProviderCard({
+  name,
+  status,
+  tone,
+}: {
+  name: string;
+  status: string;
+  tone: 'ok' | 'warning';
+}) {
+  const badgeClass = tone === 'ok' ? 'badge badge-ok' : 'badge badge-warning';
 
-function ProviderBadge({ name, status }: { name: string; status: string }) {
-  const isComingSoon = status === 'Coming soon';
   return (
-    <div className="px-6 py-4 bg-surface-raised shadow-panel rounded-lg text-center">
-      <div className="font-bold text-sm text-gray-900">{name}</div>
-      <div className={`text-2xs mt-1 ${isComingSoon ? 'text-status-warning' : 'text-status-ok'}`}>
-        {status}
+    <div className="panel-inset rounded-md p-5 text-center">
+      <div className="text-base font-display font-semibold text-gray-900">{name}</div>
+      <div className="mt-3">
+        <span className={badgeClass}>{status}</span>
       </div>
     </div>
   );
@@ -147,7 +297,7 @@ function ProviderBadge({ name, status }: { name: string; status: string }) {
 
 function ChromeIcon() {
   return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
       <circle cx="12" cy="12" r="10" />
       <circle cx="12" cy="12" r="4" />
       <line x1="21.17" y1="8" x2="12" y2="8" />

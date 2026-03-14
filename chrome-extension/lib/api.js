@@ -13,10 +13,11 @@ class VigilAPI {
     async loadFromStorage() {
         try {
             const data = await chrome.storage.sync.get(["vigil_token", "vigil_api_key"]);
+            console.log("[vigil] loadFromStorage:", { hasToken: !!data.vigil_token, hasKey: !!data.vigil_api_key });
             if (data.vigil_api_key) this.apiKey = data.vigil_api_key;
             if (data.vigil_token) this.token = data.vigil_token;
         } catch (e) {
-            console.warn("Vigil: storage read failed", e);
+            console.error("[vigil] storage read failed:", e);
         }
     }
 
@@ -27,12 +28,12 @@ class VigilAPI {
     }
 
     async request(path, options = {}) {
-        // If no in-memory credentials, try loading from storage
-        if (!this.getAuthHeader()) {
-            await this.loadFromStorage();
-        }
+        // Always reload from storage to ensure we have credentials
+        await this.loadFromStorage();
 
         const auth = this.getAuthHeader();
+        console.log("[vigil] request", path, { hasAuth: !!auth, apiKey: this.apiKey?.slice(0, 6), token: this.token?.slice(0, 6) });
+
         if (!auth) throw new Error("Not authenticated");
 
         const resp = await fetch(`${API_BASE}${path}`, {
@@ -40,9 +41,11 @@ class VigilAPI {
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": auth,
-                ...options.headers,
+                ...(options.headers || {}),
             },
         });
+
+        console.log("[vigil] response", path, resp.status);
 
         if (!resp.ok) {
             const err = await resp.json().catch(() => ({ error: resp.statusText }));
@@ -66,17 +69,20 @@ class VigilAPI {
         const data = await resp.json();
         this.token = data.token;
         await chrome.storage.sync.set({ vigil_token: data.token });
+        console.log("[vigil] login success, token saved");
         return data;
     }
 
     async loginWithApiKey(apiKey) {
         this.apiKey = apiKey;
-        // Verify the key works
+        console.log("[vigil] loginWithApiKey: set apiKey on instance");
         try {
             await this.request("/auth/me");
             await chrome.storage.sync.set({ vigil_api_key: apiKey });
+            console.log("[vigil] loginWithApiKey: saved to storage");
             return true;
         } catch (e) {
+            console.error("[vigil] loginWithApiKey failed:", e);
             this.apiKey = null;
             throw new Error("Invalid API key");
         }
@@ -84,11 +90,16 @@ class VigilAPI {
 
     async isAuthenticated() {
         await this.loadFromStorage();
-        if (!this.getAuthHeader()) return false;
+        if (!this.getAuthHeader()) {
+            console.log("[vigil] isAuthenticated: no credentials");
+            return false;
+        }
         try {
             await this.request("/auth/me");
+            console.log("[vigil] isAuthenticated: verified");
             return true;
-        } catch {
+        } catch (e) {
+            console.log("[vigil] isAuthenticated: verification failed", e);
             return false;
         }
     }
@@ -101,7 +112,9 @@ class VigilAPI {
 
     // Watchers
     async getWatchers() {
+        console.log("[vigil] getWatchers called");
         const data = await this.request("/watchers");
+        console.log("[vigil] getWatchers response:", data);
         return data.watchers || [];
     }
 
