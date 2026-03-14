@@ -32,7 +32,6 @@ export default function PricingPage() {
           <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-14">
-            <p className="text-sm font-medium text-vigil-700 uppercase tracking-wider mb-3">Pricing</p>
             <h1 className="text-4xl md:text-5xl font-display font-semibold text-gray-900 tracking-tight mb-5">
               Pay for what you use.
             </h1>
@@ -158,8 +157,7 @@ export default function PricingPage() {
 
           {/* CTA */}
           <div className="text-center">
-            <Link href="/auth/register" className="btn btn-primary btn-lg">Start for free</Link>
-            <p className="text-sm text-gray-500 mt-3">No credit card required. Pay only when you use it.</p>
+            <Link href="/auth/register" className="btn btn-primary btn-lg">Start today.</Link>
           </div>
           </div>
         </div>

@@ -38,6 +38,7 @@ export function InboxPanel({
   const [filter, setFilter] = useState<FilterStatus>('all');
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [savingReactivity, setSavingReactivity] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const filtered = threads.filter((t) => {
     if (filter === 'all') return true;
@@ -90,10 +91,19 @@ export function InboxPanel({
   const header = (
     <div className="border-b border-gray-200 bg-surface-raised px-4 pt-3 pb-0 space-y-2.5">
       <div className="flex items-center gap-2 justify-between">
-        <h2 className="text-sm font-semibold text-gray-900 truncate">{watcher.name}</h2>
+        <div className="flex items-center gap-2 min-w-0">
+          <h2 className="text-sm font-semibold text-gray-900 shrink-0">{watcher.name}</h2>
+          <button
+            onClick={() => { navigator.clipboard?.writeText(watcher.ingestion_address); setCopied(true); setTimeout(() => setCopied(false), 1500); }}
+            className="text-xs font-mono text-gray-400 hover:text-vigil-700 truncate transition-colors"
+            title="Click to copy"
+          >
+            {copied ? 'Copied!' : watcher.ingestion_address}
+          </button>
+        </div>
         <button
           onClick={onRefresh}
-          className="p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+          className="p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors shrink-0"
           title="Refresh"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
