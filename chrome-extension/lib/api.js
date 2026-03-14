@@ -8,12 +8,15 @@ class VigilAPI {
     constructor() {
         this.token = null;
         this.apiKey = null;
+        this._initialized = false;
     }
 
     async init() {
+        if (this._initialized) return;
         const data = await chrome.storage.sync.get(["vigil_token", "vigil_api_key"]);
         this.token = data.vigil_token || null;
         this.apiKey = data.vigil_api_key || null;
+        this._initialized = true;
     }
 
     getAuthHeader() {
@@ -23,6 +26,9 @@ class VigilAPI {
     }
 
     async request(path, options = {}) {
+        // Always ensure we've loaded credentials from storage
+        await this.init();
+
         const auth = this.getAuthHeader();
         if (!auth) throw new Error("Not authenticated");
 
@@ -56,12 +62,14 @@ class VigilAPI {
         }
         const data = await resp.json();
         this.token = data.token;
+        this._initialized = true;
         await chrome.storage.sync.set({ vigil_token: data.token });
         return data;
     }
 
     async loginWithApiKey(apiKey) {
         this.apiKey = apiKey;
+        this._initialized = true;
         // Verify the key works
         try {
             await this.request("/auth/me");
@@ -74,6 +82,7 @@ class VigilAPI {
     }
 
     async isAuthenticated() {
+        this._initialized = false; // Force reload from storage
         await this.init();
         if (!this.getAuthHeader()) return false;
         try {
@@ -87,16 +96,18 @@ class VigilAPI {
     async logout() {
         this.token = null;
         this.apiKey = null;
+        this._initialized = false;
         await chrome.storage.sync.remove(["vigil_token", "vigil_api_key"]);
     }
 
     // Watchers
     async getWatchers() {
-        return this.request("/watchers");
+        const data = await this.request("/watchers");
+        return data.watchers || [];
     }
 
     async createWatcher(name, systemPrompt, template) {
-        return this.request("/watchers", {
+        const data = await this.request("/watchers", {
             method: "POST",
             body: JSON.stringify({
                 name,
@@ -104,6 +115,7 @@ class VigilAPI {
                 template_id: template || "general",
             }),
         });
+        return data.watcher || data;
     }
 
     // Forwarding
