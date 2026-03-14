@@ -9,271 +9,105 @@
     <div class="panel">
         <!-- Header -->
         <div class="panel-header">
-            <div class="logo">Vigil</div>
-            <div class="step-indicator">
-                <span class="step active" data-step="1">1</span>
-                <span class="step-line"></span>
-                <span class="step" data-step="2">2</span>
-                <span class="step-line"></span>
-                <span class="step" data-step="3">3</span>
-                <span class="step-line"></span>
-                <span class="step" data-step="4">4</span>
-                <span class="step-line"></span>
-                <span class="step" data-step="5">5</span>
+            <div class="header-row">
+                <div class="logo">Vigil</div>
+                <div id="header-controls" class="header-controls hidden">
+                    <select id="watcher-select" class="watcher-dropdown"></select>
+                    <button id="btn-settings" class="btn-icon" title="Settings">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                    </button>
+                </div>
+            </div>
+            <!-- Nav tabs -->
+            <div id="nav-tabs" class="nav-tabs hidden">
+                <button class="nav-tab active" data-view="chat">Chat</button>
+                <button class="nav-tab" data-view="inbox">Inbox</button>
+                <button class="nav-tab" data-view="stats">Stats</button>
+                <button class="nav-tab" data-view="setup">Setup</button>
             </div>
         </div>
 
-        <!-- Step 1: Auth check -->
-        <div class="wizard-step active" id="step-1">
+        <!-- Auth View -->
+        <div class="view active" id="view-auth">
             <h2>Connect Your Account</h2>
-            <p class="step-desc">Enter your Vigil API key to get started.</p>
-            
+            <p class="step-desc">Enter your Vigil API key or sign in to get started.</p>
             <input type="text" id="panel-api-key" placeholder="vk_your_api_key" spellcheck="false">
             <button id="panel-btn-connect" class="btn primary">Connect</button>
-            
             <div class="divider"><span>or</span></div>
-            
             <input type="email" id="panel-email" placeholder="Email">
             <input type="password" id="panel-password" placeholder="Password">
             <button id="panel-btn-login" class="btn primary">Sign In</button>
-            
             <p class="help">Don't have an account? <a href="https://vigil.run" target="_blank">Sign up at vigil.run</a></p>
             <div id="panel-auth-error" class="error hidden"></div>
         </div>
 
-        <!-- Step 2: Detect provider -->
-        <div class="wizard-step" id="step-2">
-            <h2>Open Your Email</h2>
-            <p class="step-desc">Navigate to Gmail or Outlook so Vigil can help set up forwarding.</p>
-            
-            <div id="provider-status" class="provider-detect">
-                <div class="detect-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <!-- Chat View -->
+        <div class="view" id="view-chat">
+            <div id="chat-messages" class="chat-messages">
+                <div class="chat-welcome">
+                    <p class="chat-welcome-title">Talk to your watcher</p>
+                    <p class="chat-welcome-desc">Ask about your inbox, set rules, check obligations, or tell it what to focus on.</p>
+                    <div class="chat-suggestions">
+                        <button class="chat-suggestion" data-msg="What needs my attention today?">What needs my attention?</button>
+                        <button class="chat-suggestion" data-msg="Summarize my inbox this week">Summarize this week</button>
+                        <button class="chat-suggestion" data-msg="What deadlines are coming up?">Upcoming deadlines</button>
+                        <button class="chat-suggestion" data-msg="Ignore all emails from noreply addresses">Ignore noreply senders</button>
+                    </div>
                 </div>
-                <p id="provider-message">Checking current page...</p>
             </div>
-
-            <div class="provider-buttons">
-                <a href="https://mail.google.com" target="_blank" class="btn provider-btn gmail">
-                    Open Gmail
-                </a>
-                <a href="https://outlook.live.com" target="_blank" class="btn provider-btn outlook">
-                    Open Outlook
-                </a>
+            <div class="chat-input-area">
+                <textarea id="chat-input" placeholder="Ask your watcher anything..." rows="1"></textarea>
+                <button id="btn-send" class="btn primary btn-send" disabled>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                </button>
             </div>
         </div>
 
-        <!-- Step 3: Choose/create watcher -->
-        <div class="wizard-step" id="step-3">
-            <h2>Choose a Watcher</h2>
-            <p class="step-desc">Select an existing watcher or create a new one.</p>
-            
-            <div id="watcher-list" class="watcher-list"></div>
-            
-            <div class="divider"><span>or create new</span></div>
-            
-            <input type="text" id="watcher-name" placeholder="Watcher name (e.g., Work Email)">
-            
-            <div class="divider"><span>tell it what to do</span></div>
-
-            <textarea id="watcher-intent" rows="3" placeholder="What should this watcher focus on? e.g. Track invoices and payment deadlines. Alert me when a client hasn't responded in 48 hours. Ignore newsletters and marketing." style="width:100%;resize:vertical;padding:11px 14px;border:none;border-radius:4px;background:#f0f0ee;color:#3d3d3a;font-size:13px;font-family:inherit;outline:none;box-shadow:inset 0 1px 2px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(0,0,0,0.08);"></textarea>
-            <p class="help">This becomes the agent's instructions. Be specific about what matters and what to ignore.</p>
-
-            <button id="btn-create-watcher" class="btn primary">Create Watcher</button>
-            
-            <div id="watcher-error" class="error hidden"></div>
+        <!-- Inbox View -->
+        <div class="view" id="view-inbox">
+            <div id="inbox-list" class="inbox-list">
+                <div class="loading-state">Loading threads...</div>
+            </div>
         </div>
 
-        <!-- Step 4: Setup forwarding -->
-        <div class="wizard-step" id="step-4">
-            <h2>Set Up Forwarding</h2>
-            <p class="step-desc" id="forwarding-instructions">Follow these steps to forward emails to Vigil.</p>
-            
-            <div class="forwarding-address-box">
-                <label>Your Vigil forwarding address:</label>
-                <div class="copy-box">
-                    <code id="forwarding-address">loading...</code>
-                    <button id="btn-copy-address" class="btn-icon" title="Copy">Copy</button>
-                </div>
+        <!-- Stats View -->
+        <div class="view" id="view-stats">
+            <div id="stats-content" class="stats-content">
+                <div class="loading-state">Loading stats...</div>
             </div>
-
-            <!-- Forwarding approach selector -->
-            <div class="forwarding-approach">
-                <p class="step-desc" style="margin-bottom:8px;font-weight:600;color:#1a1a18;">What do you want to forward?</p>
-                <div style="display:flex;gap:8px;">
-                    <button id="btn-forward-all" class="btn secondary small approach-btn active">All email</button>
-                    <button id="btn-forward-filter" class="btn secondary small approach-btn">Only matching emails</button>
-                </div>
-            </div>
-
-            <!-- Gmail steps: forward all -->
-            <div id="gmail-steps" class="setup-steps hidden">
-                <div class="step-item">
-                    <span class="step-num">1</span>
-                    <div>
-                        <p>Open Gmail Settings, then Forwarding and POP/IMAP</p>
-                        <button id="btn-gmail-settings" class="btn secondary small">Open Settings</button>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <span class="step-num">2</span>
-                    <div>
-                        <p>Click "Add a forwarding address" and paste the Vigil address above</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <span class="step-num">3</span>
-                    <div>
-                        <p>Gmail will send a confirmation email. Open your inbox and click the confirmation link from Google.</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <span class="step-num">4</span>
-                    <div>
-                        <p>Back in Settings, select "Forward a copy of incoming mail to..." and choose your Vigil address. Click Save Changes.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Gmail steps: filter-based forwarding -->
-            <div id="gmail-filter-steps" class="setup-steps hidden">
-                <div class="step-item">
-                    <span class="step-num">1</span>
-                    <div>
-                        <p>First, register the forwarding address: open Gmail Settings, then Forwarding and POP/IMAP</p>
-                        <button id="btn-gmail-settings-filter" class="btn secondary small">Open Settings</button>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <span class="step-num">2</span>
-                    <div>
-                        <p>Click "Add a forwarding address", paste the Vigil address, and confirm via the link Gmail sends. Do NOT enable "Forward a copy" globally.</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <span class="step-num">3</span>
-                    <div>
-                        <p>Now create a filter. Click the search options icon in Gmail's search bar (or go to Settings, then Filters and Blocked Addresses, then "Create a new filter").</p>
-                        <button id="btn-gmail-filters" class="btn secondary small">Open Filters</button>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <span class="step-num">4</span>
-                    <div>
-                        <p>Set your filter criteria:</p>
-                        <div id="gmail-filter-suggestions" class="filter-suggestions"></div>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <span class="step-num">5</span>
-                    <div>
-                        <p>Click "Create filter", then check "Forward it to" and select your Vigil address. Click "Create filter" again.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Outlook steps: forward all -->
-            <div id="outlook-steps" class="setup-steps hidden">
-                <div class="step-item">
-                    <span class="step-num">1</span>
-                    <div>
-                        <p>Open Outlook Settings, then Mail, then Forwarding</p>
-                        <button id="btn-outlook-settings" class="btn secondary small">Open Settings</button>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <span class="step-num">2</span>
-                    <div>
-                        <p>Enable forwarding and paste the Vigil address above</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <span class="step-num">3</span>
-                    <div>
-                        <p>Check "Keep a copy of forwarded messages" and save</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Outlook steps: rule-based forwarding -->
-            <div id="outlook-rule-steps" class="setup-steps hidden">
-                <div class="step-item">
-                    <span class="step-num">1</span>
-                    <div>
-                        <p>Open Outlook Settings, then Mail, then Rules</p>
-                        <button id="btn-outlook-rules" class="btn secondary small">Open Rules</button>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <span class="step-num">2</span>
-                    <div>
-                        <p>Click "Add new rule" and set up your conditions:</p>
-                        <div id="outlook-rule-suggestions" class="filter-suggestions"></div>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <span class="step-num">3</span>
-                    <div>
-                        <p>Under "Add an action", select "Forward to" and paste the Vigil address above.</p>
-                    </div>
-                </div>
-                <div class="step-item">
-                    <span class="step-num">4</span>
-                    <div>
-                        <p>Name the rule, click Save, and make sure it's enabled.</p>
-                    </div>
-                </div>
-            </div>
-
-            <button id="btn-verify-forwarding" class="btn primary">Check Forwarding Status</button>
-            <button id="btn-skip-verify" class="btn secondary">I've confirmed it, continue</button>
         </div>
 
-        <!-- Step 5: Done -->
-        <div class="wizard-step" id="step-5">
-            <div class="success-icon">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-            </div>
-            <h2>You're Connected</h2>
-            <p class="step-desc">Vigil is now watching your email. The agent will read, remember, and alert you when something needs attention.</p>
-            
-            <div id="forwarding-status" class="status-card">
-                <div class="status-row">
-                    <span>Status</span>
-                    <span class="status-value" id="status-active">Checking...</span>
-                </div>
-                <div class="status-row">
-                    <span>Emails processed</span>
-                    <span class="status-value" id="status-total-emails">—</span>
-                </div>
-                <div class="status-row">
-                    <span>Emails (24h)</span>
-                    <span class="status-value" id="status-email-count">—</span>
-                </div>
-                <div class="status-row">
-                    <span>Agent invocations</span>
-                    <span class="status-value" id="status-invocations">—</span>
-                </div>
-                <div class="status-row">
-                    <span>Alerts sent</span>
-                    <span class="status-value" id="status-alerts">—</span>
-                </div>
-                <div class="status-row">
-                    <span>Last email</span>
-                    <span class="status-value" id="status-last-email">—</span>
-                </div>
-                <div class="status-row">
-                    <span>Model</span>
-                    <span class="status-value" id="status-model">—</span>
-                </div>
-                <div class="status-row">
-                    <span>Cost (this month)</span>
-                    <span class="status-value" id="status-cost">—</span>
-                </div>
-            </div>
+        <!-- Setup View (forwarding wizard) -->
+        <div class="view" id="view-setup">
+            <div id="setup-content">
+                <h2>Set Up Forwarding</h2>
+                <p class="step-desc">Connect your email to this watcher.</p>
 
-            <a href="https://vigil.run/dashboard" target="_blank" class="btn primary">Open Dashboard</a>
-            <button id="btn-restart" class="btn secondary">Set Up Another</button>
+                <div class="forwarding-address-box">
+                    <label>Your Vigil forwarding address:</label>
+                    <div class="copy-box">
+                        <code id="setup-address">loading...</code>
+                        <button id="btn-copy-setup-address" class="btn-icon" title="Copy">Copy</button>
+                    </div>
+                </div>
+
+                <div class="setup-steps" style="margin-top:16px;">
+                    <div class="step-item">
+                        <span class="step-num">1</span>
+                        <div><p>Open your email settings (Gmail: Settings → Forwarding, Outlook: Settings → Mail → Forwarding)</p></div>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">2</span>
+                        <div><p>Add the forwarding address above and confirm it</p></div>
+                    </div>
+                    <div class="step-item">
+                        <span class="step-num">3</span>
+                        <div><p>Enable forwarding (all mail or use a filter for specific senders/subjects)</p></div>
+                    </div>
+                </div>
+
+                <a href="https://vigil.run/extension" target="_blank" class="btn secondary" style="margin-top:16px;display:block;text-align:center;">Full setup guide</a>
+            </div>
         </div>
     </div>
 
