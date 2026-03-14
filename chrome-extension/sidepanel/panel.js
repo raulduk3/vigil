@@ -440,17 +440,50 @@ async function initStep4() {
 async function initStep5() {
     if (!selectedWatcher) return;
 
-    try {
-        const status = await vigilAPI.getForwardingStatus(selectedWatcher.id);
-        document.getElementById("status-active").textContent = status.forwarding_active ? "Active" : "Waiting...";
-        document.getElementById("status-active").style.color = status.forwarding_active ? "#3d6b4f" : "#8b7234";
-        document.getElementById("status-last-email").textContent = status.last_email_at
-            ? new Date(status.last_email_at).toLocaleString()
-            : "—";
-        document.getElementById("status-email-count").textContent = status.emails_24h || "0";
-    } catch (e) {
-        console.error("Status check failed:", e);
-    }
+    // Fetch all stats in parallel
+    const [statusResult, usageResult, watcherResult] = await Promise.allSettled([
+        vigilAPI.getForwardingStatus(selectedWatcher.id),
+        vigilAPI.getUsage(),
+        vigilAPI.getWatcher(selectedWatcher.id),
+    ]);
+
+    const status = statusResult.status === "fulfilled" ? statusResult.value : null;
+    const usage = usageResult.status === "fulfilled" ? usageResult.value?.usage : null;
+    const watcher = watcherResult.status === "fulfilled" ? watcherResult.value : null;
+
+    // Find this watcher's usage stats
+    const watcherUsage = usage?.watchers?.find(w => w.watcher_id === selectedWatcher.id);
+
+    // Status
+    const active = status?.forwarding_active ?? false;
+    document.getElementById("status-active").textContent = active ? "Active" : "Waiting...";
+    document.getElementById("status-active").style.color = active ? "#3d6b4f" : "#8b7234";
+
+    // Email counts
+    document.getElementById("status-total-emails").textContent =
+        (watcherUsage?.emails ?? status?.total_emails ?? 0).toLocaleString();
+    document.getElementById("status-email-count").textContent =
+        (status?.emails_24h ?? 0).toLocaleString();
+
+    // Agent stats
+    document.getElementById("status-invocations").textContent =
+        (watcherUsage?.invocations ?? 0).toLocaleString();
+    document.getElementById("status-alerts").textContent =
+        (watcherUsage?.alerts ?? 0).toLocaleString();
+
+    // Last email
+    document.getElementById("status-last-email").textContent = status?.last_email_at
+        ? new Date(status.last_email_at).toLocaleString()
+        : "No emails yet";
+
+    // Model
+    document.getElementById("status-model").textContent =
+        watcher?.model ?? selectedWatcher.model ?? "—";
+
+    // Cost
+    const cost = watcherUsage?.cost ?? 0;
+    document.getElementById("status-cost").textContent =
+        cost > 0 ? `$${cost.toFixed(4)}` : "$0.00";
 
     document.getElementById("btn-restart").addEventListener("click", () => {
         selectedWatcher = null;

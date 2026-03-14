@@ -170,6 +170,15 @@ class VigilAPI {
         return data.watcher || data;
     }
 
+    async getUsage() {
+        return this.request("/usage");
+    }
+
+    async getWatcher(watcherId) {
+        const data = await this.request(`/watchers/${watcherId}`);
+        return data.watcher || data;
+    }
+
     // Forwarding
     async getConfirmCode(watcherId) {
         return this.request(`/forwarding/confirm-code/${watcherId}`);
