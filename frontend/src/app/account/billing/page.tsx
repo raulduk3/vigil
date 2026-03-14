@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api/client';
-import { ALERT_DELIVERY_COST, PLATFORM_FEE_PER_INVOCATION, formatUsd } from '@/lib/pricing';
+import { formatUsd } from '@/lib/pricing';
 
 interface BillingStatus {
   has_payment_method: boolean;
@@ -251,7 +251,7 @@ export default function BillingPage() {
       <div className="rounded-lg bg-gray-50 border border-gray-200 px-4 py-3">
         <p className="text-xs text-gray-500 max-w-none">
           <span className="font-medium text-gray-700">Pay-per-use, no tiers.</span>{' '}
-          {formatUsd(PLATFORM_FEE_PER_INVOCATION)} platform fee per invocation plus model token usage. Alert deliveries cost {formatUsd(ALERT_DELIVERY_COST)} each. Billed monthly through Stripe.{!billing?.has_payment_method && ` ${billing?.trial_emails_remaining ?? 50} free trial emails remaining.`}
+          1¢ per email processed. ½¢ per alert sent. AI included. Billed monthly through Stripe.{!billing?.has_payment_method && ` ${billing?.trial_emails_remaining ?? 50} free trial emails remaining.`}
         </p>
       </div>
     </main>
