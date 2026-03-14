@@ -422,7 +422,7 @@ function SetupFactCard({
   detail: string;
 }) {
   return (
-    <div className="rounded-2xl border border-black/5 bg-white/78 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.4)]">
+    <div className="border-l-2 border-vigil-200 pl-4">
       <p className="text-[11px] uppercase tracking-[0.18em] text-vigil-700/80">{eyebrow}</p>
       <p className="text-sm font-semibold text-gray-900 mt-2 max-w-none">{title}</p>
       <p className="text-sm text-gray-600 mt-2 leading-relaxed max-w-none">{detail}</p>
