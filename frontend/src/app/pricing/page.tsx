@@ -28,15 +28,14 @@ export default function PricingPage() {
       <PublicHeader />
 
       <main className="pt-28 pb-20">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto">
+        <div className="max-w-3xl mx-auto px-6">
           {/* Header */}
           <div className="text-center mb-14">
             <p className="text-sm font-medium text-vigil-700 uppercase tracking-wider mb-3">Pricing</p>
             <h1 className="text-4xl md:text-5xl font-display font-semibold text-gray-900 tracking-tight mb-5">
               Pay for what you use.
             </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-xl text-gray-600 leading-relaxed">
               No tiers. No subscriptions. Each invocation costs a $0.001 platform fee
               plus the AI token cost for your chosen model. Alerts cost $0.005 each.
             </p>
@@ -44,18 +43,18 @@ export default function PricingPage() {
 
           {/* Core pricing */}
           <div className="panel p-8 mb-8">
-            <div className="grid md:grid-cols-3 gap-8 text-center">
+            <div className="grid grid-cols-3 gap-6 text-center">
               <div>
                 <div className="text-3xl font-display font-semibold text-gray-900 mb-1">$0.001</div>
-                <div className="text-sm text-gray-500">platform fee per invocation</div>
+                <div className="text-sm text-gray-500">platform fee<br />per invocation</div>
               </div>
               <div>
                 <div className="text-3xl font-display font-semibold text-gray-900 mb-1">+ tokens</div>
-                <div className="text-sm text-gray-500">AI cost varies by model</div>
+                <div className="text-sm text-gray-500">AI cost<br />varies by model</div>
               </div>
               <div>
                 <div className="text-3xl font-display font-semibold text-gray-900 mb-1">$0.005</div>
-                <div className="text-sm text-gray-500">per alert email sent</div>
+                <div className="text-sm text-gray-500">per alert<br />email sent</div>
               </div>
             </div>
           </div>
@@ -63,16 +62,16 @@ export default function PricingPage() {
           {/* What's free */}
           <div className="panel p-6 mb-8 bg-vigil-900 text-white">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-vigil-200 mb-4">Always free</h3>
-            <div className="grid sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               {[
                 'Unlimited watchers',
                 'Unlimited threads and memory',
-                'Full audit trail of every decision',
-                'Agent chat (conversational control)',
-                'Thread tracking and obligation alerts',
+                'Full audit trail',
+                'Agent chat',
+                'Obligation tracking',
                 'Webhook integrations',
-                'Model selection (9 models, 3 providers)',
-                'Reactivity control per watcher',
+                '9 AI models, 3 providers',
+                'Reactivity control',
               ].map((item) => (
                 <div key={item} className="flex items-center gap-2 text-sm text-vigil-100">
                   <svg className="w-4 h-4 text-vigil-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -87,7 +86,7 @@ export default function PricingPage() {
           {/* Model pricing table */}
           <div className="mb-8">
             <h2 className="text-xl font-display font-semibold text-gray-900 mb-1">Choose your model</h2>
-            <p className="text-sm text-gray-500 mb-4">Cost per 1M input tokens. Each email uses ~500-2000 tokens depending on length.</p>
+            <p className="text-sm text-gray-500 mb-4">Cost per 1M input tokens. Each email uses ~500-2000 tokens.</p>
             <div className="panel overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
@@ -119,7 +118,7 @@ export default function PricingPage() {
           <div className="mb-14">
             <h2 className="text-xl font-display font-semibold text-gray-900 mb-1">What it actually costs</h2>
             <p className="text-sm text-gray-500 mb-4">Real monthly estimates based on email volume.</p>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               {examples.map((ex) => (
                 <div key={ex.label + ex.model} className="panel p-5">
                   <div className="flex justify-between items-start mb-2">
@@ -138,12 +137,12 @@ export default function PricingPage() {
           </div>
 
           {/* FAQ */}
-          <div className="max-w-3xl mx-auto mb-14">
+          <div className="mb-14">
             <h2 className="text-2xl font-display font-semibold text-gray-900 text-center mb-8">Questions</h2>
             <div className="space-y-4">
               {[
                 { q: 'What counts as a processed email?', a: 'Each email forwarded to your watcher address. Follow-ups in the same thread count separately since each may contain new obligations or deadlines.' },
-                { q: 'What counts as an alert?', a: 'Each email sent by Vigil to notify you about something. Silence alerts, urgency alerts, and weekly digests each count as one alert ($0.005 each).' },
+                { q: 'What counts as an alert?', a: 'Each email sent by Vigil to notify you. Silence alerts, urgency alerts, and weekly digests each count as one alert ($0.005 each).' },
                 { q: 'Is there a minimum charge?', a: 'No. If you send 0 emails in a month, you pay $0. The $0.001 platform fee only applies when the agent processes an email or runs a scheduled review.' },
                 { q: 'Can I set a spending cap?', a: 'Coming soon. For now, you control costs by choosing cheaper models and adjusting your reactivity level (fewer alerts = lower cost).' },
                 { q: 'How do I pay?', a: 'Usage is tracked per account. Billing is monthly via Stripe. You can see your current usage and estimated cost in the dashboard.' },
@@ -161,12 +160,11 @@ export default function PricingPage() {
             <Link href="/auth/register" className="btn btn-primary btn-lg">Start for free</Link>
             <p className="text-sm text-gray-500 mt-3">No credit card required. Pay only when you use it.</p>
           </div>
-          </div>
         </div>
       </main>
 
       <footer className="border-t border-gray-200 bg-surface-page">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8 py-8 text-center text-sm text-gray-500">
+        <div className="max-w-3xl mx-auto px-6 py-8 text-center text-sm text-gray-500">
           © {new Date().getFullYear()} Vigil. All rights reserved.
         </div>
       </footer>
