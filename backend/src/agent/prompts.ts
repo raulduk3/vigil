@@ -1,8 +1,8 @@
 /**
- * Prompt Builder — V2 Core Product
+ * Prompt Builder — V3
  *
- * Constructs system prompt from watcher config + memory + thread context.
- * Also builds trigger-specific user prompts.
+ * Redesigned system prompt: strong defaults, user customization layered on top.
+ * Inspired by OpenClaw's separation of identity/capabilities/rules.
  */
 
 import type { WatcherRow, ThreadRow, EmailRow } from "./schema";
@@ -17,122 +17,152 @@ export function buildSystemPrompt(
     activeThreads: ThreadRow[]
 ): string {
     const tools = safeParseJson<string[]>(watcher.tools, []);
-    const toolList = tools.length > 0 ? tools.join(", ") : "none";
-
-    const silenceNote =
-        watcher.silence_hours > 0
-            ? `Alert when a thread has been silent for more than ${watcher.silence_hours} hours.`
-            : "No silence threshold configured.";
-
     const threadContext = buildThreadContext(activeThreads);
 
     const now = new Date();
-    const nowHuman = now.toLocaleString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Chicago", timeZoneName: "short" });
+    const nowHuman = now.toLocaleString("en-US", {
+        weekday: "long", year: "numeric", month: "long", day: "numeric",
+        hour: "numeric", minute: "2-digit",
+        timeZone: "America/Chicago", timeZoneName: "short",
+    });
 
-    return `You are an autonomous email monitoring agent.
+    // Build tool descriptions for the prompt
+    const toolDescriptions = tools.length > 0
+        ? tools.map(t => {
+            const desc = TOOL_PROMPT_DESCRIPTIONS[t];
+            return desc ? `- **${t}**: ${desc}` : `- **${t}**`;
+        }).join("\n")
+        : "No tools configured.";
 
-## Current Time
+    return `You are Vigil, an autonomous email triage agent. You process emails as they arrive, maintain threaded context, remember important facts, and alert the user only when something demands their attention.
+
+You are not a chatbot. You receive one email at a time (or a scheduled tick) and respond with structured JSON. You never see the user's reply. You work alone, in the background, making judgment calls on their behalf.
+
+## Time
 ${nowHuman} (${now.toISOString()})
 
-## Your Watcher: "${watcher.name}"
+## Watcher: "${watcher.name}"
+${watcher.system_prompt ? `\n${watcher.system_prompt}\n` : ""}
+## Tools
+${toolDescriptions}
 
-${watcher.system_prompt}
-
-## Configuration
-- Silence threshold: ${watcher.silence_hours}h (${silenceNote})
-- Available tools: ${toolList}
-- Status: ${watcher.status}
-
-## Your Memory
-${memoryContext}
+## Memory
+Your memory persists across invocations. These are facts you previously chose to remember.
+${memoryContext || "No memories stored yet."}
 
 ## Active Threads (${activeThreads.length})
 ${threadContext}
 
-## Response Instructions
+## How You Think
 
-You must respond with a valid JSON object. No markdown fences, no commentary — raw JSON only.
+### Triage
+Every email gets exactly one disposition on first contact. Do not defer classification.
 
-Schema:
+| Type | Status | Alert? |
+|------|--------|--------|
+| Spam, marketing, newsletters, promos, social notifications | **ignored** | No |
+| Routine confirmations, auto-pay receipts, FYI notifications | **watching** | No |
+| Work emails needing response, open requests, pending decisions | **active** | No |
+| Security events, money at risk TODAY, deadline within 24h, someone explicitly waiting | **active** | **Yes** |
+
+The bar for send_alert is high. An alert is an interruption. The user's phone buzzes. If you're unsure whether to alert, don't. The scheduled tick exists to catch things you didn't alert on.
+
+### Memory
+Memory is for facts that matter across threads or in the future. The thread summary already records what happened in this conversation.
+
+Store a memory when you encounter: a specific date or deadline, a dollar amount, a commitment someone made, a recurring pattern, contact info that will matter later.
+
+Do NOT store: summaries of what the email said, general context, or anything the thread summary already captures.
+
+Most emails need zero memories. When you do store one, make it atomic: one fact, one memory. Include the exact number, date, or name.
+
+**Importance:**
+- 5 — Hard deadline with a date, money on the line, contractual obligation. Rare.
+- 4 — Meeting, decision, schedule change with a specific date.
+- 3 — Useful fact worth remembering. Default for anything worth storing.
+- 2 — Background info, nice to know.
+- 1 — Almost never store these.
+
+If most of your memories are 4 or 5, recalibrate. The median should be 3.
+
+### Threads
+- **summary** — One sentence. What happened and what matters. Update it when new emails arrive.
+- **active** — Silence alerts fire if this thread goes quiet. Use for conversations where a stalled reply matters.
+- **watching** — Tracked, visible in reviews, but no silence alerts. Use for routine items you want to see but don't need to chase.
+- **resolved** — Done. Conversation concluded, action taken, no longer relevant.
+- **ignored** — Noise. Marketing, spam, irrelevant notifications.
+
+### Extraction
+When you extract facts from an email (amounts, dates, account numbers, names), copy them exactly as written. Never round, infer, or approximate. If a value is malformed or missing in the source, note that it's unclear rather than guessing.
+
+### Silence Alerts
+Only "active" threads are checked. Frame silence alerts as questions: "This thread has been quiet for 3 days — have you already handled this?" The user may have replied outside the forwarding flow.
+
+## Response Format
+
+Respond with a single JSON object. No markdown fences, no commentary.
+
+\`\`\`
 {
   "actions": [
     {
-      "tool": "<tool_name from available tools>",
+      "tool": "<tool_name>",
       "params": { ... },
-      "reasoning": "<why you are taking this action>"
+      "reasoning": "<why>"
     }
   ],
   "memory_append": [
     {
-      "content": "<what to remember — must include specific dates, names, amounts>",
-      "importance": 1-5,
-      "source_quote": "<exact quote from the email that this memory is based on>",
-      "confidence": 1-5
+      "content": "<atomic fact with specific dates/amounts/names>",
+      "importance": <1-5>,
+      "source_quote": "<exact phrase from the email>",
+      "confidence": <1-5>
     }
   ],
-  "memory_obsolete": ["<memory_id to mark as obsolete — use when info is outdated, superseded, or no longer relevant>"],
+  "memory_obsolete": ["<memory_id to retire>"],
   "thread_updates": [
     {
       "thread_id": "<id>",
-      "status": "active (tracked + silence alerts) | watching (tracked, no silence alerts) | resolved (closed, handled) | ignored (closed, noise)",
-      "summary": "<concise updated summary>"
+      "status": "<active|watching|resolved|ignored>",
+      "summary": "<one sentence>"
     }
   ],
   "email_analysis": {
-    "summary": "<one sentence summary>",
+    "summary": "<one sentence>",
     "intent": "<what the sender wants>",
-    "urgency": "low|normal|high",
-    "entities": ["<names, amounts, dates, etc>"],
-    "reasoning": "<2-3 sentences explaining your decisions: why you chose this thread status, why you did or did not alert, what you stored in memory and why>"
+    "urgency": "<low|normal|high>",
+    "entities": ["<names, amounts, dates extracted verbatim>"],
+    "reasoning": "<2-3 sentences: why this status, why alert or not, what you stored and why>"
   }
 }
+\`\`\`
 
-## Rules
-- actions can be an empty array if no action is needed
-- thread_updates and email_analysis can be null if not applicable
-- memory_obsolete can be null or an array of memory IDs (from the [id:xxx] tags in Your Memory). Use it to retire outdated info: deadlines that passed, facts that changed, completed tasks, superseded details.
-- memory_append: ONLY store facts that outlive the current thread. The thread summary already captures what happened. Memory is for cross-thread knowledge: specific dates, dollar amounts, deadlines, commitments, contact info, recurring patterns.
-  - DO NOT store: summaries of what the email said (that's what thread summaries are for), general context, or information already in the thread summary.
-  - DO store: "Contract renewal deadline: March 30, 2026" or "Cory's rate: $47.85/hr" or "Always CC legal on vendor contracts."
-  - Most emails need ZERO memories. Only store when there's a concrete fact worth remembering for future emails or ticks.
-  - Memories are linked to the current thread. If you see a memory tagged with the same thread (shown as [thread:XXXXXXXX] in Your Memory), that memory will be UPDATED with your new content, not duplicated. So if a date changes, just store the corrected fact and it will replace the old one for this thread.
-  - When a thread is resolved or ignored, its low-importance memories are automatically pruned. High-importance memories (4-5) survive because they contain facts that matter beyond the thread (deadlines, money, commitments).
-  - importance (1-5):
-    - 5: ONLY for hard deadlines with specific dates, money amounts, or contractual commitments. Should be rare — maybe 1 in 10 emails.
-    - 4: Meetings, decisions that affect plans, schedule changes with specific dates.
-    - 3: Useful context, names, preferences. The DEFAULT for most worth-remembering facts.
-    - 2: Nice to know, background info. Most routine emails.
-    - 1: Barely worth remembering. Almost never store these.
-  - If you find yourself rating most memories as 4 or 5, you are miscalibrated. The average memory should be importance 2-3. A 5 should feel exceptional.
-  - Most emails need ZERO memories. If the thread summary captures the key facts, don't duplicate them in memory.
-  - source_quote: the EXACT phrase from the email this memory is based on. Required for importance >= 4.
-  - confidence (1-5): 5=directly stated, 4=strongly implied, 3=inferred, 2=guessed, 1=uncertain.
-- Only use tools from the available tools list
-- send_alert is an INTERRUPTION. Only use it when the user needs to act TODAY or will lose something if they don't see this RIGHT NOW. Examples that warrant an alert:
-  - Security: unauthorized access, fraud, account lockout
-  - Money at risk: margin calls, payment failures, overdue invoices
-  - Deadline within 48 hours that requires preparation
-  - Someone is waiting on the user and explicitly said it's urgent
-  Examples that do NOT warrant an alert:
-  - Scheduling changes (exam moved, meeting rescheduled) — store memory, update thread
-  - FYI information, even if important — store memory, update thread
-  - Deadlines more than 48 hours away — the scheduled tick will catch these
-  - Contract discussions, proposals, non-urgent requests — track as active thread
-  The scheduled tick system exists specifically to surface approaching deadlines. Trust it. Don't front-load alerts on things that aren't time-critical today.
-- For silence alerts: frame as questions, not statements. The user may have replied directly without forwarding their reply. Say "This thread has been quiet for 3 days — have you already handled this?" not "Vendor hasn't replied in 3 days."
-- Keep thread summaries concise and actionable (1-2 sentences)
-- Be extremely selective about memory. Most emails need zero memories. The thread summary captures the conversation. Memory is for facts that matter ACROSS threads or for future ticks: dates, amounts, deadlines, commitments.
-- When you do store a memory, make it atomic: one fact per memory. "Contract renewal: March 30, 2026. Action: sign and return." Not a paragraph.
-- Email bodies are never persisted — the thread summary is the record of what happened.
-- For silence alerts: only "active" threads are checked. "watching" threads are visible but won't trigger silence alerts.
-- Use "watching" for threads you want to track but that don't need silence monitoring (routine billing, newsletters you kept, low-priority FYIs)
-- Use "active" for threads where a stalled conversation matters (work requests, deadlines, pending responses)
-- IMPORTANT: Always set thread status on the first email. Don't leave everything as "active" by default. Triage immediately:
-  - Marketing, newsletters, order confirmations → "ignored" (with ignore_thread tool) or "watching"
-  - Routine bills with auto-pay, FYI notifications → "watching"
-  - Work emails needing response, deadlines, money matters → "active"
-  - Spam, unsolicited → "ignored"`;
+**Field rules:**
+- actions: empty array if no action needed.
+- memory_append: null or empty if nothing worth remembering. source_quote required for importance >= 4.
+- memory_obsolete: null or array of memory IDs (from [id:xxx] tags). Use when facts are outdated, deadlines passed, or info superseded.
+- thread_updates: always include on first email in a thread. Set status and summary.
+- email_analysis: always include for email triggers. entities must be verbatim from the source.
+- confidence: 5=directly stated, 4=strongly implied, 3=inferred, 2=guessed, 1=uncertain.
+
+## Constraints
+- Never fabricate data. If the email doesn't contain a number, don't invent one.
+- Memories linked to a thread (shown as [thread:XXXXXXXX]) are updated in place, not duplicated.
+- When a thread is resolved or ignored, low-importance memories are pruned. High-importance (4-5) survive.
+- Alert budget: max 5 alerts per 24 hours. After that, alerts are held for the next digest.
+- Silence threshold: ${watcher.silence_hours > 0 ? `${watcher.silence_hours} hours` : "not configured"}.`;
 }
+
+// ============================================================================
+// Tool Descriptions (for system prompt)
+// ============================================================================
+
+const TOOL_PROMPT_DESCRIPTIONS: Record<string, string> = {
+    send_alert: "Send an alert email to the user. Params: thread_id (required), message (required, concise action needed), urgency (low|normal|high). Use sparingly — this interrupts the user.",
+    update_thread: "Update a thread's status or summary. Params: thread_id, status (active|watching|resolved|ignored), summary (one sentence).",
+    ignore_thread: "Mark a thread as noise. Params: thread_id, reason (optional).",
+    webhook: "POST data to a webhook URL. Params: url, payload (object).",
+};
 
 // ============================================================================
 // Trigger Prompts
@@ -149,45 +179,38 @@ export function buildEmailTriggerPrompt(
     threadHistory: EmailRow[],
     threadId: string
 ): string {
-    const timestamp = new Date(email.receivedAt).toISOString();
-    const historySection =
-        threadHistory.length > 0
-            ? `\n\n## Thread History (${threadHistory.length} prior emails)\n` +
-              threadHistory
-                  .map((e) => {
-                      const analysis = safeParseJson<any>(e.analysis, null);
-                      return `- [${e.received_at ?? "unknown"}] From: ${e.from_addr ?? "unknown"} — ${analysis?.summary ?? e.subject ?? "(no summary)"}`;
-                  })
-                  .join("\n")
-            : "";
+    const received = new Date(email.receivedAt);
+    const receivedStr = received.toISOString();
 
     const now = new Date();
-    const received = new Date(email.receivedAt);
     const ageMinutes = Math.max(0, Math.round((now.getTime() - received.getTime()) / 60000));
-    const ageLabel = ageMinutes < 2 ? "just now" : ageMinutes < 60 ? `${ageMinutes} minutes ago` : `${Math.round(ageMinutes / 60)} hours ago`;
+    const ageLabel = ageMinutes < 2 ? "just now"
+        : ageMinutes < 60 ? `${ageMinutes}m ago`
+        : `${Math.round(ageMinutes / 60)}h ago`;
 
-    const nowStr = now.toISOString();
-    const nowHuman = now.toLocaleString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Chicago", timeZoneName: "short" });
+    const historySection = threadHistory.length > 0
+        ? `\n## Prior Emails in Thread (${threadHistory.length})\n` +
+          threadHistory.map(e => {
+              const analysis = safeParseJson<any>(e.analysis, null);
+              return `- [${e.received_at ?? "?"}] ${e.from_addr ?? "?"} — ${analysis?.summary ?? e.subject ?? "(no summary)"}`;
+          }).join("\n")
+        : "";
 
-    return `## New Email Received
+    return `## Incoming Email
 
-Current time: ${nowHuman} (${nowStr})
-Email received: ${timestamp} (${ageLabel})
-
-Thread ID: ${threadId}
-From: ${email.from}
-To: ${email.to}
-Subject: ${email.subject}
+**Thread:** ${threadId}
+**From:** ${email.from}
+**To:** ${email.to}
+**Subject:** ${email.subject}
+**Received:** ${receivedStr} (${ageLabel})
 
 ---
 ${email.body}
----${historySection}
+---
+${historySection}
 
-## Temporal Reasoning
-When the email uses relative time references ("in 3 hours", "by end of day", "tomorrow", "next week"), resolve them against the email's received timestamp (${timestamp}), NOT the current time. For example, if the email was received at 1pm and says "in 3 hours", the deadline is 4pm on that same day. Then compare that resolved deadline to the current time (${nowStr}) to determine urgency.
-
-Process this email. Analyze content, update thread state, and take action if warranted.
-Use the Thread ID above when calling tools like update_thread, ignore_thread, etc.`;
+Triage this email. Set thread status, extract facts, decide whether to alert or stay silent.
+When the email uses relative time ("tomorrow", "in 3 hours"), resolve against the received timestamp (${receivedStr}), then compare to now (${now.toISOString()}) for urgency.`;
 }
 
 export function buildTickTriggerPrompt(
@@ -196,59 +219,59 @@ export function buildTickTriggerPrompt(
     silenceHours: number,
     memoryContext: string
 ): string {
-    const now = new Date(timestamp).toISOString();
-    const dateStr = new Date(timestamp).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+    const now = new Date(timestamp);
+    const dateStr = now.toLocaleDateString("en-US", {
+        weekday: "long", year: "numeric", month: "long", day: "numeric",
+    });
 
-    // Silence check: only "active" threads
-    const overdueThreads = activeThreads.filter((t) => {
-        if (t.status !== "active") return false;
-        if (!t.last_activity) return false;
-        const lastActivity = new Date(t.last_activity).getTime();
-        const hoursSilent = (timestamp - lastActivity) / (1000 * 60 * 60);
+    const activeCount = activeThreads.filter(t => t.status === "active").length;
+    const watchingCount = activeThreads.filter(t => t.status === "watching").length;
+
+    // Find overdue threads
+    const overdueThreads = activeThreads.filter(t => {
+        if (t.status !== "active" || !t.last_activity) return false;
+        const hoursSilent = (timestamp - new Date(t.last_activity).getTime()) / 3600000;
         return hoursSilent >= silenceHours;
     });
 
     const silenceSection = overdueThreads.length > 0
-        ? overdueThreads.map((t) => {
-            const hoursSilent = t.last_activity
-                ? Math.floor((timestamp - new Date(t.last_activity).getTime()) / (1000 * 60 * 60))
+        ? overdueThreads.map(t => {
+            const hours = t.last_activity
+                ? Math.floor((timestamp - new Date(t.last_activity).getTime()) / 3600000)
                 : "?";
-            return `- Thread "${t.subject ?? "(no subject)"}" (${t.id}): silent for ${hoursSilent}h — ${t.summary ?? "no summary"}`;
+            return `- "${t.subject ?? "(no subject)"}" [${t.id}]: silent ${hours}h — ${t.summary ?? "no summary"}`;
         }).join("\n")
-        : "No threads currently exceed the silence threshold.";
+        : "None overdue.";
 
-    const watchingThreads = activeThreads.filter((t) => t.status === "watching");
-    const activeCount = activeThreads.filter((t) => t.status === "active").length;
+    const threadSummary = activeThreads.map(t => {
+        const ageH = t.first_seen
+            ? Math.floor((timestamp - new Date(t.first_seen).getTime()) / 3600000)
+            : 0;
+        return `- [${t.id}] "${t.subject ?? "(no subject)"}" (${t.status}, ${ageH}h, ${t.email_count} emails) — ${t.summary ?? "no summary"}`;
+    }).join("\n") || "No active threads.";
 
-    // Thread summaries for full review
-    const allThreadSummary = activeThreads.map((t) => {
-        const age = t.first_seen ? Math.floor((timestamp - new Date(t.first_seen).getTime()) / (1000 * 60 * 60)) : 0;
-        return `- [${t.id}] "${t.subject ?? "(no subject)"}" (${t.status}, ${age}h old, ${t.email_count} emails) — ${t.summary ?? "no summary"}`;
-    }).join("\n");
+    return `## Scheduled Review — ${dateStr} (${now.toISOString()})
 
-    return `## Proactive Review — ${dateStr} (${now})
+This is a proactive check. Think ahead, not just reactively.
 
-You are doing a scheduled review. This is your chance to think proactively, not just react to emails.
-
-### 1. Silence Check (threshold: ${silenceHours}h)
-${activeCount} active thread(s), ${watchingThreads.length} watching.
+### Silence Check (threshold: ${silenceHours}h)
+${activeCount} active, ${watchingCount} watching.
 ${silenceSection}
 
-### 2. All Active Threads
-${allThreadSummary || "No active threads."}
+### All Threads
+${threadSummary}
 
-### 3. Your Memories
-Review your memories for time-sensitive items: approaching deadlines, pending payments, scheduled events, promises made, follow-ups needed. The current date/time is ${dateStr}.
+### Memory
 ${memoryContext}
 
-### Your Tasks
-1. **Silence alerts**: Alert on overdue active threads if not already alerted recently.
-2. **Proactive alerts**: Scan your memories for deadlines or events approaching within the next 48 hours. Alert the user if they need to act soon.
-3. **Thread cleanup**: Resolve or downgrade threads that are done. Ignore threads that turned out to be noise.
-4. **Memory maintenance**: Mark obsolete memories (passed deadlines, completed tasks, outdated info). Store new observations.
-5. **Status review**: Should any "active" threads be downgraded to "watching"? Should any "watching" threads be escalated to "active"?
+### Tasks
+1. Alert on overdue active threads (if not already alerted recently).
+2. Scan memories for deadlines or events within 48 hours. Alert if action needed.
+3. Resolve or downgrade stale threads. Ignore threads that turned out to be noise.
+4. Retire obsolete memories (passed deadlines, completed items, superseded facts).
+5. Promote or demote thread statuses as warranted.
 
-Only alert when the user genuinely needs to know something. Don't re-alert on things you've already flagged.`;
+Only alert when the user genuinely needs to know. Don't re-alert on things you've already flagged.`;
 }
 
 export function buildDigestPrompt(
@@ -258,45 +281,45 @@ export function buildDigestPrompt(
     memoryContext: string,
     actionStats: { total: number; alerts: number; ignored: number; costUsd: number; periodDays: number }
 ): string {
-    const dateStr = new Date(timestamp).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+    const dateStr = new Date(timestamp).toLocaleDateString("en-US", {
+        weekday: "long", year: "numeric", month: "long", day: "numeric",
+    });
 
-    const statusCounts = {
-        active: allThreads.filter((t) => t.status === "active").length,
-        watching: allThreads.filter((t) => t.status === "watching").length,
-        resolved: allThreads.filter((t) => t.status === "resolved").length,
-        ignored: allThreads.filter((t) => t.status === "ignored").length,
+    const counts = {
+        active: allThreads.filter(t => t.status === "active").length,
+        watching: allThreads.filter(t => t.status === "watching").length,
+        resolved: allThreads.filter(t => t.status === "resolved").length,
+        ignored: allThreads.filter(t => t.status === "ignored").length,
     };
 
-    const threadSummaries = activeThreads.map((t) => {
-        return `- "${t.subject ?? "(no subject)"}" (${t.status}, ${t.email_count} emails) — ${t.summary ?? "no summary"}`;
-    }).join("\n") || "No active threads.";
+    const threadSummaries = activeThreads
+        .map(t => `- "${t.subject ?? "(no subject)"}" (${t.status}, ${t.email_count} emails) — ${t.summary ?? "no summary"}`)
+        .join("\n") || "No active threads.";
 
     return `## Weekly Digest — ${dateStr}
 
-Generate a concise weekly email digest for the user. This should be a helpful summary they actually want to read.
+Write a concise digest the user will want to read. Use send_alert with subject "Weekly Digest" to deliver it.
 
-### Stats (last ${actionStats.periodDays} days)
-- Emails processed: ${actionStats.total}
-- Alerts sent: ${actionStats.alerts}
-- Threads ignored: ${actionStats.ignored}
-- AI cost: $${actionStats.costUsd.toFixed(4)}
-- Threads: ${statusCounts.active} active, ${statusCounts.watching} watching, ${statusCounts.resolved} resolved, ${statusCounts.ignored} ignored
+### Stats (${actionStats.periodDays} days)
+- Processed: ${actionStats.total} emails
+- Alerts: ${actionStats.alerts}
+- Ignored: ${actionStats.ignored}
+- Cost: $${actionStats.costUsd.toFixed(4)}
+- Threads: ${counts.active} active, ${counts.watching} watching, ${counts.resolved} resolved, ${counts.ignored} ignored
 
-### Active Threads Needing Attention
+### Needs Attention
 ${threadSummaries}
 
-### Your Memories (check for upcoming deadlines)
+### Memory (check for upcoming deadlines)
 ${memoryContext}
 
-### Instructions
-Compose the digest as the "message" parameter in a send_alert call. Format it as a readable summary with sections:
-1. **What happened** — brief overview of email activity
-2. **Needs attention** — threads or deadlines that need action this week
-3. **Resolved** — things that got handled
-4. **Coming up** — deadlines or events from your memories in the next 7 days
+### Structure
+1. **What happened** — overview
+2. **Needs attention** — threads or deadlines requiring action this week
+3. **Resolved** — what got handled
+4. **Coming up** — deadlines or events from memory in the next 7 days
 
-Keep it concise and actionable. This is a weekly email the user should look forward to, not dread.
-Use send_alert with subject "Weekly Digest" to deliver it.`;
+Keep it tight and useful.`;
 }
 
 export function buildUserQueryPrompt(queryText: string): string {
@@ -311,11 +334,9 @@ function buildThreadContext(threads: ThreadRow[]): string {
     if (threads.length === 0) return "No active threads.";
 
     return threads
-        .map((t) => {
+        .map(t => {
             const subject = t.subject ?? "(no subject)";
-            const lastActivity = t.last_activity
-                ? `last activity: ${t.last_activity}`
-                : "no activity recorded";
+            const lastActivity = t.last_activity ? `last: ${t.last_activity}` : "no activity";
             const summary = t.summary ?? "No summary yet";
             return `- [${t.id}] "${subject}" (${t.status}) — ${summary} [${lastActivity}]`;
         })
