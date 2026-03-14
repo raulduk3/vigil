@@ -1,42 +1,43 @@
 /**
  * Vigil API Client — Chrome Extension
+ * 
+ * Auth is held in memory for the active session.
+ * chrome.storage.local is used only to persist across panel reloads.
  */
 
 const API_BASE = "https://api.vigil.run/api";
 
-class VigilAPI {
-    constructor() {
-        this.token = null;
-        this.apiKey = null;
-    }
+// Module-level credential store — survives across all calls in this page context
+let _apiKey = null;
+let _token = null;
 
-    async loadFromStorage() {
+class VigilAPI {
+
+    async _restoreFromStorage() {
+        // Only called once on page load to restore prior session
         try {
-            const data = await chrome.storage.sync.get(["vigil_token", "vigil_api_key"]);
-            console.log("[vigil] loadFromStorage:", { hasToken: !!data.vigil_token, hasKey: !!data.vigil_api_key });
-            if (data.vigil_api_key) this.apiKey = data.vigil_api_key;
-            if (data.vigil_token) this.token = data.vigil_token;
+            const data = await chrome.storage.local.get(["vigil_token", "vigil_api_key"]);
+            if (data.vigil_api_key) _apiKey = data.vigil_api_key;
+            if (data.vigil_token) _token = data.vigil_token;
+            console.log("[vigil] restored from storage:", { hasKey: !!_apiKey, hasToken: !!_token });
         } catch (e) {
-            console.error("[vigil] storage read failed:", e);
+            console.warn("[vigil] storage restore failed:", e);
         }
     }
 
-    getAuthHeader() {
-        if (this.apiKey) return `Bearer ${this.apiKey}`;
-        if (this.token) return `Bearer ${this.token}`;
+    _getAuthHeader() {
+        if (_apiKey) return `Bearer ${_apiKey}`;
+        if (_token) return `Bearer ${_token}`;
         return null;
     }
 
     async request(path, options = {}) {
-        // Always reload from storage to ensure we have credentials
-        await this.loadFromStorage();
-
-        const auth = this.getAuthHeader();
-        console.log("[vigil] request", path, { hasAuth: !!auth, apiKey: this.apiKey?.slice(0, 6), token: this.token?.slice(0, 6) });
-
+        const auth = this._getAuthHeader();
+        console.log("[vigil] request", path, { hasAuth: !!auth });
         if (!auth) throw new Error("Not authenticated");
 
-        const resp = await fetch(`${API_BASE}${path}`, {
+        const url = `${API_BASE}${path}`;
+        const resp = await fetch(url, {
             ...options,
             headers: {
                 "Content-Type": "application/json",
@@ -46,16 +47,17 @@ class VigilAPI {
         });
 
         console.log("[vigil] response", path, resp.status);
-
         if (!resp.ok) {
-            const err = await resp.json().catch(() => ({ error: resp.statusText }));
-            throw new Error(err.error || `API error ${resp.status}`);
+            const body = await resp.text();
+            let msg;
+            try { msg = JSON.parse(body).error; } catch { msg = body || resp.statusText; }
+            throw new Error(msg || `API error ${resp.status}`);
         }
 
         return resp.json();
     }
 
-    // Auth
+    // Auth — email/password
     async login(email, password) {
         const resp = await fetch(`${API_BASE}/auth/login`, {
             method: "POST",
@@ -67,55 +69,59 @@ class VigilAPI {
             throw new Error(err.error || "Login failed");
         }
         const data = await resp.json();
-        this.token = data.token;
-        await chrome.storage.sync.set({ vigil_token: data.token });
-        console.log("[vigil] login success, token saved");
+        _token = data.token;
+        console.log("[vigil] login OK, token set in memory");
+        chrome.storage.local.set({ vigil_token: data.token }); // fire-and-forget
         return data;
     }
 
+    // Auth — API key
     async loginWithApiKey(apiKey) {
-        this.apiKey = apiKey;
-        console.log("[vigil] loginWithApiKey: set apiKey on instance");
+        _apiKey = apiKey;
+        console.log("[vigil] apiKey set in memory, verifying...");
         try {
-            await this.request("/auth/me");
-            await chrome.storage.sync.set({ vigil_api_key: apiKey });
-            console.log("[vigil] loginWithApiKey: saved to storage");
+            const me = await this.request("/auth/me");
+            console.log("[vigil] apiKey verified:", me);
+            chrome.storage.local.set({ vigil_api_key: apiKey }); // fire-and-forget
             return true;
         } catch (e) {
-            console.error("[vigil] loginWithApiKey failed:", e);
-            this.apiKey = null;
+            console.error("[vigil] apiKey verification failed:", e);
+            _apiKey = null;
             throw new Error("Invalid API key");
         }
     }
 
+    // Check if we have valid credentials
     async isAuthenticated() {
-        await this.loadFromStorage();
-        if (!this.getAuthHeader()) {
-            console.log("[vigil] isAuthenticated: no credentials");
+        // Try restoring from storage first
+        if (!this._getAuthHeader()) {
+            await this._restoreFromStorage();
+        }
+        if (!this._getAuthHeader()) {
+            console.log("[vigil] isAuthenticated: no credentials anywhere");
             return false;
         }
         try {
             await this.request("/auth/me");
-            console.log("[vigil] isAuthenticated: verified");
             return true;
-        } catch (e) {
-            console.log("[vigil] isAuthenticated: verification failed", e);
+        } catch {
             return false;
         }
     }
 
     async logout() {
-        this.token = null;
-        this.apiKey = null;
-        await chrome.storage.sync.remove(["vigil_token", "vigil_api_key"]);
+        _apiKey = null;
+        _token = null;
+        await chrome.storage.local.remove(["vigil_token", "vigil_api_key"]);
     }
 
     // Watchers
     async getWatchers() {
-        console.log("[vigil] getWatchers called");
+        console.log("[vigil] getWatchers...");
         const data = await this.request("/watchers");
-        console.log("[vigil] getWatchers response:", data);
-        return data.watchers || [];
+        const list = data.watchers || [];
+        console.log("[vigil] getWatchers:", list.length, "watchers");
+        return list;
     }
 
     async createWatcher(name, systemPrompt, template) {
@@ -140,5 +146,4 @@ class VigilAPI {
     }
 }
 
-// Export singleton
 const vigilAPI = new VigilAPI();
