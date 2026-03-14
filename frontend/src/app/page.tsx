@@ -132,9 +132,9 @@ export default function HomePage() {
                         <p className="text-xs md:text-sm text-gray-700 mt-2">Your prompt, your tools, your rules. Each watcher learns independently.</p>
                       </div>
                       <div className="rounded-xl bg-[#0d202c] p-4 md:p-5 text-left shadow-[0_12px_40px_rgba(11,31,42,0.18)]">
-                        <p className="text-[11px] uppercase tracking-[0.2em] text-vigil-300 mb-2">Agent decision</p>
+                        <p className="text-[11px] uppercase tracking-[0.2em] text-white/60 font-bold mb-2">Agent decision</p>
                         <p className="text-sm md:text-base text-white font-medium">Invoice #4521 is due tomorrow. This vendor expects payment by the 14th. Alerting you now.</p>
-                        <div className="mt-4 space-y-2 text-xs md:text-sm text-vigil-200/90">
+                        <div className="mt-4 space-y-2 text-xs md:text-sm text-white/80">
                           <p>Thread: 3 emails grouped. Obligation detected.</p>
                           <p>Memory: Payment pattern recognized from 4 prior invoices.</p>
                           <p>Action: Email alert sent. Webhook fired to accounting.</p>
