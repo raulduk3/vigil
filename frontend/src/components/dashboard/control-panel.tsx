@@ -40,8 +40,8 @@ export function ControlPanel({
         <StatsCard threads={threads} actions={actions} memories={memories} />
       </div>
 
-      {/* Memory panel — collapsible */}
-      <div className="shrink-0 overflow-y-auto max-h-64">
+      {/* Memory panel */}
+      <div className="shrink-0">
         <MemoryPanel
           watcherId={watcherId}
           memories={memories}

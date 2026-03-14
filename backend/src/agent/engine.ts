@@ -190,7 +190,50 @@ export async function invokeAgent(
         );
     }
 
-    // 5. Build prompt
+    // 5. Chat mode — completely separate path, returns text not JSON
+    if (trigger.type === "user_chat") {
+        const { buildChatSystemPrompt, buildChatUserPrompt } = await import("./prompts");
+
+        // Load recent emails for inbox context
+        const recentEmails = queryMany<EmailRow>(
+            `SELECT * FROM emails WHERE watcher_id = ? ORDER BY created_at DESC LIMIT 30`,
+            [watcherId]
+        );
+
+        const chatSystem = buildChatSystemPrompt(watcher, memoryContext, activeThreads, recentEmails);
+        const chatUser = buildChatUserPrompt(trigger.message);
+        const model = watcher.model || process.env.VIGIL_MODEL || "gpt-4.1-mini";
+
+        try {
+            const result = await callLLMRaw(chatSystem, chatUser, model);
+            const rates = MODEL_CATALOG[model]?.pricing ?? { input: 0.0004, output: 0.0016 };
+            const cost = (result.inputTokens / 1000) * rates.input + (result.outputTokens / 1000) * rates.output;
+
+            logger.info("Chat invocation complete", { watcherId, model, tokens: result.inputTokens + result.outputTokens, cost });
+
+            // Return the raw text as a special AgentResponse with chat_response field
+            return {
+                actions: [],
+                memory_append: null,
+                memory_obsolete: null,
+                thread_updates: null,
+                email_analysis: null,
+                chat_response: result.text,
+            } as AgentResponse & { chat_response: string };
+        } catch (err) {
+            logger.error("Chat LLM call failed", { watcherId, err, model });
+            return {
+                actions: [],
+                memory_append: null,
+                memory_obsolete: null,
+                thread_updates: null,
+                email_analysis: null,
+                chat_response: "Sorry, I couldn't process that right now. Please try again.",
+            } as AgentResponse & { chat_response: string };
+        }
+    }
+
+    // 6. Build structured prompt (non-chat triggers)
     const systemPrompt = buildSystemPrompt(watcher, memoryContext, activeThreads);
     let userPrompt: string;
 
@@ -584,6 +627,80 @@ async function callGoogle(
         inputTokens: data.usageMetadata?.promptTokenCount ?? 0,
         outputTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
     };
+}
+
+// Raw text LLM call (for chat mode — no JSON parsing)
+async function callLLMRaw(
+    systemPrompt: string,
+    userPrompt: string,
+    model: string = "gpt-4.1-mini"
+): Promise<{ text: string; inputTokens: number; outputTokens: number }> {
+    const catalog = MODEL_CATALOG[model];
+    const provider = catalog?.provider ?? "openai";
+
+    if (provider === "anthropic") {
+        const apiKey = process.env.ANTHROPIC_API_KEY;
+        if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
+        const resp = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+            body: JSON.stringify({
+                model, max_tokens: catalog?.maxTokens ?? 1024,
+                system: systemPrompt,
+                messages: [{ role: "user", content: userPrompt }],
+            }),
+        });
+        if (!resp.ok) throw new Error(`Anthropic error ${resp.status}: ${await resp.text()}`);
+        const data = (await resp.json()) as any;
+        return {
+            text: data.content?.find((c: any) => c.type === "text")?.text ?? "",
+            inputTokens: data.usage?.input_tokens ?? 0,
+            outputTokens: data.usage?.output_tokens ?? 0,
+        };
+    } else if (provider === "google") {
+        const apiKey = process.env.GOOGLE_AI_API_KEY;
+        if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured");
+        const resp = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+            {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    contents: [{ role: "user", parts: [{ text: userPrompt }] }],
+                    generationConfig: { maxOutputTokens: catalog?.maxTokens ?? 1024 },
+                }),
+            }
+        );
+        if (!resp.ok) throw new Error(`Google AI error ${resp.status}: ${await resp.text()}`);
+        const data = (await resp.json()) as any;
+        return {
+            text: data.candidates?.[0]?.content?.parts?.[0]?.text ?? "",
+            inputTokens: data.usageMetadata?.promptTokenCount ?? 0,
+            outputTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
+        };
+    } else {
+        const apiKey = process.env.OPENAI_API_KEY;
+        if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
+        const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${apiKey}`, "content-type": "application/json" },
+            body: JSON.stringify({
+                model, max_tokens: catalog?.maxTokens ?? 1024,
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: userPrompt },
+                ],
+            }),
+        });
+        if (!resp.ok) throw new Error(`OpenAI error ${resp.status}: ${await resp.text()}`);
+        const data = (await resp.json()) as any;
+        return {
+            text: data.choices?.[0]?.message?.content ?? "",
+            inputTokens: data.usage?.prompt_tokens ?? 0,
+            outputTokens: data.usage?.completion_tokens ?? 0,
+        };
+    }
 }
 
 function parseAgentResponse(text: string): AgentResponse {

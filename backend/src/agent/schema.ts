@@ -103,7 +103,8 @@ export type InvocationTrigger =
     | { type: "email_received"; email: ParsedEmail }
     | { type: "scheduled_tick"; timestamp: number }
     | { type: "weekly_digest"; timestamp: number }
-    | { type: "user_query"; query: string };
+    | { type: "user_query"; query: string }
+    | { type: "user_chat"; message: string };
 
 // ============================================================================
 // Agent Response (LLM output)

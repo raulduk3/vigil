@@ -164,6 +164,18 @@ export const watcherHandlers = {
         if (!watcher) return c.json({ error: "Watcher not found" }, 404);
 
         const { invokeAgent } = await import("../../agent/engine");
+
+        // Chat mode: body.message triggers conversational response
+        // Query mode: body.query triggers structured JSON response
+        if (body.message) {
+            const response = await invokeAgent(id, {
+                type: "user_chat",
+                message: body.message,
+            });
+            const chatResponse = (response as any)?.chat_response ?? "No response.";
+            return c.json({ watcher_id: id, message: chatResponse });
+        }
+
         const response = await invokeAgent(id, {
             type: "user_query",
             query: body.query ?? "Manual invocation — review active threads.",
@@ -374,6 +386,7 @@ export const watcherHandlers = {
         const user = c.get("user");
         const id = c.req.param("id") ?? "";
         const limit = parseInt(c.req.query("limit") ?? "50", 10);
+        const threadId = c.req.query("thread_id") ?? null;
 
         const watcher = queryOne(
             `SELECT id FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
@@ -381,10 +394,15 @@ export const watcherHandlers = {
         );
         if (!watcher) return c.json({ error: "Watcher not found" }, 404);
 
-        const actions = queryMany(
-            `SELECT * FROM actions WHERE watcher_id = ? ORDER BY created_at DESC LIMIT ?`,
-            [id, limit]
-        );
+        const actions = threadId
+            ? queryMany(
+                `SELECT * FROM actions WHERE watcher_id = ? AND thread_id = ? ORDER BY created_at DESC LIMIT ?`,
+                [id, threadId, limit]
+            )
+            : queryMany(
+                `SELECT * FROM actions WHERE watcher_id = ? ORDER BY created_at DESC LIMIT ?`,
+                [id, limit]
+            );
 
         return c.json({ actions });
     },

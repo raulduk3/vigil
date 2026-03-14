@@ -10,6 +10,18 @@ interface EmailDetailProps {
   onStatusChange: (threadId: string, status: Thread['status']) => void;
 }
 
+type ActionTab = 'thread' | 'all';
+
+const TIMEZONE_OPTIONS = [
+  { value: 'browser', label: 'Browser Timezone' },
+  { value: 'UTC', label: 'UTC' },
+  { value: 'America/Los_Angeles', label: 'America/Los_Angeles' },
+  { value: 'America/New_York', label: 'America/New_York' },
+  { value: 'Europe/London', label: 'Europe/London' },
+  { value: 'Europe/Berlin', label: 'Europe/Berlin' },
+  { value: 'Asia/Tokyo', label: 'Asia/Tokyo' },
+];
+
 function formatRelative(isoDate: string): string {
   const diff = Date.now() - new Date(isoDate).getTime();
   const minutes = Math.floor(diff / 60000);
@@ -19,6 +31,29 @@ function formatRelative(isoDate: string): string {
   if (minutes < 60) return `${minutes}m ago`;
   if (hours < 24) return `${hours}h ago`;
   return `${days}d ago`;
+}
+
+function formatFullTimestamp(isoDate: string, timezone: string): string {
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) return isoDate;
+
+  const normalizedTimezone = timezone === 'browser' ? undefined : timezone;
+
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+      timeZone: normalizedTimezone,
+      timeZoneName: 'short',
+    }).format(date);
+  } catch {
+    return date.toISOString();
+  }
 }
 
 function statusBadgeClass(status: Thread['status']) {
@@ -34,18 +69,40 @@ function statusBadgeClass(status: Thread['status']) {
 const STATUSES: Thread['status'][] = ['active', 'watching', 'resolved', 'ignored'];
 
 export function EmailDetail({ thread, watcherId, onClose, onStatusChange }: EmailDetailProps) {
-  const [actions, setActions] = useState<Action[]>([]);
+  const [threadActions, setThreadActions] = useState<Action[]>([]);
+  const [allActions, setAllActions] = useState<Action[]>([]);
+  const [tab, setTab] = useState<ActionTab>('thread');
+  const [timezone, setTimezone] = useState('browser');
   const [loadingActions, setLoadingActions] = useState(false);
   const [changingStatus, setChangingStatus] = useState<string | null>(null);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const saved = window.localStorage.getItem('vigil.dashboard.timezone');
+    if (saved) setTimezone(saved);
+  }, []);
+
+  const handleTimezoneChange = (value: string) => {
+    setTimezone(value);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('vigil.dashboard.timezone', value);
+    }
+  };
+
+  useEffect(() => {
     setLoadingActions(true);
-    api.getActions(watcherId)
-      .then((res) => {
-        // filter actions related to this thread's subject/participants if possible
-        setActions((res.actions || []).slice(0, 10));
+    Promise.all([
+      api.getActions(watcherId, { threadId: thread.id, limit: 20 }),
+      api.getActions(watcherId, { limit: 100 }),
+    ])
+      .then(([threadRes, allRes]) => {
+        setThreadActions(threadRes.actions || []);
+        setAllActions(allRes.actions || []);
       })
-      .catch(() => setActions([]))
+      .catch(() => {
+        setThreadActions([]);
+        setAllActions([]);
+      })
       .finally(() => setLoadingActions(false));
   }, [watcherId, thread.id]);
 
@@ -144,16 +201,51 @@ export function EmailDetail({ thread, watcherId, onClose, onStatusChange }: Emai
 
         {/* Recent actions */}
         <div className="px-4 py-3">
-          <div className="data-label mb-2">Recent Agent Actions</div>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="data-label">Agent Actions</div>
+            <select
+              value={timezone}
+              onChange={(e) => handleTimezoneChange(e.target.value)}
+              className="input max-w-56 py-1.5 text-xs"
+              aria-label="Timezone"
+            >
+              {TIMEZONE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex gap-1 mb-2">
+            <button
+              onClick={() => setTab('thread')}
+              className={`px-2.5 py-1 text-xs rounded transition-colors ${tab === 'thread' ? 'bg-vigil-900 text-white font-medium' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
+            >
+              Thread Recent
+            </button>
+            <button
+              onClick={() => setTab('all')}
+              className={`px-2.5 py-1 text-xs rounded transition-colors ${tab === 'all' ? 'bg-vigil-900 text-white font-medium' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
+            >
+              All Actions
+            </button>
+          </div>
+
           {loadingActions ? (
             <div className="flex items-center gap-2 text-xs text-gray-400">
               <span className="spinner-sm" /> Loading...
             </div>
-          ) : actions.length === 0 ? (
-            <p className="text-xs text-gray-400">No actions recorded yet.</p>
           ) : (
             <div className="space-y-2">
-              {actions.map((action) => (
+              {(tab === 'thread' ? threadActions : allActions).length === 0 && (
+                <p className="text-xs text-gray-400">
+                  {tab === 'thread'
+                    ? 'No actions recorded yet for this thread.'
+                    : 'No actions recorded yet for this watcher.'}
+                </p>
+              )}
+              {(tab === 'thread' ? threadActions : allActions).map((action) => (
                 <div key={action.id} className="panel-inset px-3 py-2 text-xs">
                   <div className="flex items-center justify-between gap-2 mb-0.5">
                     <span className="font-medium text-gray-700 capitalize">{action.tool || action.trigger_type}</span>
@@ -161,10 +253,26 @@ export function EmailDetail({ thread, watcherId, onClose, onStatusChange }: Emai
                       {action.result}
                     </span>
                   </div>
+                  <div className="text-gray-500 mb-1">{formatFullTimestamp(action.created_at, timezone)}</div>
+                  <div className="text-gray-500 mb-1 flex flex-wrap gap-x-2 gap-y-0.5">
+                    <span>trigger: {action.trigger_type}</span>
+                    {action.model && <span>model: {action.model}</span>}
+                    {action.duration_ms !== null && action.duration_ms !== undefined && <span>duration: {action.duration_ms}ms</span>}
+                    {action.context_tokens !== null && action.context_tokens !== undefined && <span>tokens: {action.context_tokens}</span>}
+                    {action.cost_usd !== null && action.cost_usd !== undefined && <span>cost: ${Number(action.cost_usd).toFixed(4)}</span>}
+                  </div>
                   {action.decision && (
-                    <p className="text-gray-500 truncate">{action.decision}</p>
+                    <p className="text-gray-600">decision: {action.decision}</p>
                   )}
-                  <div className="text-gray-400 mt-0.5">{formatRelative(action.created_at)}</div>
+                  {action.memory_delta && (
+                    <p className="text-gray-500 mt-0.5">memory: {action.memory_delta}</p>
+                  )}
+                  {action.error && (
+                    <p className="text-red-600 mt-0.5">error: {action.error}</p>
+                  )}
+                  {action.tool_params && (
+                    <pre className="text-gray-500 mt-1 whitespace-pre-wrap break-words">params: {JSON.stringify(action.tool_params)}</pre>
+                  )}
                 </div>
               ))}
             </div>

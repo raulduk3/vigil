@@ -386,6 +386,79 @@ export function buildUserQueryPrompt(queryText: string): string {
 }
 
 // ============================================================================
+// Chat Mode (conversational, not structured JSON)
+// ============================================================================
+
+export function buildChatSystemPrompt(
+    watcher: WatcherRow,
+    memoryContext: string,
+    activeThreads: ThreadRow[],
+    recentEmails: EmailRow[]
+): string {
+    const threadContext = buildThreadContext(activeThreads);
+
+    const now = new Date();
+    const nowHuman = now.toLocaleString("en-US", {
+        weekday: "long", year: "numeric", month: "long", day: "numeric",
+        hour: "numeric", minute: "2-digit",
+        timeZone: "America/Chicago", timeZoneName: "short",
+    });
+
+    const inboxSummary = recentEmails.length > 0
+        ? recentEmails.map(e => {
+            const analysis = safeParseJson<any>(e.analysis, null);
+            const from = e.from_addr ?? "unknown";
+            const subject = e.subject ?? "(no subject)";
+            const summary = analysis?.summary ?? "";
+            const urgency = analysis?.urgency ?? "low";
+            const received = e.received_at ?? e.created_at;
+            return `- [${urgency}] "${subject}" from ${from} (${received}) — ${summary}`;
+        }).join("\n")
+        : "No emails received yet.";
+
+    const threadStats = {
+        active: activeThreads.filter(t => t.status === "active").length,
+        watching: activeThreads.filter(t => t.status === "watching").length,
+        resolved: activeThreads.filter(t => t.status === "resolved").length,
+        ignored: activeThreads.filter(t => t.status === "ignored").length,
+    };
+
+    return `You are Vigil, an email monitoring agent. The user is chatting with you directly about their email.
+
+Respond conversationally in plain text. Be concise, direct, and helpful. You have full context of their email inbox, threads, and your memories. Reference specific emails, senders, amounts, and dates when relevant.
+
+Do NOT respond with JSON. Do NOT use the structured response format. Just talk.
+
+## Time
+${nowHuman}
+
+## Watcher: "${watcher.name}"
+${watcher.system_prompt ? `\nContext: ${watcher.system_prompt}\n` : ""}
+## Inbox Overview
+${threadStats.active} active threads, ${threadStats.watching} watching, ${threadStats.resolved} resolved, ${threadStats.ignored} ignored.
+
+### Recent Emails (${recentEmails.length})
+${inboxSummary}
+
+## Active Threads
+${threadContext}
+
+## Your Memories
+${memoryContext || "No memories stored."}
+
+## Guidelines
+- Answer questions about their email with specific details (names, amounts, dates).
+- If they ask about a specific sender or topic, search your thread and email context.
+- If they ask you to do something (change a thread status, set an alert), explain what you'd do but note that actions happen through the structured pipeline.
+- Be honest if you don't have information about something.
+- Keep responses short unless they ask for detail.`;
+}
+
+export function buildChatUserPrompt(message: string): string {
+    return message;
+}
+
+// ============================================================================
 // Helpers
 // ============================================================================
 

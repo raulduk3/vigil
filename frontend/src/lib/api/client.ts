@@ -66,15 +66,20 @@ export interface Thread {
 export interface Action {
   id: string;
   watcher_id: string;
+  thread_id: string | null;
+  email_id: string | null;
   trigger_type: 'email_received' | 'scheduled_tick' | 'user_query';
   tool: string | null;
   tool_params: Record<string, unknown> | null;
   result: 'success' | 'failed';
   decision: string | null;
+  error: string | null;
+  reasoning: string | null;
+  model: string | null;
   memory_delta: string | null;
-  context_tokens: number;
-  cost_usd: number;
-  duration_ms: number;
+  context_tokens: number | null;
+  cost_usd: number | null;
+  duration_ms: number | null;
   created_at: string;
 }
 
@@ -346,8 +351,15 @@ export const api = {
   },
 
   // Actions
-  async getActions(watcherId: string): Promise<{ actions: Action[] }> {
-    return request(`/api/watchers/${watcherId}/actions`);
+  async getActions(
+    watcherId: string,
+    options?: { limit?: number; threadId?: string }
+  ): Promise<{ actions: Action[] }> {
+    const query = new URLSearchParams();
+    if (options?.limit !== undefined) query.set('limit', String(options.limit));
+    if (options?.threadId) query.set('thread_id', options.threadId);
+    const suffix = query.toString();
+    return request(`/api/watchers/${watcherId}/actions${suffix ? `?${suffix}` : ''}`);
   },
 
   // Templates
