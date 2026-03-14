@@ -264,8 +264,11 @@ export const api = {
     return request(`/api/watchers/${id}`, { method: 'DELETE' });
   },
 
-  async invokeWatcher(id: string): Promise<{ result: unknown }> {
-    return request(`/api/watchers/${id}/invoke`, { method: 'POST' });
+  async invokeWatcher(id: string, query?: string): Promise<{ invoked: boolean; watcher_id: string; response: unknown }> {
+    return request(`/api/watchers/${id}/invoke`, {
+      method: 'POST',
+      body: JSON.stringify({ query: query ?? 'Review active threads.' }),
+    });
   },
 
   async sendDigest(id: string): Promise<{ digest_sent: boolean }> {
