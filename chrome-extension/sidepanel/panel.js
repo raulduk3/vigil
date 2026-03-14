@@ -2,224 +2,219 @@
  * Side Panel — Watcher dashboard with chat, inbox, stats, and setup.
  */
 
+const DEFAULT_WATCHER_PROMPT = `You are an email monitoring agent. You watch a stream of forwarded emails and take action when something needs attention.
+
+Your job:
+1. Read each email carefully. Extract who sent it, what they want, and whether it requires action.
+2. Track conversations. Group related emails into threads. Update thread status as conversations evolve.
+3. Remember what matters. Store facts, commitments, deadlines, and patterns as memories.
+4. Alert when needed. Send an alert when an email requires the user's attention.
+5. Stay quiet when nothing matters. Routine confirmations, newsletters, and FYIs should rarely alert.
+
+When you alert, be specific and actionable. When you store memories, be concrete.`;
+
 let currentWatcher = null;
 let watchers = [];
 let chatHistory = [];
-
-// ============================================================================
-// View Management
-// ============================================================================
+let currentSetupContext = null;
+let currentConfirmCode = null;
+let confirmCodeTimer = null;
 
 function showView(name) {
-    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
     document.getElementById(`view-${name}`)?.classList.add("active");
-    document.querySelectorAll(".nav-tab").forEach(t => {
-        t.classList.toggle("active", t.dataset.view === name);
+
+    document.querySelectorAll(".nav-tab").forEach((tab) => {
+        tab.classList.toggle("active", tab.dataset.view === name);
     });
+
+    if (name !== "setup") {
+        stopConfirmCodePolling();
+    }
+
     if (name === "dashboard") loadDashboard();
     if (name === "inbox") loadInbox();
     if (name === "setup") loadSetup();
+    if (name === "stats") loadStats();
 }
 
-function showDashboard() {
+function showAuthenticatedShell(startView = "dashboard") {
     document.getElementById("view-auth").classList.remove("active");
     document.getElementById("header-controls").classList.remove("hidden");
     document.getElementById("nav-tabs").classList.remove("hidden");
-    showView("dashboard");
+    showView(startView);
 }
 
-// ============================================================================
-// Init — wire ALL event listeners, then check auth
-// ============================================================================
+function showAuthShell() {
+    stopConfirmCodePolling();
+    document.getElementById("header-controls").classList.add("hidden");
+    document.getElementById("nav-tabs").classList.add("hidden");
+    document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
+    document.getElementById("view-auth").classList.add("active");
+}
 
-document.addEventListener("DOMContentLoaded", async () => {
-    console.log("[vigil] panel loaded");
+function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str || "";
+    return div.innerHTML;
+}
 
-    // --- Wire everything first, before any async ---
+function timeAgo(dateStr) {
+    const now = Date.now();
+    const then = new Date(dateStr).getTime();
+    const diff = now - then;
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
+}
 
-    // Nav tabs
-    document.querySelectorAll(".nav-tab").forEach(tab => {
-        tab.addEventListener("click", () => showView(tab.dataset.view));
-    });
+function setStatus(element, text, tone = "info") {
+    if (!element) return;
+    element.textContent = text;
+    element.dataset.tone = tone;
+    element.classList.remove("hidden");
+}
 
-    // Auth buttons
-    document.getElementById("panel-btn-connect").addEventListener("click", async () => {
-        const key = document.getElementById("panel-api-key").value.trim();
-        if (!key) return;
-        const err = document.getElementById("panel-auth-error");
-        err.classList.add("hidden");
-        try {
-            await vigilAPI.loginWithApiKey(key);
-            await loadWatchers();
-            showDashboard();
-        } catch (e) {
-            err.textContent = e.message;
-            err.classList.remove("hidden");
-        }
-    });
+function hideStatus(element) {
+    if (!element) return;
+    element.textContent = "";
+    element.classList.add("hidden");
+    delete element.dataset.tone;
+}
 
-    document.getElementById("panel-btn-login").addEventListener("click", async () => {
-        const email = document.getElementById("panel-email").value.trim();
-        const password = document.getElementById("panel-password").value;
-        if (!email || !password) return;
-        const err = document.getElementById("panel-auth-error");
-        err.classList.add("hidden");
-        try {
-            await vigilAPI.login(email, password);
-            await loadWatchers();
-            showDashboard();
-        } catch (e) {
-            err.textContent = e.message;
-            err.classList.remove("hidden");
-        }
-    });
+function getSetupAddress() {
+    if (!currentWatcher) return "";
+    return currentWatcher.ingestion_address ||
+        `${currentWatcher.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${currentWatcher.ingest_token}@vigil.run`;
+}
 
-    document.getElementById("panel-api-key").addEventListener("keydown", e => {
-        if (e.key === "Enter") document.getElementById("panel-btn-connect").click();
-    });
-    document.getElementById("panel-password").addEventListener("keydown", e => {
-        if (e.key === "Enter") document.getElementById("panel-btn-login").click();
-    });
+function renderNoWatcherState(title, description) {
+    return `
+        <div class="empty-state">
+            <p>${escapeHtml(title)}</p>
+            <p style="margin-top:4px;">${escapeHtml(description)}</p>
+        </div>
+    `;
+}
 
-    // Chat
-    const chatInput = document.getElementById("chat-input");
-    const btnSend = document.getElementById("btn-send");
+function updateWatcherSelector() {
+    const select = document.getElementById("watcher-select");
+    select.innerHTML = "";
+    select.disabled = watchers.length === 0;
 
-    chatInput.addEventListener("input", () => {
-        btnSend.disabled = !chatInput.value.trim();
-        chatInput.style.height = "auto";
-        chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + "px";
-    });
-
-    chatInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            if (chatInput.value.trim()) sendChat();
-        }
-    });
-
-    btnSend.addEventListener("click", sendChat);
-
-    document.querySelectorAll(".chat-suggestion").forEach(btn => {
-        btn.addEventListener("click", () => {
-            chatInput.value = btn.dataset.msg;
-            btnSend.disabled = false;
-            sendChat();
-        });
-    });
-
-    // Settings button
-    document.getElementById("btn-settings").addEventListener("click", () => {
-        showView("setup");
-    });
-
-    // Watcher dropdown
-    document.getElementById("watcher-select").addEventListener("change", (e) => {
-        const w = watchers.find(w => w.id === e.target.value);
-        if (w) {
-            currentWatcher = w;
-            chatHistory = [];
-            renderChat();
-        }
-    });
-
-    // Setup: copy address
-    document.getElementById("btn-copy-setup-address").addEventListener("click", () => {
-        const addr = document.getElementById("setup-address").textContent;
-        navigator.clipboard.writeText(addr);
-        document.getElementById("btn-copy-setup-address").textContent = "Copied";
-        setTimeout(() => document.getElementById("btn-copy-setup-address").textContent = "Copy", 2000);
-    });
-
-    // Setup: gmail buttons
-    document.getElementById("btn-open-gmail-settings")?.addEventListener("click", () => {
-        chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-            if (tab?.id) chrome.tabs.update(tab.id, { url: "https://mail.google.com/mail/u/0/#settings/fwdandpop" });
-        });
-    });
-    document.getElementById("btn-open-gmail-filters")?.addEventListener("click", () => {
-        chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-            if (tab?.id) chrome.tabs.update(tab.id, { url: "https://mail.google.com/mail/u/0/#settings/filters" });
-        });
-    });
-
-    // Setup: save config
-    document.getElementById("btn-save-config")?.addEventListener("click", async () => {
-        if (!currentWatcher) return;
-        const prompt = document.getElementById("setup-prompt").value.trim();
-        const model = document.getElementById("setup-model").value;
-        const statusEl = document.getElementById("config-status");
-        try {
-            const updates = {};
-            if (prompt) updates.system_prompt = prompt;
-            if (model) updates.model = model;
-            await vigilAPI.updateWatcher(currentWatcher.id, updates);
-            currentWatcher.system_prompt = prompt || currentWatcher.system_prompt;
-            currentWatcher.model = model || currentWatcher.model;
-            statusEl.textContent = "Saved.";
-            statusEl.style.color = "#3d6b4f";
-            statusEl.classList.remove("hidden");
-            setTimeout(() => statusEl.classList.add("hidden"), 3000);
-        } catch (e) {
-            statusEl.textContent = `Error: ${e.message}`;
-            statusEl.style.color = "#8b4242";
-            statusEl.classList.remove("hidden");
-        }
-    });
-
-    // Logout
-    document.getElementById("btn-logout")?.addEventListener("click", async () => {
-        await vigilAPI.logout();
-        document.getElementById("header-controls").classList.add("hidden");
-        document.getElementById("nav-tabs").classList.add("hidden");
-        document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
-        document.getElementById("view-auth").classList.add("active");
-    });
-
-    // --- Now check auth ---
-    let authed = false;
-    try {
-        authed = await vigilAPI.isAuthenticated();
-        console.log("[vigil] authed:", authed);
-    } catch (e) {
-        console.error("[vigil] auth check failed:", e);
+    if (watchers.length === 0) {
+        const option = document.createElement("option");
+        option.textContent = "Create a watcher";
+        option.value = "";
+        select.appendChild(option);
+        return;
     }
-    if (authed) {
-        await loadWatchers();
-        showDashboard();
-    }
-});
 
-// ============================================================================
-// Watchers
-// ============================================================================
+    for (const watcher of watchers) {
+        const option = document.createElement("option");
+        option.value = watcher.id;
+        option.textContent = `${watcher.name} (${(watcher.total_emails || 0).toLocaleString()})`;
+        option.selected = currentWatcher?.id === watcher.id;
+        select.appendChild(option);
+    }
+}
 
 async function loadWatchers() {
-    try {
-        watchers = await vigilAPI.getWatchers();
-        const select = document.getElementById("watcher-select");
-        select.innerHTML = "";
-        for (const w of watchers) {
-            const opt = document.createElement("option");
-            opt.value = w.id;
-            opt.textContent = `${w.name} (${(w.total_emails || 0).toLocaleString()})`;
-            select.appendChild(opt);
-        }
-        if (watchers.length > 0) {
-            currentWatcher = watchers[0];
-        }
-    } catch (e) {
-        console.error("[vigil] loadWatchers failed:", e);
+    watchers = await vigilAPI.getWatchers();
+
+    if (watchers.length === 0) {
+        currentWatcher = null;
+    } else if (!currentWatcher) {
+        currentWatcher = watchers[0];
+    } else {
+        currentWatcher = watchers.find((watcher) => watcher.id === currentWatcher.id) || watchers[0];
     }
+
+    updateWatcherSelector();
 }
 
-// ============================================================================
-// Dashboard — what the agent has been doing
-// ============================================================================
+function renderChat() {
+    const container = document.getElementById("chat-messages");
+
+    if (!currentWatcher) {
+        container.innerHTML = renderNoWatcherState(
+            "No watcher yet.",
+            "Open Config to create one before using chat."
+        );
+        return;
+    }
+
+    if (chatHistory.length === 0) {
+        container.innerHTML = `
+            <div class="chat-welcome">
+                <p class="chat-welcome-title">Talk to ${escapeHtml(currentWatcher.name || "your watcher")}</p>
+                <p class="chat-welcome-desc">Ask about your inbox, set rules, check obligations, or tell it what to focus on.</p>
+                <div class="chat-suggestions">
+                    <button class="chat-suggestion" data-msg="What needs my attention today?">What needs my attention?</button>
+                    <button class="chat-suggestion" data-msg="Summarize my inbox this week">Summarize this week</button>
+                    <button class="chat-suggestion" data-msg="What deadlines are coming up?">Upcoming deadlines</button>
+                    <button class="chat-suggestion" data-msg="Ignore all emails from noreply addresses">Ignore noreply senders</button>
+                </div>
+            </div>
+        `;
+
+        container.querySelectorAll(".chat-suggestion").forEach((button) => {
+            button.addEventListener("click", () => {
+                document.getElementById("chat-input").value = button.dataset.msg;
+                document.getElementById("btn-send").disabled = false;
+                sendChat();
+            });
+        });
+        return;
+    }
+
+    container.innerHTML = chatHistory.map((message) => `
+        <div class="chat-msg chat-msg-${message.role}">
+            <div class="chat-msg-label">${message.role === "user" ? "You" : escapeHtml(currentWatcher?.name || "Vigil")}</div>
+            <div class="chat-msg-body">${escapeHtml(message.text)}</div>
+        </div>
+    `).join("");
+    container.scrollTop = container.scrollHeight;
+}
+
+async function sendChat() {
+    const input = document.getElementById("chat-input");
+    const message = input.value.trim();
+    if (!message || !currentWatcher) return;
+
+    input.value = "";
+    input.style.height = "auto";
+    document.getElementById("btn-send").disabled = true;
+
+    chatHistory.push({ role: "user", text: message });
+    chatHistory.push({ role: "assistant", text: "Thinking..." });
+    renderChat();
+
+    try {
+        const response = await vigilAPI.chat(currentWatcher.id, message);
+        chatHistory[chatHistory.length - 1].text = response;
+    } catch (error) {
+        chatHistory[chatHistory.length - 1].text = `Error: ${error.message}`;
+    }
+
+    renderChat();
+}
 
 async function loadDashboard() {
-    if (!currentWatcher) return;
     const container = document.getElementById("dashboard-content");
+
+    if (!currentWatcher) {
+        container.innerHTML = renderNoWatcherState(
+            "Create your first watcher.",
+            "Open Config to generate a forwarding address and finish setup."
+        );
+        return;
+    }
+
     container.innerHTML = '<div class="loading-state">Loading...</div>';
 
     try {
