@@ -1,54 +1,49 @@
 /**
- * Side Panel Wizard — Step-by-step forwarding setup
+ * Side Panel — Watcher dashboard with chat, inbox, stats, and setup.
  */
 
-let currentStep = 1;
-let selectedWatcher = null;
-let detectedProvider = null;
-
+let currentWatcher = null;
+let watchers = [];
+let chatHistory = [];
 
 // ============================================================================
-// Step Navigation
+// View Management
 // ============================================================================
 
-function goToStep(step) {
-    // Hide all steps
-    document.querySelectorAll(".wizard-step").forEach(s => s.classList.remove("active"));
-    // Show target step
-    document.getElementById(`step-${step}`).classList.add("active");
-
-    // Update indicators
-    document.querySelectorAll(".step-indicator .step").forEach(s => {
-        const n = parseInt(s.dataset.step);
-        s.classList.remove("active", "done");
-        if (n === step) s.classList.add("active");
-        else if (n < step) s.classList.add("done");
+function showView(name) {
+    document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+    document.getElementById(`view-${name}`)?.classList.add("active");
+    document.querySelectorAll(".nav-tab").forEach(t => {
+        t.classList.toggle("active", t.dataset.view === name);
     });
 
-    // Update lines
-    const lines = document.querySelectorAll(".step-line");
-    lines.forEach((line, i) => {
-        line.classList.toggle("done", i < step - 1);
-    });
+    if (name === "inbox") loadInbox();
+    if (name === "stats") loadStats();
+    if (name === "setup") loadSetup();
+}
 
-    currentStep = step;
-
-    // Step-specific initialization
-    if (step === 2) initStep2();
-    if (step === 3) initStep3();
-    if (step === 4) initStep4();
-    if (step === 5) initStep5();
+function showDashboard() {
+    document.getElementById("view-auth").classList.remove("active");
+    document.getElementById("header-controls").classList.remove("hidden");
+    document.getElementById("nav-tabs").classList.remove("hidden");
+    showView("chat");
 }
 
 // ============================================================================
-// Step 1: Authentication
+// Init
 // ============================================================================
 
 document.addEventListener("DOMContentLoaded", async () => {
-    // Check if already authenticated
+    // Nav tabs
+    document.querySelectorAll(".nav-tab").forEach(tab => {
+        tab.addEventListener("click", () => showView(tab.dataset.view));
+    });
+
+    // Auth check
     const authed = await vigilAPI.isAuthenticated();
     if (authed) {
-        goToStep(2);
+        await loadWatchers();
+        showDashboard();
         return;
     }
 
@@ -60,7 +55,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         err.classList.add("hidden");
         try {
             await vigilAPI.loginWithApiKey(key);
-            goToStep(2);
+            await loadWatchers();
+            showDashboard();
         } catch (e) {
             err.textContent = e.message;
             err.classList.remove("hidden");
@@ -76,7 +72,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         err.classList.add("hidden");
         try {
             await vigilAPI.login(email, password);
-            goToStep(2);
+            await loadWatchers();
+            showDashboard();
         } catch (e) {
             err.textContent = e.message;
             err.classList.remove("hidden");
