@@ -1,4 +1,4 @@
-export const PLATFORM_FEE_PER_INVOCATION = 0.001;
+export const PLATFORM_FEE_PER_INVOCATION = 0.005;
 export const ALERT_DELIVERY_COST = 0.005;
 export const DEFAULT_ESTIMATE_ASSUMPTIONS = {
   daysPerMonth: 30,

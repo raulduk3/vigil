@@ -215,7 +215,7 @@ export async function invokeAgent(
         try {
             const result = await callLLMRaw(chatSystem, chatUser, model);
             const rates = MODEL_CATALOG[model]?.pricing ?? { input: 0.0004, output: 0.0016 };
-            const PLATFORM_FEE = 0.001;
+            const PLATFORM_FEE = 0.005;
             const tokenCost = (result.inputTokens / 1000) * rates.input + (result.outputTokens / 1000) * rates.output;
             const totalCost = tokenCost + PLATFORM_FEE;
 
@@ -325,7 +325,7 @@ export async function invokeAgent(
         contextTokens = result.inputTokens + result.outputTokens;
         // Pricing: marked-up token cost + platform fee per invocation
         const rates = MODEL_CATALOG[model]?.pricing ?? { input: 0.0004, output: 0.0016 };
-        const PLATFORM_FEE_PER_INVOCATION = 0.001; // $0.001 per agent invocation
+        const PLATFORM_FEE_PER_INVOCATION = 0.005; // $0.005 per agent invocation
         costUsd =
             (result.inputTokens / 1000) * rates.input +
             (result.outputTokens / 1000) * rates.output +
