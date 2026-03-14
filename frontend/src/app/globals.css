@@ -1066,6 +1066,7 @@ html {
       rounded-md
       transition-all duration-150
       outline-none;
+    white-space: nowrap;
   }
   .nav-item:hover {
     @apply text-gray-900 bg-gray-50;

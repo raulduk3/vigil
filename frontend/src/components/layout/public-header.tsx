@@ -35,7 +35,7 @@ export function PublicHeader({
           <div className="flex items-center gap-4 sm:gap-5 min-w-0 flex-1">
             <HeaderLogo />
             {navLinks.length > 0 && (
-              <div className="hidden md:flex items-center gap-1">
+              <div className="hidden lg:flex items-center gap-1">
                 {navLinks.map((link) => (
                   <Link key={link.href} href={link.href} className="nav-item text-base">
                     {link.label}

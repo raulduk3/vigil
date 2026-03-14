@@ -18,6 +18,7 @@ export function Footer() {
               <li><Link href="/pricing" className="hover:text-gray-700">Pricing</Link></li>
               <li><Link href="/auth/register" className="hover:text-gray-700">Sign up</Link></li>
               <li><Link href="/auth/login" className="hover:text-gray-700">Sign in</Link></li>
+              <li><Link href="/extension" className="hover:text-gray-700">Chrome Extension</Link></li>
             </ul>
           </div>
           <div>
