@@ -9,6 +9,10 @@ export default function EmailIngestionPage() {
         <li>You stay in full control — if you want to stop, delete the forwarding rule and Vigil sees nothing more</li>
       </ul>
 
+      <h2>Fastest setup: Chrome extension</h2>
+      <p>The <a href="/extension">Vigil Chrome extension</a> automates the entire forwarding setup. Install it, sign in, and it walks you through connecting Gmail or Outlook in under 30 seconds. It handles Gmail's confirmation code automatically so you never have to dig through email to find it.</p>
+      <p>If you prefer to set things up manually, the steps below work for any email provider.</p>
+
       <h2>How forwarding works</h2>
       <p>Email forwarding is a standard feature in virtually every email provider. It copies incoming messages to a second address automatically, without touching the original.</p>
       <ul>
@@ -19,6 +23,7 @@ export default function EmailIngestionPage() {
       <p>You can be as broad or as targeted as you like — some people forward their entire inbox to a general-purpose watcher, others use filters to forward only emails from specific senders or matching certain keywords.</p>
 
       <h2>Setting up Gmail forwarding</h2>
+      <p>The <a href="/extension">Chrome extension</a> handles all of this automatically. To do it manually:</p>
       <p>In Gmail, go to Settings, then Forwarding and POP/IMAP. Add your watcher address as a forwarding destination.</p>
       <ul>
         <li>Gmail will send a confirmation email to that address</li>

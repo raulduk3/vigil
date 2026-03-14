@@ -168,7 +168,10 @@ export default function HomePage() {
               <p className="text-sm text-gray-400 mt-3 text-center">Free to start. 50 emails on us. No credit card needed.</p>
             </div>
 
-            <div className="flex items-center justify-center gap-4 mt-5">
+            <div className="flex items-center justify-center gap-6 mt-5">
+              <Link href="/extension" className="text-sm text-vigil-700 hover:text-vigil-800 font-medium transition-colors">
+                Get the Chrome extension
+              </Link>
               <a href="#how-it-works" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
                 How it works ↓
               </a>
@@ -244,7 +247,7 @@ export default function HomePage() {
           <SectionHeader
             eyebrow="How it works"
             title="Analyze. Remember. Act."
-            description="Set up a forwarding rule. Your agent reads each email, builds context across conversations, and alerts you only when something needs action."
+            description="Install the extension or set up a forwarding rule. Your agent reads each email, builds context across conversations, and alerts you only when something needs action."
           />
         </div>
 
@@ -252,15 +255,23 @@ export default function HomePage() {
           <div data-reveal id="hiw-1" className="landing-step-card panel p-7 flex flex-col opacity-0" style={{ animation: isRevealed('hiw-1') ? 'slideUpIn 0.6s ease-out 0.1s forwards' : 'none' }}>
             <div className="flex items-center gap-4 mb-5">
               <span className="landing-step-index">1</span>
-              <h3 className="text-lg font-semibold text-gray-900">Forward emails</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Connect your email</h3>
             </div>
             <p className="text-base text-gray-600 leading-relaxed mb-5 flex-grow">
-              Create a forwarding rule in Gmail or Outlook. Important emails go to your
-              Vigil watcher address. You control exactly what the agent sees.
+              Install the <Link href="/extension" className="text-vigil-700 font-medium hover:underline">Chrome extension</Link> and
+              it walks you through forwarding setup in under 30 seconds. Or set up a
+              forwarding rule manually in Gmail or Outlook.
             </p>
             <div className="panel-inset p-5 rounded-md">
-              <p className="font-mono text-sm text-gray-500 mb-1">Forward to:</p>
-              <p className="font-mono text-base text-vigil-700">work-a7f3k9@vigil.run</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-mono text-sm text-gray-500 mb-1">Forward to:</p>
+                  <p className="font-mono text-base text-vigil-700">work-a7f3k9@vigil.run</p>
+                </div>
+                <Link href="/extension" className="text-xs font-medium text-vigil-700 hover:text-vigil-800 whitespace-nowrap">
+                  Auto-setup →
+                </Link>
+              </div>
             </div>
           </div>
 
@@ -479,7 +490,7 @@ export default function HomePage() {
           <SectionHeader
             eyebrow="Architecture"
             title="Simple by design."
-            description="No OAuth. No inbox connection. No email bodies stored. Vigil works through forwarding rules you already know how to set up. The privacy model isn't a feature. It's the architecture."
+            description="No OAuth. No inbox connection. No email bodies stored. Vigil works through forwarding rules — set one up in 30 seconds with the Chrome extension or do it manually. The privacy model isn't a feature. It's the architecture."
           />
         </div>
 
@@ -535,6 +546,7 @@ export default function HomePage() {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5">
           {[
+            { href: '/extension', title: 'Chrome Extension', description: 'Set up email forwarding in 30 seconds. No manual steps, no confirmation codes to hunt down.' },
             { href: '/learn/watchers', title: 'Watchers', description: 'Create agents that monitor email streams. Configure prompts, tools, and alert thresholds.' },
             { href: '/learn/email-ingestion', title: 'Email Ingestion', description: 'How to forward emails to Vigil, what gets processed, and how threads are detected.' },
             { href: '/learn/agent', title: 'The Agent', description: 'How the AI agent analyzes email, builds memory, and decides when to act.' },
@@ -568,15 +580,15 @@ export default function HomePage() {
             <div className="px-6 py-8 md:px-10 md:py-10 text-left">
               <SectionHeader
                 eyebrow="Start now"
-                title="Start watching in 2 minutes."
-                description="Create a watcher. Set up a forwarding rule. That's it. Your agent starts learning from the first email."
+                title="Start watching in 30 seconds."
+                description="Install the Chrome extension, sign up, and it sets up forwarding for you. Your agent starts learning from the first email."
               />
               <div className="mt-8 flex flex-col sm:flex-row gap-3">
-                <Link href="/auth/register" className="btn btn-primary btn-lg">
-                  Start for free
+                <Link href="/extension" className="btn btn-primary btn-lg">
+                  Get the extension
                 </Link>
-                <Link href="/pricing" className="btn btn-secondary btn-lg">
-                  View pricing
+                <Link href="/auth/register" className="btn btn-secondary btn-lg">
+                  Sign up first
                 </Link>
               </div>
               <p className="mt-4 text-sm text-gray-500 max-w-none">No credit card required. Pay only when the agent actually runs.</p>
