@@ -253,6 +253,37 @@ html {
   }
 }
 
+@keyframes promptPlaceholderIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes heroPromptShell {
+  0%, 100% {
+    transform: translateY(0);
+    box-shadow: 0 16px 40px rgba(11, 31, 42, 0.1);
+  }
+  50% {
+    transform: translateY(-2px);
+    box-shadow: 0 22px 56px rgba(11, 31, 42, 0.14);
+  }
+}
+
+@keyframes heroFloatCard {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
 /* Scroll-triggered reveal animations */
 @keyframes slideUpIn {
   from {
