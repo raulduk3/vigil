@@ -64,12 +64,12 @@ export default function PricingPage() {
 
       <main className="pt-28 pb-20">
         <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <div className="w-full">
+          <div className="pricing-content w-full">
             <div className="text-center mb-14">
               <h1 className="text-4xl md:text-5xl font-display font-semibold text-gray-900 tracking-tight mb-5">
                 Pay for what you use.
               </h1>
-              <p className="w-full text-xl text-gray-600 leading-relaxed">
+              <p className="mx-auto w-full max-w-4xl text-xl text-gray-600 leading-relaxed">
                 No tiers. No subscriptions. Each invocation costs a platform fee plus model token usage.
                 Alert deliveries are billed separately.
               </p>

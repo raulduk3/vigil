@@ -491,10 +491,10 @@ export default function HomePage() {
 
         <div
           data-reveal id="arch-flow"
-          className="landing-architecture-shell panel p-6 md:p-8 mb-2 opacity-0"
+          className="landing-architecture-shell panel max-w-5xl mx-auto p-4 md:p-5 mb-2 opacity-0"
           style={{ animation: isRevealed('arch-flow') ? 'scaleIn 0.6s ease-out forwards' : 'none' }}
         >
-          <div className="landing-architecture-grid flex flex-col md:flex-row items-center justify-center gap-4 md:gap-0">
+          <div className="landing-architecture-grid">
             {[
               { icon: '01', label: 'Your email', sub: 'forwarding rule' },
               { icon: '02', label: 'Cloudflare', sub: 'receives at MX' },
@@ -502,23 +502,24 @@ export default function HomePage() {
               { icon: '04', label: 'Memory', sub: 'learns patterns' },
               { icon: '05', label: 'Alert', sub: 'notifies you' },
             ].map((step, idx, steps) => (
-              <div key={step.label} className="flex items-center md:items-start">
-                <div className="landing-architecture-node text-center min-w-[8.5rem]">
+              <div key={step.label} className="landing-architecture-step">
+                <div className="landing-architecture-node text-center">
                   <div className="landing-architecture-index">{step.icon}</div>
                   <p className="font-semibold text-gray-900">{step.label}</p>
                   <p className="text-xs text-gray-500">{step.sub}</p>
                 </div>
                 {idx < steps.length - 1 && (
-                  <span
-                    aria-hidden
-                    className="hidden md:flex w-10 h-10 items-center justify-center text-2xl leading-none text-gray-400 font-light mt-0.5"
-                  >
-                    →
+                  <span aria-hidden className="landing-architecture-separator">
+                    <span className="md:hidden">↓</span>
+                    <span className="hidden md:inline">→</span>
                   </span>
                 )}
               </div>
             ))}
           </div>
+          <p className="landing-architecture-note mt-4 text-center text-xs text-gray-500">
+            Forwarded email in, decision out. No inbox access and no stored email bodies.
+          </p>
         </div>
       </Section>
 
@@ -630,8 +631,10 @@ export default function HomePage() {
               </ul>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-3">Account</p>
+              <p className="text-sm font-medium text-gray-700 mb-3">Company</p>
               <ul className="space-y-2 text-sm text-gray-500">
+                <li><Link href="/blog" className="hover:text-gray-700">Blog</Link></li>
+                <li><Link href="/privacy" className="hover:text-gray-700">Privacy & Data</Link></li>
                 <li><Link href="/auth/register" className="hover:text-gray-700">Sign up</Link></li>
                 <li><Link href="/auth/login" className="hover:text-gray-700">Sign in</Link></li>
               </ul>
