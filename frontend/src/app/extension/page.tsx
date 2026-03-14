@@ -430,49 +430,6 @@ function SetupFactCard({
   );
 }
 
-function SetupHighlightCard({
-  label,
-  value,
-  detail,
-}: {
-  label: string;
-  value: string;
-  detail: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-black/5 bg-white/82 px-4 py-4">
-      <p className="text-[11px] uppercase tracking-[0.18em] text-vigil-700/80">{label}</p>
-      <p className="mt-2 text-xl font-display font-semibold text-gray-900">{value}</p>
-      <p className="mt-2 text-sm text-gray-600 leading-relaxed max-w-none">{detail}</p>
-    </div>
-  );
-}
-
-function BoundaryCard({
-  title,
-  items,
-  summary,
-}: {
-  title: string;
-  items: string[];
-  summary: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-black/5 bg-[rgba(255,255,255,0.72)] px-5 py-5">
-      <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">{title}</p>
-      <ul className="mt-4 space-y-3 text-sm text-gray-600">
-        {items.map((item) => (
-          <li key={item} className="flex items-start gap-2.5">
-            <span className="mt-0.5 text-vigil-700">•</span>
-            <span>{item}</span>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-5 text-sm leading-relaxed text-gray-600 max-w-none">{summary}</p>
-    </div>
-  );
-}
-
 function MiniStat({ value, label }: { value: string; label: string }) {
   return (
     <div className="panel-inset rounded-md px-4 py-4">
