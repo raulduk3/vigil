@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { api, type Watcher, type Channel } from '@/lib/api/client';
 import { ReactivitySlider } from './reactivity-slider';
+import { Term } from '@/components/ui/term';
 
 type Tab = 'general' | 'prompt' | 'channels';
 
@@ -20,6 +21,63 @@ const TOOLS = [
   { id: 'webhook', label: 'Webhook', description: 'POST to a configured URL' },
 ];
 
+const MEMORY_SENSITIVITY_LEVELS = [
+  { value: 1, label: 'Minimal', description: 'Only store deadlines and money' },
+  { value: 2, label: 'Low', description: 'Concrete facts only' },
+  { value: 3, label: 'Balanced', description: 'Default — key facts and context' },
+  { value: 4, label: 'Detailed', description: 'Context and patterns' },
+  { value: 5, label: 'Maximum', description: 'Remember everything' },
+];
+
+function MemorySensitivitySlider({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const current = MEMORY_SENSITIVITY_LEVELS.find((l) => l.value === value) ?? MEMORY_SENSITIVITY_LEVELS[2];
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h4 className="text-sm font-semibold text-gray-700">Memory Sensitivity</h4>
+          <p className="text-xs text-gray-500 mt-0.5">How much the agent stores in memory</p>
+        </div>
+        <div className="text-right">
+          <span className="text-lg font-bold text-gray-900 tabular-nums">{value}/5</span>
+          <p className="text-xs text-gray-500">{current.label}</p>
+        </div>
+      </div>
+      <div className="relative mb-3">
+        <input
+          type="range"
+          min={1}
+          max={5}
+          step={1}
+          value={value}
+          onChange={(e) => onChange(parseInt(e.target.value))}
+          className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+          style={{ background: `linear-gradient(to right, #93c5fd 0%, #3b82f6 50%, #1d4ed8 100%)` }}
+        />
+        <div className="flex justify-between mt-1.5">
+          {MEMORY_SENSITIVITY_LEVELS.map((level) => (
+            <button
+              key={level.value}
+              type="button"
+              onClick={() => onChange(level.value)}
+              className={`w-6 h-6 rounded-full text-xs font-semibold transition-all ${
+                value === level.value
+                  ? 'bg-blue-500 text-white shadow-raised-sm'
+                  : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+              }`}
+            >
+              {level.value}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="panel-inset px-3 py-2">
+        <p className="text-xs text-gray-600">{current.description}</p>
+      </div>
+    </div>
+  );
+}
+
 export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: SettingsModalProps) {
   const [tab, setTab] = useState<Tab>('general');
   const [saving, setSaving] = useState(false);
@@ -28,6 +86,7 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
   // General state
   const [name, setName] = useState(watcher.name);
   const [reactivity, setReactivity] = useState(watcher.reactivity ?? 3);
+  const [memorySensitivity, setMemorySensitivity] = useState((watcher as any).memory_sensitivity ?? 3);
   const [model, setModel] = useState((watcher as any).model ?? 'gpt-4.1-mini');
   const [silenceHours, setSilenceHours] = useState(watcher.silence_hours);
   const [tickInterval, setTickInterval] = useState(watcher.tick_interval);
@@ -71,6 +130,7 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
       const res = await api.updateWatcher(watcher.id, {
         name,
         reactivity,
+        memory_sensitivity: memorySensitivity,
         model,
         silence_hours: silenceHours,
         tick_interval: tickInterval,
@@ -210,6 +270,8 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
 
               <ReactivitySlider value={reactivity} onChange={setReactivity} variant="full" />
 
+              <MemorySensitivitySlider value={memorySensitivity} onChange={setMemorySensitivity} />
+
               <div className="form-group">
                 <label className="form-label text-sm">Model</label>
                 <select
@@ -238,7 +300,7 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="form-group">
-                  <label className="form-label text-sm">Silence Threshold (hours)</label>
+                  <label className="form-label text-sm"><Term>Silence Threshold</Term> (hours)</label>
                   <input
                     type="number"
                     min={1}
@@ -249,7 +311,7 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label text-sm">Tick Interval (minutes)</label>
+                  <label className="form-label text-sm"><Term>Tick Interval</Term> (minutes)</label>
                   <input
                     type="number"
                     min={1}

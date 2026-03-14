@@ -38,6 +38,10 @@ export function buildSystemPrompt(
     const reactivity = watcher.reactivity ?? 3;
     const reactivityBlock = buildReactivityBlock(reactivity);
 
+    // Memory sensitivity (1-5, default 3)
+    const memSensitivity = watcher.memory_sensitivity ?? 3;
+    const memSensitivityBlock = buildMemorySensitivityBlock(memSensitivity);
+
     return `You are Vigil, an autonomous email triage agent. You process emails as they arrive, maintain threaded context, remember important facts, and alert the user when warranted by your reactivity level.
 
 You are not a chatbot. You receive one email at a time (or a scheduled tick) and respond with structured JSON. You never see the user's reply. You work alone, in the background, making judgment calls on their behalf.
@@ -67,8 +71,9 @@ Every email gets exactly one disposition on first contact. Do not defer classifi
 
 The triage table shifts based on your reactivity level above. At low reactivity, almost nothing alerts. At high reactivity, anything the user might want to know about triggers an alert.
 
-### Memory
-Memory is for facts that matter across threads or in the future. The thread summary already records what happened in this conversation.
+### Memory (sensitivity: ${memSensitivity}/5)
+${memSensitivityBlock}
+The thread summary already records what happened in this conversation.
 
 Store a memory when you encounter: a specific date or deadline, a dollar amount, a commitment someone made, a recurring pattern, contact info that will matter later.
 
@@ -223,6 +228,23 @@ Only ignore obvious spam and bulk marketing from brands the user has no relation
 
         default:
             return buildReactivityBlock(3);
+    }
+}
+
+function buildMemorySensitivityBlock(level: number): string {
+    switch (level) {
+        case 1:
+            return "**Minimal.** Only store hard deadlines with dates and money amounts. Everything else goes in the thread summary. Most emails should produce zero memories.";
+        case 2:
+            return "**Low.** Store concrete facts: deadlines, dollar amounts, commitments, contact info. Skip context, patterns, and nice-to-know info.";
+        case 3:
+            return "**Balanced.** Store facts that matter across threads or in the future: dates, amounts, names, preferences, recurring patterns. Skip info the thread summary already captures.";
+        case 4:
+            return "**Detailed.** Store useful context: sender patterns, preferences, project details, relationships between threads. Be generous with what you remember.";
+        case 5:
+            return "**Maximum.** Remember everything potentially useful: all names, all dates, all amounts, patterns, preferences, context. Better to remember too much than too little.";
+        default:
+            return buildMemorySensitivityBlock(3);
     }
 }
 

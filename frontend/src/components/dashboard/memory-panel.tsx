@@ -91,7 +91,6 @@ function ImportanceDots({ value, onChange }: { value: number; onChange: (v: numb
 }
 
 export function MemoryPanel({ watcherId, memories, onMemoriesChange }: MemoryPanelProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newContent, setNewContent] = useState('');
   const [newImportance, setNewImportance] = useState(3);
@@ -122,6 +121,8 @@ export function MemoryPanel({ watcherId, memories, onMemoriesChange }: MemoryPan
     level,
     count: active.filter((m) => m.importance === level).length,
   })).filter((b) => b.count > 0);
+  const criticalCount = active.filter((m) => m.importance >= 4).length;
+  const newestMemory = active[0] ?? memories[0] ?? null;
 
   const handleAdd = async () => {
     if (!newContent.trim()) return;
@@ -183,88 +184,98 @@ export function MemoryPanel({ watcherId, memories, onMemoriesChange }: MemoryPan
   };
 
   return (
-    <div className="border-t border-gray-200">
-      {/* Header */}
-      <button
-        onClick={() => setIsExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-3 py-2.5 text-xs font-medium text-gray-600 hover:text-gray-800 hover:bg-surface-sunken transition-colors"
-      >
-        <div className="flex items-center gap-1.5">
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-          </svg>
-          Memories
-          <span className="text-gray-400">({active.length})</span>
-          {breakdown.length > 0 && (
-            <span className="flex items-center gap-0.5 ml-1">
-              {breakdown.map((b) => (
-                <span key={b.level} className={`text-xs font-semibold ${IMPORTANCE_TEXT_COLORS[b.level]}`}>
-                  {b.count}
-                </span>
-              ))}
-            </span>
-          )}
+    <div className="flex flex-1 min-h-0 flex-col bg-surface-page">
+      <div className="border-b border-gray-200 bg-surface-raised px-4 py-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-gray-500">Memory</h3>
+            <p className="mt-1 max-w-none text-sm text-gray-500">Persistent notes the watcher has learned. Edit, retire, or add guidance without leaving the dashboard.</p>
+          </div>
+          <button
+            onClick={() => setShowAddForm((value) => !value)}
+            className={`inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${showAddForm ? 'border-gray-300 bg-surface-sunken text-gray-700 hover:bg-surface-inset' : 'border-vigil-300 bg-white text-vigil-700 hover:border-vigil-400 hover:bg-vigil-50'}`}
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            {showAddForm ? 'Close composer' : 'Add memory'}
+          </button>
         </div>
-        <svg className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
 
-      {isExpanded && (
-        <div className="px-3 pb-3 space-y-2">
-          {/* Toolbar */}
-          <div className="flex items-center gap-1.5">
-            <div className="relative flex-1">
-              <svg className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Filter memories..."
-                className="input py-1.5 pl-7 text-xs w-full"
-              />
-            </div>
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-lg border border-gray-200 bg-surface-page px-3 py-2">
+            <div className="text-[11px] uppercase tracking-[0.14em] text-gray-400">Active</div>
+            <div className="mt-1 text-lg font-semibold tabular-nums text-gray-800">{active.length}</div>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-surface-page px-3 py-2">
+            <div className="text-[11px] uppercase tracking-[0.14em] text-gray-400">Retired</div>
+            <div className="mt-1 text-lg font-semibold tabular-nums text-gray-800">{obsolete.length}</div>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-surface-page px-3 py-2">
+            <div className="text-[11px] uppercase tracking-[0.14em] text-gray-400">High priority</div>
+            <div className="mt-1 text-lg font-semibold tabular-nums text-gray-800">{criticalCount}</div>
+          </div>
+          <div className="rounded-lg border border-gray-200 bg-surface-page px-3 py-2">
+            <div className="text-[11px] uppercase tracking-[0.14em] text-gray-400">Latest</div>
+            <div className="mt-1 truncate text-sm font-medium text-gray-700">{newestMemory ? formatTimestamp(newestMemory.created_at) : 'No memories'}</div>
+          </div>
+        </div>
+
+        {breakdown.length > 0 && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+            <span className="uppercase tracking-[0.14em] text-gray-400">Importance mix</span>
+            {breakdown.map((b) => (
+              <span key={b.level} className="inline-flex items-center gap-1 rounded-full bg-surface-page px-2 py-1">
+                <span className={`h-2 w-2 rounded-full ${IMPORTANCE_COLORS[b.level]}`} />
+                <span className={IMPORTANCE_TEXT_COLORS[b.level]}>{IMPORTANCE_LABELS[b.level]}</span>
+                <span className="tabular-nums text-gray-400">{b.count}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="border-b border-gray-200 bg-surface-page px-4 py-3">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+          <div className="relative flex-1">
+            <svg className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search memories"
+              className="input w-full py-2 pl-9 text-sm"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as 'newest' | 'importance')}
-              className="input py-1.5 text-xs shrink-0 w-auto pr-6"
+              className="input w-auto min-w-32 py-2 pr-8 text-sm"
             >
-              <option value="newest">Newest</option>
-              <option value="importance">Importance</option>
+              <option value="newest">Newest first</option>
+              <option value="importance">Highest importance</option>
             </select>
             <button
               onClick={() => setShowObsolete((v) => !v)}
-              title={showObsolete ? 'Hide retired' : 'Show retired'}
-              className={`p-1.5 rounded text-xs transition-colors ${showObsolete ? 'text-gray-600 bg-gray-100' : 'text-gray-400 hover:text-gray-600'}`}
+              className={`rounded-lg border px-3 py-2 text-sm transition-colors ${showObsolete ? 'border-gray-300 bg-surface-sunken text-gray-700' : 'border-gray-200 bg-white text-gray-500 hover:border-gray-300 hover:text-gray-700'}`}
             >
-              {showObsolete ? (
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                </svg>
-              ) : (
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                </svg>
-              )}
+              {showObsolete ? 'Hide retired' : `Show retired (${obsolete.length})`}
             </button>
           </div>
+        </div>
+      </div>
 
-          {/* Add memory button / form */}
-          {!showAddForm ? (
-            <button
-              onClick={() => setShowAddForm(true)}
-              className="w-full flex items-center justify-center gap-1.5 py-1.5 text-xs text-vigil-600 hover:text-vigil-700 border border-dashed border-vigil-300 hover:border-vigil-400 rounded transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add memory
-            </button>
-          ) : (
-            <div className="panel-inset px-2.5 py-2 space-y-2">
+      {showAddForm && (
+        <div className="border-b border-gray-200 bg-surface-raised px-4 py-4">
+          <div className="mx-auto max-w-4xl rounded-xl border border-gray-200 bg-surface-page p-4 shadow-raised-sm">
+            <div className="flex flex-col gap-3">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-400">New memory</div>
+                <p className="mt-1 max-w-none text-sm text-gray-500">Capture a stable preference, recurring pattern, or instruction worth remembering.</p>
+              </div>
               <AutoResizeTextarea
                 value={newContent}
                 onChange={setNewContent}
@@ -273,33 +284,40 @@ export function MemoryPanel({ watcherId, memories, onMemoriesChange }: MemoryPan
                   if (e.key === 'Escape') { setShowAddForm(false); setNewContent(''); }
                 }}
                 placeholder="What should the agent remember?"
-                className="input py-1.5 text-xs w-full"
+                className="input w-full py-2 text-sm"
                 autoFocus
               />
-              <div className="flex items-center justify-between">
-                <ImportanceDots value={newImportance} onChange={setNewImportance} />
-                <div className="flex gap-1">
-                  <button onClick={() => { setShowAddForm(false); setNewContent(''); }} className="btn btn-secondary btn-xs">Cancel</button>
-                  <button onClick={handleAdd} disabled={adding || !newContent.trim()} className="btn btn-primary btn-xs">
-                    {adding ? <span className="spinner-sm" /> : 'Save'}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <ImportanceDots value={newImportance} onChange={setNewImportance} />
+                  <span className="text-sm text-gray-500">{IMPORTANCE_LABELS[newImportance]} priority</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => { setShowAddForm(false); setNewContent(''); }} className="btn btn-secondary">Cancel</button>
+                  <button onClick={handleAdd} disabled={adding || !newContent.trim()} className="btn btn-primary">
+                    {adding ? <span className="spinner-sm" /> : 'Save memory'}
                   </button>
                 </div>
               </div>
-              <p className="text-xs text-gray-400">⌘↵ to save · Esc to cancel</p>
+              <p className="max-w-none text-xs text-gray-400">⌘↵ to save, Esc to close.</p>
             </div>
-          )}
+          </div>
+        </div>
+      )}
 
-          {/* Memory list */}
+      <div className="flex-1 overflow-y-auto px-4 py-5">
+        <div className="mx-auto max-w-4xl space-y-3">
           {sorted.length === 0 && (
-            <p className="text-xs text-gray-400 text-center py-2">
-              {searchQuery ? 'No memories match.' : 'No memories yet.'}
-            </p>
+            <div className="rounded-xl border border-dashed border-gray-300 bg-surface-raised px-6 py-12 text-center">
+              <p className="mb-1 text-sm font-medium text-gray-700">{searchQuery ? 'No matching memories' : 'No memories yet'}</p>
+              <p className="max-w-none text-sm text-gray-500">{searchQuery ? 'Try a different term or include retired memories.' : 'Add a memory to give this watcher durable context.'}</p>
+            </div>
           )}
 
           {sorted.map((memory) => (
             <div
               key={memory.id}
-              className={`panel-inset px-2.5 py-2 text-xs group ${memory.obsolete ? 'opacity-50' : ''}`}
+              className={`group rounded-xl border bg-surface-raised p-4 shadow-raised-sm transition-colors ${memory.obsolete ? 'border-gray-200 opacity-70' : 'border-gray-200 hover:border-gray-300'}`}
             >
               {editingId === memory.id ? (
                 <div className="space-y-2">
@@ -310,14 +328,17 @@ export function MemoryPanel({ watcherId, memories, onMemoriesChange }: MemoryPan
                       if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSaveEdit(memory.id);
                       if (e.key === 'Escape') setEditingId(null);
                     }}
-                    className="input py-1.5 text-xs w-full"
+                    className="input w-full py-2 text-sm"
                     autoFocus
                   />
-                  <div className="flex items-center justify-between">
-                    <ImportanceDots value={editImportance} onChange={setEditImportance} />
-                    <div className="flex gap-1">
-                      <button onClick={() => setEditingId(null)} className="btn btn-secondary btn-xs">Cancel</button>
-                      <button onClick={() => handleSaveEdit(memory.id)} disabled={savingId === memory.id} className="btn btn-primary btn-xs">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-center gap-3">
+                      <ImportanceDots value={editImportance} onChange={setEditImportance} />
+                      <span className="text-sm text-gray-500">{IMPORTANCE_LABELS[editImportance]} priority</span>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setEditingId(null)} className="btn btn-secondary">Cancel</button>
+                      <button onClick={() => handleSaveEdit(memory.id)} disabled={savingId === memory.id} className="btn btn-primary">
                         {savingId === memory.id ? <span className="spinner-sm" /> : 'Save'}
                       </button>
                     </div>
@@ -325,67 +346,62 @@ export function MemoryPanel({ watcherId, memories, onMemoriesChange }: MemoryPan
                 </div>
               ) : (
                 <>
-                  <div className="flex items-start gap-1.5">
-                    {/* Importance indicator */}
-                    <div className="flex items-center gap-0.5 shrink-0 mt-0.5" title={`Importance: ${IMPORTANCE_LABELS[memory.importance]}`}>
-                      {[1, 2, 3, 4, 5].map((n) => (
-                        <span
-                          key={n}
-                          className={`inline-block w-1.5 h-1.5 rounded-full ${n <= memory.importance ? IMPORTANCE_COLORS[memory.importance] : 'bg-gray-200'}`}
-                        />
-                      ))}
-                    </div>
-
-                    {/* Content */}
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium uppercase tracking-[0.14em] ${IMPORTANCE_TEXT_COLORS[memory.importance]} bg-surface-page`}>
+                          <span className={`h-2 w-2 rounded-full ${IMPORTANCE_COLORS[memory.importance]}`} />
+                          {IMPORTANCE_LABELS[memory.importance]}
+                        </span>
+                        {memory.obsolete && (
+                          <span className="rounded-full bg-gray-100 px-2 py-1 text-[11px] font-medium uppercase tracking-[0.14em] text-gray-500">
+                            Retired
+                          </span>
+                        )}
+                      </div>
+                    
                     <p
-                      className={`flex-1 text-gray-700 leading-relaxed cursor-pointer hover:text-gray-900 ${memory.obsolete ? 'line-through text-gray-400' : ''}`}
+                      className={`max-w-none cursor-pointer text-sm leading-6 text-gray-700 hover:text-gray-900 ${memory.obsolete ? 'line-through text-gray-400' : ''}`}
                       onClick={() => !memory.obsolete && startEdit(memory)}
                       title="Click to edit"
                     >
                       {memory.content}
                     </p>
+                      <div className="mt-3 text-xs text-gray-400">{formatTimestamp(memory.created_at)}</div>
+                    </div>
 
-                    {/* Actions */}
                     {confirmDeleteId === memory.id ? (
-                      <div className="flex items-center gap-1 shrink-0">
-                        <span className="text-gray-500">Delete?</span>
-                        <button onClick={() => handleDelete(memory.id)} className="text-red-500 hover:text-red-700 font-medium">Yes</button>
-                        <button onClick={() => setConfirmDeleteId(null)} className="text-gray-400 hover:text-gray-600">No</button>
+                      <div className="flex shrink-0 items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-xs">
+                        <span className="text-red-600">Delete?</span>
+                        <button onClick={() => handleDelete(memory.id)} className="font-medium text-red-600 hover:text-red-700">Yes</button>
+                        <button onClick={() => setConfirmDeleteId(null)} className="text-gray-500 hover:text-gray-700">No</button>
                       </div>
                     ) : (
-                      <div className="shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {/* Edit */}
-                        <button onClick={() => startEdit(memory)} className="text-gray-400 hover:text-gray-600" title="Edit">
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <div className="flex shrink-0 gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
+                        <button onClick={() => startEdit(memory)} className="rounded-lg p-2 text-gray-400 hover:bg-surface-page hover:text-gray-700" title="Edit">
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                           </svg>
                         </button>
-                        {/* Toggle obsolete */}
-                        <button onClick={() => handleToggleObsolete(memory)} className="text-gray-400 hover:text-gray-600" title={memory.obsolete ? 'Restore' : 'Mark retired'}>
+                        <button onClick={() => handleToggleObsolete(memory)} className="rounded-lg p-2 text-gray-400 hover:bg-surface-page hover:text-gray-700" title={memory.obsolete ? 'Restore' : 'Mark retired'}>
                           {memory.obsolete ? (
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                             </svg>
                           ) : (
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
                             </svg>
                           )}
                         </button>
-                        {/* Delete */}
-                        <button onClick={() => setConfirmDeleteId(memory.id)} className="text-gray-400 hover:text-red-500" title="Delete">
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <button onClick={() => setConfirmDeleteId(memory.id)} className="rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-500" title="Delete">
+                          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
                       </div>
                     )}
-                  </div>
-
-                  {/* Timestamp */}
-                  <div className="mt-1 text-gray-400 text-xs pl-4">
-                    {formatTimestamp(memory.created_at)}
                   </div>
                 </>
               )}
@@ -393,12 +409,12 @@ export function MemoryPanel({ watcherId, memories, onMemoriesChange }: MemoryPan
           ))}
 
           {obsolete.length > 0 && !showObsolete && (
-            <button onClick={() => setShowObsolete(true)} className="text-xs text-gray-400 hover:text-gray-600 w-full text-center py-1">
+            <button onClick={() => setShowObsolete(true)} className="w-full rounded-lg border border-dashed border-gray-300 px-4 py-3 text-center text-sm text-gray-500 transition-colors hover:border-gray-400 hover:text-gray-700">
               {obsolete.length} retired {obsolete.length === 1 ? 'memory' : 'memories'} hidden
             </button>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

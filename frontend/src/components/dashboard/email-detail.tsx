@@ -10,8 +10,6 @@ interface EmailDetailProps {
   onStatusChange: (threadId: string, status: Thread['status']) => void;
 }
 
-type ActionTab = 'thread' | 'all';
-
 const TIMEZONE_OPTIONS = [
   { value: 'browser', label: 'Browser Timezone' },
   { value: 'UTC', label: 'UTC' },
@@ -65,8 +63,6 @@ const STATUSES: Thread['status'][] = ['active', 'watching', 'resolved', 'ignored
 
 export function EmailDetail({ thread, watcherId, onClose, onStatusChange }: EmailDetailProps) {
   const [threadActions, setThreadActions] = useState<Action[]>([]);
-  const [allActions, setAllActions] = useState<Action[]>([]);
-  const [tab, setTab] = useState<ActionTab>('thread');
   const [timezone, setTimezone] = useState('browser');
   const [loadingActions, setLoadingActions] = useState(false);
   const [changingStatus, setChangingStatus] = useState<string | null>(null);
@@ -86,18 +82,14 @@ export function EmailDetail({ thread, watcherId, onClose, onStatusChange }: Emai
 
   useEffect(() => {
     setLoadingActions(true);
-    Promise.all([
-      api.getActions(watcherId, { threadId: thread.id, limit: 20 }),
-      api.getActions(watcherId, { limit: 100 }),
-    ])
-      .then(([threadRes, allRes]) => {
-        setThreadActions(threadRes.actions || []);
-        setAllActions(allRes.actions || []);
+    api.getActions(watcherId, { threadId: thread.id, limit: 50 })
+      .then((res) => {
+        const actions = (res.actions || []).filter(
+          (a: Action) => a.trigger_type !== 'user_chat'
+        );
+        setThreadActions(actions);
       })
-      .catch(() => {
-        setThreadActions([]);
-        setAllActions([]);
-      })
+      .catch(() => setThreadActions([]))
       .finally(() => setLoadingActions(false));
   }, [watcherId, thread.id]);
 
@@ -212,35 +204,16 @@ export function EmailDetail({ thread, watcherId, onClose, onStatusChange }: Emai
             </select>
           </div>
 
-          <div className="flex gap-1 mb-2">
-            <button
-              onClick={() => setTab('thread')}
-              className={`px-2.5 py-1 text-xs rounded transition-colors ${tab === 'thread' ? 'bg-vigil-900 text-white font-medium' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
-            >
-              Thread Recent
-            </button>
-            <button
-              onClick={() => setTab('all')}
-              className={`px-2.5 py-1 text-xs rounded transition-colors ${tab === 'all' ? 'bg-vigil-900 text-white font-medium' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}
-            >
-              All Actions
-            </button>
-          </div>
-
           {loadingActions ? (
             <div className="flex items-center gap-2 text-xs text-gray-400">
               <span className="spinner-sm" /> Loading...
             </div>
           ) : (
             <div className="space-y-2">
-              {(tab === 'thread' ? threadActions : allActions).length === 0 && (
-                <p className="text-xs text-gray-400">
-                  {tab === 'thread'
-                    ? 'No actions recorded yet for this thread.'
-                    : 'No actions recorded yet for this watcher.'}
-                </p>
+              {threadActions.length === 0 && (
+                <p className="text-xs text-gray-400">No actions recorded yet for this thread.</p>
               )}
-              {(tab === 'thread' ? threadActions : allActions).map((action) => (
+              {threadActions.map((action) => (
                 <div key={action.id} className="panel-inset px-3 py-2 text-xs">
                   <div className="flex items-center justify-between gap-2 mb-0.5">
                     <span className="font-medium text-gray-700 capitalize">{action.tool || action.trigger_type}</span>

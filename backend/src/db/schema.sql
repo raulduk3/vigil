@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS watchers (
   template_id     TEXT,
   last_tick_at    TIMESTAMP,
   reactivity      INTEGER DEFAULT 3,
+  memory_sensitivity INTEGER DEFAULT 3,
   created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

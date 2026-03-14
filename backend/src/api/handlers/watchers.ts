@@ -109,6 +109,7 @@ export const watcherHandlers = {
             "model",
             "status",
             "reactivity",
+            "memory_sensitivity",
         ] as const;
 
         for (const key of allowed) {
@@ -457,6 +458,7 @@ function formatWatcher(row: WatcherRow) {
         model: row.model ?? "gpt-4.1-mini",
         status: row.status,
         reactivity: row.reactivity ?? 3,
+        memory_sensitivity: row.memory_sensitivity ?? 3,
         template_id: row.template_id,
         last_tick_at: row.last_tick_at,
         created_at: row.created_at,

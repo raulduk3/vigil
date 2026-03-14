@@ -1,0 +1,17 @@
+export const GLOSSARY: Record<string, string> = {
+  'watcher': 'An AI agent that monitors a stream of forwarded emails and takes action when something needs your attention.',
+  'thread': 'A group of related emails about the same topic, tracked together.',
+  'reactivity': 'Controls how aggressively your agent alerts you. Higher = more alerts.',
+  'memory': 'Facts the agent has chosen to remember across emails. Used to build context over time.',
+  'memory sensitivity': 'Controls how many facts the agent stores. Higher = more memories retained.',
+  'silence threshold': 'How long a thread can go without new emails before the agent flags it.',
+  'tick interval': 'How often the agent wakes up to review threads and check for obligations.',
+  'ingest token': 'The unique address part that routes forwarded emails to your watcher.',
+  'obligation': 'Something that needs a response or follow-up, tracked across email threads.',
+  'active': 'A thread being actively monitored. Silence alerts will fire if it goes quiet.',
+  'watching': 'A thread being tracked but without silence alerts. For low-priority items.',
+  'resolved': 'A thread that has been handled. No more monitoring.',
+  'ignored': 'A thread classified as noise. Not tracked.',
+  'platform fee': 'A flat $0.001 charge per agent invocation covering infrastructure costs.',
+  'invocation': 'Each time the agent processes an email, runs a review, or handles a chat message.',
+};

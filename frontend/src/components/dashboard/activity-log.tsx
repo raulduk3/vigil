@@ -34,6 +34,12 @@ function truncate(str: string, max = 80): string {
   return str.length > max ? str.slice(0, max).trimEnd() + '…' : str;
 }
 
+function averageDuration(actions: Action[]): number | null {
+  const durations = actions.map((action) => action.duration_ms).filter((value): value is number => value != null);
+  if (durations.length === 0) return null;
+  return Math.round(durations.reduce((sum, value) => sum + value, 0) / durations.length);
+}
+
 /**
  * Determine if an action is user-meaningful (not internal bookkeeping).
  * We show: send_alert, ignore_thread, email analysis (decision), and scheduled ticks with decisions.
@@ -132,37 +138,44 @@ function ActionCard({ action }: { action: Action }) {
   const [expanded, setExpanded] = useState(false);
   const { label, badge, badgeClass } = getActionLabel(action);
   const failed = action.result === 'failed';
+  const triggerLabel = action.trigger_type.replace('_', ' ');
 
   return (
-    <div className={`panel px-4 py-3 ${failed ? 'border-red-200' : ''}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-2 min-w-0">
-          <span className={`badge badge-sm ${badgeClass} shrink-0 mt-0.5`}>{badge}</span>
-          <p className={`text-sm ${failed ? 'text-red-700' : 'text-gray-800'} leading-snug`}>
+    <article className={`rounded-xl border bg-surface-raised px-4 py-3 shadow-raised-sm ${failed ? 'border-red-200' : 'border-gray-200'}`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`badge badge-sm ${badgeClass}`}>{badge}</span>
+            <span className="rounded-full bg-surface-sunken px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.12em] text-gray-500">
+              {triggerLabel}
+            </span>
+            {failed && (
+              <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium uppercase tracking-[0.12em] text-red-600">
+                Failed
+              </span>
+            )}
+          </div>
+          <p className={`max-w-none text-sm leading-6 ${failed ? 'text-red-700' : 'text-gray-800'}`}>
             {label}
           </p>
         </div>
-        <span className="text-xs text-gray-400 shrink-0 tabular-nums">{formatFullTime(action.created_at)}</span>
+        <span className="shrink-0 text-xs text-gray-400 tabular-nums">{formatFullTime(action.created_at)}</span>
       </div>
 
       {action.error && (
-        <p className="text-xs text-red-500 mt-1.5 pl-6">{action.error}</p>
+        <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs leading-5 text-red-600">{action.error}</p>
       )}
 
-      {/* Footer */}
-      <div className="flex items-center gap-3 text-xs text-gray-400 mt-2 pl-6">
-        {action.trigger_type === 'email_received' && (
-          <span>email trigger</span>
-        )}
-        {action.model && <span className="font-mono">{action.model}</span>}
+      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-gray-400">
+        {action.model && <span className="rounded-full bg-surface-sunken px-2 py-1 font-mono text-[11px]">{action.model}</span>}
         {action.cost_usd != null && action.cost_usd > 0 && (
-          <span>${Number(action.cost_usd).toFixed(4)}</span>
+          <span className="rounded-full bg-surface-sunken px-2 py-1">${Number(action.cost_usd).toFixed(4)}</span>
         )}
-        {action.duration_ms != null && <span>{action.duration_ms}ms</span>}
+        {action.duration_ms != null && <span className="rounded-full bg-surface-sunken px-2 py-1">{action.duration_ms}ms</span>}
         {action.reasoning && (
           <button
             onClick={() => setExpanded(v => !v)}
-            className="ml-auto text-gray-400 hover:text-gray-600 transition-colors"
+            className="ml-auto rounded-full px-2 py-1 text-gray-500 transition-colors hover:bg-surface-sunken hover:text-gray-700"
           >
             {expanded ? 'Hide reasoning' : 'Why?'}
           </button>
@@ -170,11 +183,11 @@ function ActionCard({ action }: { action: Action }) {
       </div>
 
       {expanded && action.reasoning && (
-        <p className="text-xs text-gray-500 bg-surface-sunken rounded px-2.5 py-2 mt-2 leading-relaxed ml-6">
+        <p className="mt-3 rounded-lg bg-surface-sunken px-3 py-3 text-xs leading-6 text-gray-500">
           {action.reasoning}
         </p>
       )}
-    </div>
+    </article>
   );
 }
 
@@ -200,12 +213,24 @@ export function ActivityLog({ watcherId }: ActivityLogProps) {
 
   // Filter to meaningful actions only
   const meaningful = actions.filter(isMeaningfulAction);
+  const alertCount = meaningful.filter((action) => action.tool === 'send_alert').length;
+  const failedCount = meaningful.filter((action) => action.result === 'failed').length;
+  const automatedCount = meaningful.filter((action) => action.trigger_type !== 'user_query' && action.trigger_type !== 'user_chat').length;
+  const avgDuration = averageDuration(meaningful);
 
   if (meaningful.length === 0) {
     return (
-      <div className="text-center py-12 text-sm text-gray-500">
-        <p className="font-medium text-gray-700 mb-1">No activity yet</p>
-        <p>Agent actions will appear here after emails are processed.</p>
+      <div className="flex flex-1 flex-col bg-surface-page">
+        <div className="border-b border-gray-200 bg-surface-raised px-4 py-4">
+          <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-gray-500">Activity</h3>
+          <p className="mt-1 max-w-none text-sm text-gray-500">Meaningful agent actions, reviews, and user-triggered runs appear here.</p>
+        </div>
+        <div className="flex flex-1 items-center justify-center px-6 text-center">
+          <div>
+            <p className="mb-1 text-sm font-medium text-gray-700">No activity yet</p>
+            <p className="max-w-none text-sm text-gray-500">Once this watcher processes email or you query the agent, the timeline will populate here.</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -223,21 +248,57 @@ export function ActivityLog({ watcherId }: ActivityLogProps) {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-6">
-      {groups.map((group) => (
-        <div key={group.dateKey}>
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{group.dateLabel}</span>
-            <div className="flex-1 border-t border-gray-100" />
-            <span className="text-xs text-gray-400">{group.actions.length}</span>
+    <div className="flex flex-1 min-h-0 flex-col bg-surface-page">
+      <div className="border-b border-gray-200 bg-surface-raised px-4 py-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-gray-500">Activity</h3>
+            <p className="mt-1 max-w-none text-sm text-gray-500">A cleaner audit trail of actions that mattered, without internal bookkeeping noise.</p>
           </div>
-          <div className="space-y-2">
-            {group.actions.map((action) => (
-              <ActionCard key={action.id} action={action} />
-            ))}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="rounded-lg border border-gray-200 bg-surface-page px-3 py-2">
+              <div className="text-[11px] uppercase tracking-[0.14em] text-gray-400">Events</div>
+              <div className="mt-1 text-lg font-semibold tabular-nums text-gray-800">{meaningful.length}</div>
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-surface-page px-3 py-2">
+              <div className="text-[11px] uppercase tracking-[0.14em] text-gray-400">Alerts</div>
+              <div className="mt-1 text-lg font-semibold tabular-nums text-gray-800">{alertCount}</div>
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-surface-page px-3 py-2">
+              <div className="text-[11px] uppercase tracking-[0.14em] text-gray-400">Automated</div>
+              <div className="mt-1 text-lg font-semibold tabular-nums text-gray-800">{automatedCount}</div>
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-surface-page px-3 py-2">
+              <div className="text-[11px] uppercase tracking-[0.14em] text-gray-400">Avg runtime</div>
+              <div className="mt-1 text-lg font-semibold tabular-nums text-gray-800">{avgDuration != null ? `${avgDuration}ms` : 'n/a'}</div>
+            </div>
           </div>
         </div>
-      ))}
+        {failedCount > 0 && (
+          <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600">
+            {failedCount} failed {failedCount === 1 ? 'action' : 'actions'} still visible in the timeline.
+          </div>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 py-5">
+        <div className="mx-auto max-w-4xl space-y-6">
+          {groups.map((group) => (
+            <section key={group.dateKey}>
+              <div className="mb-3 flex items-center gap-3">
+                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">{group.dateLabel}</span>
+                <div className="h-px flex-1 bg-gray-200" />
+                <span className="rounded-full bg-surface-raised px-2 py-0.5 text-xs text-gray-400 shadow-raised-sm">{group.actions.length}</span>
+              </div>
+              <div className="space-y-3">
+                {group.actions.map((action) => (
+                  <ActionCard key={action.id} action={action} />
+                ))}
+              </div>
+            </section>
+          ))}
+          </div>
+      </div>
     </div>
   );
 }
