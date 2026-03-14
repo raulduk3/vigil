@@ -307,11 +307,20 @@ export default function ExtensionPage() {
   );
 }
 
-function FlowRow({ label, value }: { label: string; value: string }) {
+function SetupFactCard({
+  eyebrow,
+  title,
+  detail,
+}: {
+  eyebrow: string;
+  title: string;
+  detail: string;
+}) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-black/5 pb-3 last:border-b-0 last:pb-0">
-      <span className="text-sm text-gray-500">{label}</span>
-      <span className="text-sm font-medium text-gray-900 text-right">{value}</span>
+    <div className="rounded-md border border-black/5 bg-white/70 px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]">
+      <p className="text-[11px] uppercase tracking-[0.18em] text-vigil-700/80">{eyebrow}</p>
+      <p className="text-sm font-semibold text-gray-900 mt-2 max-w-none">{title}</p>
+      <p className="text-sm text-gray-600 mt-2 leading-relaxed max-w-none">{detail}</p>
     </div>
   );
 }
