@@ -136,21 +136,21 @@ export default function BillingPage() {
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
             <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
+              className={`badge ${
                 billing?.has_payment_method
-                  ? 'bg-green-50 text-green-700'
+                  ? 'badge-ok'
                   : trialPct >= 100
-                  ? 'bg-red-50 text-red-700'
-                  : 'bg-amber-50 text-amber-700'
+                  ? 'badge-critical'
+                  : 'badge-warning'
               }`}
             >
               <span
-                className={`w-1.5 h-1.5 rounded-full ${
+                className={`status-indicator mr-1 ${
                   billing?.has_payment_method
-                    ? 'bg-green-500'
+                    ? 'status-indicator-ok'
                     : trialPct >= 100
-                    ? 'bg-red-500'
-                    : 'bg-amber-500'
+                    ? 'status-indicator-critical'
+                    : 'status-indicator-warning'
                 }`}
               />
               {billing?.has_payment_method ? 'Active' : trialPct >= 100 ? 'Trial ended' : 'Free trial'}
@@ -168,7 +168,7 @@ export default function BillingPage() {
             <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all ${
-                  trialPct >= 80 ? 'bg-red-400' : trialPct >= 50 ? 'bg-amber-400' : 'bg-teal-500'
+                  trialPct >= 80 ? 'bg-status-critical' : trialPct >= 50 ? 'bg-status-warning' : 'bg-status-ok'
                 }`}
                 style={{ width: `${trialPct}%` }}
               />
@@ -182,7 +182,7 @@ export default function BillingPage() {
             <button
               onClick={handleSetup}
               disabled={actionLoading === 'setup'}
-              className="btn-primary text-sm px-4 py-2 disabled:opacity-50"
+              className="btn btn-primary btn-sm"
             >
               {actionLoading === 'setup' ? 'Redirecting...' : 'Add payment method'}
             </button>
@@ -191,7 +191,7 @@ export default function BillingPage() {
             <button
               onClick={handlePortal}
               disabled={actionLoading === 'portal'}
-              className="btn-secondary text-sm px-4 py-2 disabled:opacity-50"
+              className="btn btn-secondary btn-sm"
             >
               {actionLoading === 'portal' ? 'Redirecting...' : 'Manage billing'}
             </button>

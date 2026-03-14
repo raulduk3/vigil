@@ -67,7 +67,7 @@ export function EmailRow({ thread, isSelected, onClick }: EmailRowProps) {
         </div>
 
         {thread.summary && (
-          <p className="text-xs text-gray-400 mt-0.5 truncate">{thread.summary}</p>
+          <p className="text-xs text-gray-400 mt-0.5 line-clamp-2 max-w-none">{thread.summary}</p>
         )}
       </div>
     </div>
