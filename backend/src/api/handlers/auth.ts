@@ -197,6 +197,35 @@ export const authHandlers = {
         return c.json(formatAuthResponse(tokens, account));
     },
 
+    async changePassword(c: Context) {
+        const user = c.get("user");
+        const { current_password, new_password } = await c.req.json();
+
+        if (!current_password || !new_password) {
+            return c.json({ error: "Current and new password required" }, 400);
+        }
+        if (new_password.length < 8) {
+            return c.json({ error: "Password must be at least 8 characters" }, 400);
+        }
+
+        const account = queryOne<{ password_hash: string | null }>(
+            `SELECT password_hash FROM accounts WHERE id = ?`,
+            [user.account_id]
+        );
+
+        if (account?.password_hash) {
+            const valid = await Bun.password.verify(current_password, account.password_hash);
+            if (!valid) {
+                return c.json({ error: "Current password is incorrect" }, 400);
+            }
+        }
+
+        const newHash = await Bun.password.hash(new_password);
+        run(`UPDATE accounts SET password_hash = ? WHERE id = ?`, [newHash, user.account_id]);
+
+        return c.json({ success: true });
+    },
+
     async oauthStart(c: Context) {
         const provider = (c.req.param("provider") ?? "") as OAuthProvider;
 
