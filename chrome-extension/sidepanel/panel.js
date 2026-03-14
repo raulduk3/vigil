@@ -34,13 +34,21 @@ function showDashboard() {
 // ============================================================================
 
 document.addEventListener("DOMContentLoaded", async () => {
+    console.log("[vigil] panel loaded");
+
     // Nav tabs
     document.querySelectorAll(".nav-tab").forEach(tab => {
         tab.addEventListener("click", () => showView(tab.dataset.view));
     });
 
     // Auth check
-    const authed = await vigilAPI.isAuthenticated();
+    let authed = false;
+    try {
+        authed = await vigilAPI.isAuthenticated();
+        console.log("[vigil] authed:", authed);
+    } catch (e) {
+        console.error("[vigil] auth check failed:", e);
+    }
     if (authed) {
         await loadWatchers();
         showDashboard();
