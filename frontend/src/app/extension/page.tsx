@@ -40,6 +40,34 @@ const guarantees = [
   'No analytics, cookies, or tracking',
 ];
 
+const setupFacts = [
+  { label: 'Works with', value: 'Gmail and Outlook' },
+  { label: 'Needs from Vigil', value: 'A watcher and forwarding address' },
+  { label: 'Handles for you', value: 'Provider routing and Gmail confirmation' },
+  { label: 'After setup', value: 'Your provider forwards natively' },
+];
+
+const installChoices = [
+  {
+    title: 'Fastest path',
+    description: 'Create a watcher, open Gmail or Outlook, and let the extension guide the forwarding steps.',
+    href: '#setup-flow',
+    cta: 'See setup flow',
+  },
+  {
+    title: 'Need a watcher first',
+    description: 'If you have not created an account yet, start there so the extension has an address to wire in.',
+    href: '/auth/register',
+    cta: 'Create account',
+  },
+  {
+    title: 'Installing locally',
+    description: 'The Chrome Web Store listing is still pending, so local developer-mode install is the current path.',
+    href: '#local-install',
+    cta: 'Local install steps',
+  },
+];
+
 const manualInstallSteps = [
   <>
     Download the extension from{' '}
@@ -89,9 +117,9 @@ export default function ExtensionPage() {
               </div>
 
               <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-                <Link href="#manual-install" className="btn btn-primary btn-lg w-full sm:w-auto gap-2.5">
+                  <Link href="#setup-flow" className="btn btn-primary btn-lg w-full sm:w-auto gap-2.5">
                   <ChromeIcon />
-                  Install in Chrome
+                    View setup flow
                 </Link>
                 <Link href="/auth/register" className="btn btn-secondary btn-lg w-full sm:w-auto">
                   Create free account
@@ -110,16 +138,26 @@ export default function ExtensionPage() {
               </div>
             </div>
 
+            <div className="grid gap-4 md:grid-cols-3 mb-6">
+              {installChoices.map((choice) => (
+                <Link key={choice.title} href={choice.href} className="landing-start-card panel p-5">
+                  <p className="landing-start-kicker">Extension</p>
+                  <h2 className="text-lg font-display font-semibold text-gray-900 mt-3">{choice.title}</h2>
+                  <p className="text-sm text-gray-600 leading-relaxed mt-3 max-w-none">{choice.description}</p>
+                  <span className="mt-5 inline-flex text-sm font-medium text-vigil-700">{choice.cta} →</span>
+                </Link>
+              ))}
+            </div>
+
             <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr] items-stretch">
               <div className="panel p-6 md:p-7">
                 <div className="grid gap-4 md:grid-cols-[1.05fr_0.95fr]">
                   <div className="panel-inset rounded-md p-5 md:p-6 text-left">
-                    <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">What it does</p>
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Setup facts</p>
                     <div className="space-y-3">
-                      <FlowRow label="Provider detection" value="Gmail or Outlook" />
-                      <FlowRow label="Forwarding address" value="Generated per watcher" />
-                      <FlowRow label="Gmail confirmation" value="Retrieved automatically" />
-                      <FlowRow label="After setup" value="Provider forwards natively" />
+                      {setupFacts.map((fact) => (
+                        <FlowRow key={fact.label} label={fact.label} value={fact.value} />
+                      ))}
                     </div>
                   </div>
 
@@ -142,28 +180,28 @@ export default function ExtensionPage() {
 
               <div className="panel p-6 md:p-7 flex flex-col justify-between gap-6">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Why this exists</p>
-                  <h2 className="text-2xl font-display font-semibold text-gray-900 mb-3">Fast setup, same privacy model.</h2>
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Before you install</p>
+                  <h2 className="text-2xl font-display font-semibold text-gray-900 mb-3">This is a setup helper, not an inbox integration.</h2>
                   <p className="text-sm md:text-base text-gray-600 leading-relaxed max-w-none">
                     Vigil does not connect to your inbox. Forwarding keeps the architecture simple: your provider sends mail to Vigil,
                     Vigil reads it, remembers what matters, and alerts you only when something needs attention.
                   </p>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
-                  <MiniStat value="30 sec" label="Typical setup time" />
+                <div className="grid gap-3">
+                  <MiniStat value="1" label="Create one watcher before opening the extension" />
+                  <MiniStat value="30 sec" label="Typical setup time once the watcher exists" />
                   <MiniStat value="0" label="Inbox permissions requested" />
-                  <MiniStat value="Native" label="Forwarding handled by provider" />
                 </div>
               </div>
             </div>
           </div>
         </section>
 
-        <section id="manual-install" className="landing-section px-6 lg:px-8 mt-18 scroll-mt-28">
+        <section id="setup-flow" className="landing-section px-6 lg:px-8 mt-18 scroll-mt-28">
           <div className="max-w-6xl mx-auto">
             <div className="landing-section-header text-center items-center mx-auto mb-10">
-              <div className="landing-section-kicker">How It Works</div>
+              <div className="landing-section-kicker">Setup Flow</div>
               <h2 className="landing-section-title max-w-none">Five steps from install to active watcher.</h2>
               <p className="landing-section-copy">
                 The extension handles the awkward parts of forwarding setup so you can get straight to the agent behavior you care about.
@@ -178,11 +216,11 @@ export default function ExtensionPage() {
           </div>
         </section>
 
-        <section className="landing-section px-6 lg:px-8 mt-18">
+        <section id="local-install" className="landing-section px-6 lg:px-8 mt-18 scroll-mt-28">
           <div className="max-w-6xl mx-auto grid gap-6 lg:grid-cols-[0.95fr_1.05fr] items-start">
             <div className="panel p-6 md:p-7">
-              <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Manual Install</p>
-              <h2 className="text-2xl font-display font-semibold text-gray-900 mb-3">Developer mode still works.</h2>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Local Install</p>
+              <h2 className="text-2xl font-display font-semibold text-gray-900 mb-3">Load it in Chrome while the Web Store listing is pending.</h2>
               <p className="text-sm md:text-base text-gray-600 leading-relaxed mb-5 max-w-none">
                 If the Chrome Web Store listing is not live yet, you can load the extension locally in a few steps.
               </p>
@@ -209,15 +247,15 @@ export default function ExtensionPage() {
               <div className="panel p-6 md:p-7">
                 <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
                   <div>
-                    <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Account Required</p>
-                    <h2 className="text-2xl font-display font-semibold text-gray-900 mb-3">Install the extension after you have a watcher.</h2>
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Start Order</p>
+                    <h2 className="text-2xl font-display font-semibold text-gray-900 mb-3">Create the watcher first, then use the extension.</h2>
                     <p className="text-sm md:text-base text-gray-600 leading-relaxed max-w-none">
                       The setup flow is faster when your watcher already exists. Create one first, then use the extension to wire forwarding in.
                     </p>
                   </div>
                   <div className="panel-inset rounded-md p-5 md:p-6 flex flex-col justify-center">
                     <p className="text-sm uppercase tracking-[0.2em] text-vigil-700/80 mb-2">Start free</p>
-                    <p className="text-3xl font-display font-semibold text-gray-900 mb-2">50 emails included</p>
+                    <p className="text-3xl font-display font-semibold text-gray-900 mb-2">50 emails free each month</p>
                     <p className="text-sm text-gray-600 leading-relaxed mb-5 max-w-none">
                       No credit card required. Set up a watcher, install the extension, and let the agent start learning from the first thread.
                     </p>
@@ -254,15 +292,15 @@ function FlowRow({ label, value }: { label: string; value: string }) {
 function MiniStat({ value, label }: { value: string; label: string }) {
   return (
     <div className="panel-inset rounded-md px-4 py-4">
-      <div className="text-2xl font-display font-semibold text-gray-900">{value}</div>
-      <div className="text-sm text-gray-500 mt-1">{label}</div>
+      <div className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">{value}</div>
+      <div className="text-sm text-gray-700 mt-2 max-w-none">{label}</div>
     </div>
   );
 }
 
 function StepCard({ num, title, desc }: { num: number; title: string; desc: string }) {
   return (
-    <div className="panel p-6 flex flex-col gap-4">
+    <div className="panel p-6 flex flex-col gap-4 h-full">
       <StepBadge>{num}</StepBadge>
       <div>
         <h3 className="text-lg font-display font-semibold text-gray-900 mb-2">{title}</h3>
@@ -290,13 +328,15 @@ function ProviderCard({
   tone: 'ok' | 'warning';
 }) {
   const badgeClass = tone === 'ok' ? 'badge badge-ok' : 'badge badge-warning';
+  const detail = tone === 'ok' ? 'Ready in the extension today' : 'Manual forwarding still works';
 
   return (
-    <div className="panel-inset rounded-md p-5 text-center">
+    <div className="panel-inset rounded-md p-5 text-center h-full">
       <div className="text-base font-display font-semibold text-gray-900">{name}</div>
       <div className="mt-3">
         <span className={badgeClass}>{status}</span>
       </div>
+      <p className="text-sm text-gray-500 mt-3 max-w-none">{detail}</p>
     </div>
   );
 }

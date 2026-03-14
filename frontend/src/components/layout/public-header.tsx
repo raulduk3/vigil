@@ -13,10 +13,9 @@ interface PublicHeaderProps {
 }
 
 const defaultNavLinks = [
-  { href: '/#how-it-works', label: 'How it works' },
-  { href: '/extension', label: 'Extension' },
+  { href: '/extension', label: 'Get started' },
   { href: '/pricing', label: 'Pricing' },
-  { href: '/privacy', label: 'Privacy & Data' },
+  { href: '/learn/watchers', label: 'Docs' },
 ];
 
 export function PublicHeader({
@@ -30,7 +29,7 @@ export function PublicHeader({
   };
 
   return (
-    <header className={`bg-surface-raised border-b border-gray-200${fixed ? ' fixed top-0 left-0 right-0 z-50' : ''}`}>
+    <header className={`border-b border-gray-200/80 bg-white/88 backdrop-blur-md supports-[backdrop-filter]:bg-white/76${fixed ? ' fixed top-0 left-0 right-0 z-50' : ''}`}>
       <div className="max-w-6xl mx-auto px-6">
         <div className="flex justify-between items-center h-18">
           <div className="flex items-center gap-4 sm:gap-5 min-w-0 flex-1">
@@ -74,7 +73,7 @@ export function PublicHeader({
                   Sign in
                 </Link>
                 <Link href="/auth/register" className="btn btn-primary">
-                  Get started
+                  Create account
                 </Link>
               </>
             )}

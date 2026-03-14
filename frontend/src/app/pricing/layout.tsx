@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 export const metadata: Metadata = {
-  title: 'Pricing — 1¢ Per Email',
-  description: 'One cent per email processed. Half a cent per alert. No subscriptions, no tiers, no limits. AI cost included.',
+  title: 'Pricing — $0.005 Per Email',
+  description: 'Half a cent per email processed. 50 free emails each month. No tiers, no alert fees, no subscriptions.',
 };
 export default function Layout({ children }: { children: React.ReactNode }) { return children; }

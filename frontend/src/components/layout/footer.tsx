@@ -8,26 +8,26 @@ export function Footer() {
           <div>
             <p className="font-display font-semibold text-gray-900 mb-3">Vigil</p>
             <p className="text-sm text-gray-500 leading-relaxed">
-              An AI agent that reads your email and acts on it. One cent per email.
+              Forward emails to an AI agent that reads them, remembers context, and surfaces what matters. $0.005 per email.
             </p>
           </div>
           <div>
-            <p className="text-sm font-medium text-gray-700 mb-3">Product</p>
+            <p className="text-sm font-medium text-gray-700 mb-3">Get Started</p>
             <ul className="space-y-2 text-sm text-gray-500">
-              <li><Link href="/#how-it-works" className="hover:text-gray-700">How it works</Link></li>
+              <li><Link href="/#get-started" className="hover:text-gray-700">Start here</Link></li>
+              <li><Link href="/auth/register" className="hover:text-gray-700">Create account</Link></li>
               <li><Link href="/pricing" className="hover:text-gray-700">Pricing</Link></li>
-              <li><Link href="/auth/register" className="hover:text-gray-700">Sign up</Link></li>
-              <li><Link href="/auth/login" className="hover:text-gray-700">Sign in</Link></li>
               <li><Link href="/extension" className="hover:text-gray-700">Chrome Extension</Link></li>
+              <li><Link href="/learn/email-ingestion" className="hover:text-gray-700">Manual forwarding</Link></li>
             </ul>
           </div>
           <div>
             <p className="text-sm font-medium text-gray-700 mb-3">Documentation</p>
             <ul className="space-y-2 text-sm text-gray-500">
+              <li><Link href="/learn/email-ingestion" className="hover:text-gray-700">Email Forwarding</Link></li>
               <li><Link href="/learn/watchers" className="hover:text-gray-700">Watchers</Link></li>
               <li><Link href="/learn/agent" className="hover:text-gray-700">The Agent</Link></li>
-              <li><Link href="/learn/actions" className="hover:text-gray-700">How the Agent Acts</Link></li>
-              <li><Link href="/learn/integrations" className="hover:text-gray-700">Agent Integration</Link></li>
+              <li><Link href="/learn/memory" className="hover:text-gray-700">Memory System</Link></li>
               <li><Link href="/learn/architecture" className="hover:text-gray-700">Architecture</Link></li>
             </ul>
           </div>
@@ -37,6 +37,7 @@ export function Footer() {
               <li><Link href="/blog" className="hover:text-gray-700">Blog</Link></li>
               <li><Link href="/privacy" className="hover:text-gray-700">Privacy & Data</Link></li>
               <li><Link href="/learn/security" className="hover:text-gray-700">Security</Link></li>
+              <li><Link href="/auth/login" className="hover:text-gray-700">Sign in</Link></li>
             </ul>
           </div>
         </div>

@@ -8,10 +8,10 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: {
-    default: 'Vigil — AI Email Agent That Reads and Acts on Your Email',
+    default: 'Vigil — AI Email Agent That Reads, Remembers, and Surfaces What Matters',
     template: '%s | Vigil',
   },
-  description: 'An AI agent that reads your email, tracks obligations, and acts on your behalf. No inbox access. One cent per email. Forward what matters.',
+  description: 'Forward emails to an AI agent that reads them, remembers context, and tells you when something matters. No inbox access. No stored email bodies. $0.005 per email.',
   keywords: ['AI email agent', 'email automation', 'obligation tracking', 'email monitoring', 'email API', 'no inbox access', 'pay per use email', 'email webhook', 'email AI', 'autonomous email agent'],
   metadataBase: new URL('https://vigil.run'),
   openGraph: {
@@ -19,13 +19,13 @@ export const metadata: Metadata = {
     locale: 'en_US',
     url: 'https://vigil.run',
     siteName: 'Vigil',
-    title: 'Vigil — AI Email Agent That Reads and Acts on Your Email',
-    description: 'An AI agent that reads your email, tracks obligations, and acts on your behalf. No inbox access. One cent per email.',
+    title: 'Vigil — AI Email Agent That Reads, Remembers, and Surfaces What Matters',
+    description: 'Forward emails to an AI agent that reads them, remembers context, and tells you when something matters. No inbox access. $0.005 per email.',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Vigil — AI Email Agent',
-    description: 'An AI agent that reads your email, tracks obligations, and acts. No inbox access. 1¢ per email.',
+    description: 'Forward emails to an AI agent that reads them, remembers context, and tells you when something matters. No inbox access. $0.005 per email.',
   },
   robots: {
     index: true,
@@ -62,14 +62,14 @@ export default function RootLayout({
               '@type': 'SoftwareApplication',
               name: 'Vigil',
               url: 'https://vigil.run',
-              description: 'An AI agent that reads your email, tracks obligations, and acts on your behalf.',
+              description: 'An AI agent that reads your email, remembers context, and tells you when something matters.',
               applicationCategory: 'BusinessApplication',
               operatingSystem: 'Web',
               offers: {
                 '@type': 'Offer',
-                price: '0.01',
+                price: '0.005',
                 priceCurrency: 'USD',
-                description: 'Pay per email processed. No subscriptions.',
+                description: 'Pay per email processed. Free tier included. No subscriptions.',
               },
             }),
           }}

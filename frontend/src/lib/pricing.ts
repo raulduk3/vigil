@@ -1,12 +1,9 @@
-export const PRICE_PER_EMAIL = 0.01;
-export const ALERT_DELIVERY_COST = 0.005;
+export const PRICE_PER_EMAIL = 0.005;
 
 export function calculateMonthlyEstimate(
-  emailsPerDay: number,
-  alertsPerDay: number,
+  emailsPerMonth: number,
 ): number {
-  const days = 30;
-  return (emailsPerDay * days * PRICE_PER_EMAIL) + (alertsPerDay * days * ALERT_DELIVERY_COST);
+  return emailsPerMonth * PRICE_PER_EMAIL;
 }
 
 export function formatUsd(amount: number): string {
