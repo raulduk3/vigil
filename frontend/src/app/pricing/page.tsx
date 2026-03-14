@@ -11,10 +11,10 @@ import {
 } from '@/lib/pricing';
 
 const scenarios = [
-  { label: 'Light use', emailsPerDay: 10, alertsPerDay: 1, modelId: 'gpt-4.1' },
-  { label: 'Typical professional', emailsPerDay: 50, alertsPerDay: 2, modelId: 'gpt-4.1' },
-  { label: 'Heavy inbox', emailsPerDay: 200, alertsPerDay: 5, modelId: 'gpt-4.1' },
-  { label: 'Premium reasoning', emailsPerDay: 50, alertsPerDay: 2, modelId: 'claude-sonnet-4' },
+  { label: 'One focused watcher', emailsPerDay: 5, alertsPerDay: 1, modelId: 'gpt-4.1' },
+  { label: 'Work + bills (typical)', emailsPerDay: 15, alertsPerDay: 2, modelId: 'gpt-4.1' },
+  { label: 'Multiple active watchers', emailsPerDay: 40, alertsPerDay: 3, modelId: 'gpt-4.1' },
+  { label: 'Premium model', emailsPerDay: 15, alertsPerDay: 2, modelId: 'claude-sonnet-4' },
 ];
 
 export default function PricingPage() {
