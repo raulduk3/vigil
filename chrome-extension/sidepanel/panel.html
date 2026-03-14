@@ -77,10 +77,10 @@
             </div>
         </div>
 
-        <!-- Setup View (forwarding wizard) -->
+        <!-- Setup View (forwarding + watcher config) -->
         <div class="view" id="view-setup">
-            <div id="setup-content">
-                <h2>Set Up Forwarding</h2>
+            <div id="setup-content" style="padding:20px 16px;overflow-y:auto;flex:1;">
+                <h2>Forwarding</h2>
                 <p class="step-desc">Connect your email to this watcher.</p>
 
                 <div class="forwarding-address-box">
@@ -94,19 +94,45 @@
                 <div class="setup-steps" style="margin-top:16px;">
                     <div class="step-item">
                         <span class="step-num">1</span>
-                        <div><p>Open your email settings (Gmail: Settings → Forwarding, Outlook: Settings → Mail → Forwarding)</p></div>
+                        <div><p>Open your email settings (Gmail: Settings, Forwarding and POP/IMAP. Outlook: Settings, Mail, Forwarding)</p></div>
                     </div>
                     <div class="step-item">
                         <span class="step-num">2</span>
-                        <div><p>Add the forwarding address above and confirm it</p></div>
+                        <div><p>Add the forwarding address above and confirm via the link Gmail sends</p></div>
                     </div>
                     <div class="step-item">
                         <span class="step-num">3</span>
-                        <div><p>Enable forwarding (all mail or use a filter for specific senders/subjects)</p></div>
+                        <div><p>Enable forwarding for all mail, or create a filter to forward only specific senders or subjects</p></div>
                     </div>
                 </div>
 
-                <a href="https://vigil.run/extension" target="_blank" class="btn secondary" style="margin-top:16px;display:block;text-align:center;">Full setup guide</a>
+                <div style="display:flex;gap:8px;margin-top:16px;">
+                    <button id="btn-open-gmail-settings" class="btn secondary" style="flex:1;text-align:center;">Open Gmail Settings</button>
+                    <button id="btn-open-gmail-filters" class="btn secondary" style="flex:1;text-align:center;">Gmail Filters</button>
+                </div>
+
+                <a href="https://vigil.run/extension" target="_blank" class="btn secondary" style="margin-top:8px;display:block;text-align:center;">Full setup guide</a>
+
+                <div style="margin-top:24px;">
+                    <h2>Watcher Config</h2>
+                    <p class="step-desc" style="margin-bottom:12px;">Edit the agent's instructions for this watcher.</p>
+                    <textarea id="setup-prompt" rows="5" placeholder="Agent instructions..." style="width:100%;resize:vertical;padding:11px 14px;border:none;border-radius:4px;background:#f0f0ee;color:#3d3d3a;font-size:13px;font-family:inherit;outline:none;box-shadow:inset 0 1px 2px rgba(0,0,0,0.06), inset 0 0 0 1px rgba(0,0,0,0.08);"></textarea>
+                    <div style="display:flex;gap:8px;margin-top:8px;align-items:center;">
+                        <select id="setup-model" style="flex:1;padding:8px;border:none;border-radius:4px;background:#f0f0ee;font-size:12px;box-shadow:inset 0 1px 1px rgba(0,0,0,0.04);">
+                            <option value="gpt-4.1">GPT-4.1 ($3/$12 per M tokens)</option>
+                            <option value="gpt-4.1-mini">GPT-4.1 Mini ($0.40/$1.60)</option>
+                            <option value="gpt-4.1-nano">GPT-4.1 Nano ($0.10/$0.40)</option>
+                            <option value="gpt-4o">GPT-4o ($2.50/$10)</option>
+                            <option value="gpt-4o-mini">GPT-4o Mini ($0.15/$0.60)</option>
+                        </select>
+                        <button id="btn-save-config" class="btn primary">Save</button>
+                    </div>
+                    <div id="config-status" class="hidden" style="margin-top:8px;font-size:12px;color:#3d6b4f;"></div>
+                </div>
+
+                <div style="margin-top:24px;">
+                    <button id="btn-logout" class="btn secondary" style="width:100%;text-align:center;color:#8b4242;">Disconnect account</button>
+                </div>
             </div>
         </div>
     </div>

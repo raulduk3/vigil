@@ -146,6 +146,51 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.getElementById("btn-copy-setup-address").textContent = "Copied";
         setTimeout(() => document.getElementById("btn-copy-setup-address").textContent = "Copy", 2000);
     });
+
+    // Gmail buttons in setup
+    document.getElementById("btn-open-gmail-settings")?.addEventListener("click", () => {
+        chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+            if (tab?.id) chrome.tabs.update(tab.id, { url: "https://mail.google.com/mail/u/0/#settings/fwdandpop" });
+        });
+    });
+    document.getElementById("btn-open-gmail-filters")?.addEventListener("click", () => {
+        chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+            if (tab?.id) chrome.tabs.update(tab.id, { url: "https://mail.google.com/mail/u/0/#settings/filters" });
+        });
+    });
+
+    // Save watcher config
+    document.getElementById("btn-save-config")?.addEventListener("click", async () => {
+        if (!currentWatcher) return;
+        const prompt = document.getElementById("setup-prompt").value.trim();
+        const model = document.getElementById("setup-model").value;
+        const statusEl = document.getElementById("config-status");
+
+        try {
+            const updates = {};
+            if (prompt) updates.system_prompt = prompt;
+            if (model) updates.model = model;
+            await vigilAPI.updateWatcher(currentWatcher.id, updates);
+            currentWatcher.system_prompt = prompt || currentWatcher.system_prompt;
+            currentWatcher.model = model || currentWatcher.model;
+            statusEl.textContent = "Saved.";
+            statusEl.classList.remove("hidden");
+            setTimeout(() => statusEl.classList.add("hidden"), 3000);
+        } catch (e) {
+            statusEl.textContent = `Error: ${e.message}`;
+            statusEl.style.color = "#8b4242";
+            statusEl.classList.remove("hidden");
+        }
+    });
+
+    // Logout
+    document.getElementById("btn-logout")?.addEventListener("click", async () => {
+        await vigilAPI.logout();
+        document.getElementById("header-controls").classList.add("hidden");
+        document.getElementById("nav-tabs").classList.add("hidden");
+        document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
+        document.getElementById("view-auth").classList.add("active");
+    });
 });
 
 // ============================================================================
@@ -351,11 +396,23 @@ async function loadStats() {
 // Setup
 // ============================================================================
 
-function loadSetup() {
+async function loadSetup() {
     if (!currentWatcher) return;
+
+    // Forwarding address
     const addr = currentWatcher.ingestion_address ||
         `${currentWatcher.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${currentWatcher.ingest_token}@vigil.run`;
     document.getElementById("setup-address").textContent = addr;
+
+    // Load current config
+    try {
+        const w = await vigilAPI.getWatcher(currentWatcher.id);
+        document.getElementById("setup-prompt").value = w.system_prompt || "";
+        document.getElementById("setup-model").value = w.model || "gpt-4.1";
+    } catch (e) {
+        document.getElementById("setup-prompt").value = currentWatcher.system_prompt || "";
+        document.getElementById("setup-model").value = currentWatcher.model || "gpt-4.1";
+    }
 }
 
 // ============================================================================
