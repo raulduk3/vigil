@@ -14,11 +14,12 @@ let _token = null;
 class VigilAPI {
 
     async _restoreFromStorage() {
-        // Only called once on page load to restore prior session
+        // Restore from both local and sync (migration)
         try {
-            const data = await chrome.storage.local.get(["vigil_token", "vigil_api_key"]);
-            if (data.vigil_api_key) _apiKey = data.vigil_api_key;
-            if (data.vigil_token) _token = data.vigil_token;
+            const local = await chrome.storage.local.get(["vigil_token", "vigil_api_key"]);
+            const sync = await chrome.storage.sync.get(["vigil_token", "vigil_api_key"]);
+            _apiKey = local.vigil_api_key || sync.vigil_api_key || null;
+            _token = local.vigil_token || sync.vigil_token || null;
             console.log("[vigil] restored from storage:", { hasKey: !!_apiKey, hasToken: !!_token });
         } catch (e) {
             console.warn("[vigil] storage restore failed:", e);
@@ -87,9 +88,16 @@ class VigilAPI {
             throw new Error(err.error || "Login failed");
         }
         const data = await resp.json();
-        _token = data.token;
-        console.log("[vigil] login OK, token set in memory");
-        chrome.storage.local.set({ vigil_token: data.token }); // fire-and-forget
+        console.log("[vigil] login response keys:", Object.keys(data));
+        // Backend returns { tokens: { access_token, refresh_token }, user: {...} }
+        const accessToken = data.tokens?.access_token || data.access_token || data.token;
+        if (!accessToken) {
+            console.error("[vigil] no token in login response:", data);
+            throw new Error("Login succeeded but no token returned");
+        }
+        _token = accessToken;
+        console.log("[vigil] login OK, token set in memory:", _token.slice(0, 15) + "...");
+        chrome.storage.local.set({ vigil_token: accessToken });
         return data;
     }
 
