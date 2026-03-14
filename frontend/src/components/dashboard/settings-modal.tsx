@@ -382,22 +382,24 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
                   <input
                     type="number"
                     min={1}
-                    max={168}
+                    max={720}
                     value={silenceHours}
-                    onChange={(e) => setSilenceHours(parseInt(e.target.value) || 1)}
+                    onChange={(e) => setSilenceHours(Math.max(1, parseInt(e.target.value) || 1))}
                     className="input py-2"
                   />
+                  <p className="text-xs text-gray-400 mt-1">How long a thread can go quiet before the agent flags it. No minimum.</p>
                 </div>
                 <div className="form-group">
                   <label className="form-label text-sm"><Term>Tick Interval</Term> (minutes)</label>
                   <input
                     type="number"
-                    min={1}
+                    min={60}
                     max={1440}
                     value={tickInterval}
-                    onChange={(e) => setTickInterval(parseInt(e.target.value) || 5)}
+                    onChange={(e) => setTickInterval(Math.max(60, parseInt(e.target.value) || 60))}
                     className="input py-2"
                   />
+                  <p className="text-xs text-gray-400 mt-1">Minimum 60 minutes. Each tick is an LLM call that costs 1¢.</p>
                 </div>
               </div>
 

@@ -48,10 +48,12 @@ export const watcherHandlers = {
             system_prompt,
             tools = ["send_alert"],
             silence_hours = 48,
-            tick_interval = 60,
-            model = "gpt-4.1-mini",
+            tick_interval: rawTickInterval = 60,
+            model = "gpt-4.1",
             template_id,
         } = body;
+
+        const tick_interval = Math.max(60, rawTickInterval); // Minimum 60 minutes
 
         if (!name) return c.json({ error: "name required" }, 400);
         if (!system_prompt)
@@ -114,10 +116,11 @@ export const watcherHandlers = {
 
         for (const key of allowed) {
             if (body[key] !== undefined) {
+                let value = key === "tools" ? JSON.stringify(body[key]) : body[key];
+                // Enforce minimum tick interval of 60 minutes (ticks are LLM calls)
+                if (key === "tick_interval" && typeof value === "number" && value < 60) value = 60;
                 updates.push(`${key} = ?`);
-                vals.push(
-                    key === "tools" ? JSON.stringify(body[key]) : body[key]
-                );
+                vals.push(value);
             }
         }
 
