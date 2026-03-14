@@ -87,13 +87,13 @@ export default function HomePage() {
               AI email agent · Pay per use · No inbox access
             </p>
             <h1 className="text-5xl md:text-6xl font-display font-semibold text-gray-900 tracking-tight mb-7 text-balance leading-[1.1]">
-              Never lose track of<br />
-              an email obligation.
+              An AI agent that reads<br />
+              your email and acts on it.
             </h1>
             <p className="text-xl text-gray-600 mb-8 leading-relaxed max-w-2xl">
-              Forward an email. Your agent analyzes it, remembers what matters, and alerts you
-              when something needs action. No inbox access. No subscriptions.
-              Never drop an obligation.
+              Forward an email. Your agent reads it, remembers what matters, and does
+              whatever you told it to do. Send a text. Fire a webhook. Connect to another system.
+              Prompt it like you'd prompt anything else. It works for you.
             </p>
             <div className="flex items-center gap-4">
               <Link href="/auth/register" className="btn btn-primary btn-lg">
@@ -214,14 +214,14 @@ export default function HomePage() {
               description: 'Conversations are grouped automatically; the agent tracks which threads are active, stale, or resolved.',
             },
             {
-              icon: 'CFG',
-              title: 'Configurable agent',
-              description: 'Write your own prompt, enable specific tools, set silence thresholds — each watcher is yours to define.',
+              icon: 'EXT',
+              title: 'Extensible',
+              description: 'Webhooks, APIs, external systems. The agent triggers whatever you connect. Prompt it to act on your behalf.',
             },
             {
-              icon: 'LOG',
-              title: 'Full audit trail',
-              description: 'Every decision is logged: tool called, reason given, cost incurred, duration.',
+              icon: 'CFG',
+              title: 'Your agent',
+              description: 'Your prompt, your rules, your model. Not a feature someone else shipped. An agent you control completely.',
             },
           ].map((feature, idx) => (
             <div
@@ -295,12 +295,14 @@ export default function HomePage() {
           >
             <h3 className="font-semibold text-gray-900 mb-3">Act</h3>
             <p className="text-base text-gray-600 leading-relaxed mb-4">
-              When something needs attention, the agent acts: alert, thread update, or webhook — each logged with reasoning.
+              The agent doesn't just alert you. It does what you told it to do.
+              Send an email. Fire a webhook. Connect to external systems.
+              Anything you can reach with an API, the agent can trigger.
             </p>
             <div className="panel-inset p-4 rounded-md text-sm space-y-1.5">
-              <p><span className="badge badge-sm badge-critical">send_alert</span> <span className="text-gray-600 ml-1">Payment overdue, service at risk</span></p>
-              <p><span className="badge badge-sm badge-ok">update_thread</span> <span className="text-gray-600 ml-1">Marked as urgent, summary updated</span></p>
-              <p><span className="badge badge-sm badge-neutral">memory</span> <span className="text-gray-600 ml-1">Noted: vendor escalation pattern</span></p>
+              <p><span className="badge badge-sm badge-critical">alert</span> <span className="text-gray-600 ml-1">Payment overdue — notify immediately</span></p>
+              <p><span className="badge badge-sm badge-warning">webhook</span> <span className="text-gray-600 ml-1">POST to Slack, Discord, or your own API</span></p>
+              <p><span className="badge badge-sm badge-ok">integrate</span> <span className="text-gray-600 ml-1">Trigger a workflow in any connected system</span></p>
             </div>
           </div>
         </div>
@@ -320,12 +322,12 @@ export default function HomePage() {
 
         <ul className="space-y-4 md:space-y-6">
           {[
-            { id: 'uc-vendor', role: 'Vendor follow-up', text: 'Track invoices, flag overdue payments, and get alerted when requests go unanswered.' },
-            { id: 'uc-client', role: 'Client communications', text: 'Know when conversations go cold or when action items surface in long email chains.' },
-            { id: 'uc-billing', role: 'Bills and renewals', text: 'The agent remembers payment patterns and alerts before deadlines slip.' },
-            { id: 'uc-legal', role: 'Sensitive correspondence', text: 'Full audit trail on every decision. Nothing stored, everything logged.' },
-            { id: 'uc-freelance', role: 'Freelancers', text: 'Each watcher handles a separate client, remembers their patterns, keeps you on deliverables.' },
-            { id: 'uc-custom', role: 'Build your own', text: 'Write the prompt. Enable the tools. The agent does what you tell it.' },
+            { id: 'uc-vendor', role: 'Vendor follow-up', text: 'Track invoices, flag overdue payments. Webhook to your accounting system when a payment is due.' },
+            { id: 'uc-client', role: 'Client communications', text: 'Know when conversations go cold. Trigger a Slack message when a client is waiting.' },
+            { id: 'uc-ops', role: 'Ops and alerts', text: 'Connect to PagerDuty, Discord, or any API. The agent reads the email and triggers the right action.' },
+            { id: 'uc-billing', role: 'Bills and deadlines', text: 'The agent remembers payment patterns and fires webhooks before deadlines slip.' },
+            { id: 'uc-freelance', role: 'Freelancers', text: 'One watcher per client. Each tracks obligations independently. Connect to your CRM or project tool.' },
+            { id: 'uc-custom', role: 'Anything you can prompt', text: 'Write the prompt. Connect the tools. If it has an API, the agent can reach it.' },
           ].map((item, idx) => (
             <li
               key={item.id}
