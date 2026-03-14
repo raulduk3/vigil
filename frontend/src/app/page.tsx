@@ -641,7 +641,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="divider my-8" />
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
+          <div className="flex flex-col items-center justify-center gap-4 text-center text-sm text-gray-500">
             <p>© {new Date().getFullYear()} Vigil. All rights reserved.</p>
           </div>
         </div>
