@@ -188,7 +188,7 @@ export default function ExtensionPage() {
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-3 mb-6">
+            <div className="flex flex-col gap-4 mb-6">
               {installChoices.map((choice) => (
                 <Link key={choice.title} href={choice.href} className="landing-start-card panel p-5">
                   <p className="landing-start-kicker">Extension</p>
@@ -199,7 +199,7 @@ export default function ExtensionPage() {
               ))}
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr] items-stretch">
+            <div className="flex flex-col gap-6">
               <div className="panel overflow-hidden p-0">
                 <div className="px-6 py-6 md:px-7 md:py-7 text-left">
                   <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80">Setup facts</p>
@@ -212,11 +212,11 @@ export default function ExtensionPage() {
                 </div>
 
                 <div className="border-t border-black/5 px-6 py-6 md:px-7 md:py-7">
-                  <div className="grid gap-6 lg:grid-cols-[180px_1fr] lg:gap-8">
+                  <div className="flex flex-col gap-6">
                     <div>
                       <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">Quick facts</p>
                     </div>
-                    <div className="grid gap-4 md:grid-cols-3">
+                    <div className="flex flex-col gap-4">
                       {setupHighlights.map((highlight) => (
                         <div key={highlight.label} className="border-l-2 border-vigil-200 pl-4">
                           <p className="text-[11px] uppercase tracking-[0.18em] text-vigil-700/80">{highlight.label}</p>
@@ -229,12 +229,12 @@ export default function ExtensionPage() {
                 </div>
 
                 <div className="border-t border-black/5 px-6 py-6 md:px-7 md:py-7">
-                  <div className="grid gap-6 lg:grid-cols-[180px_1fr] lg:gap-8">
+                  <div className="flex flex-col gap-6">
                     <div>
                       <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">How setup works</p>
                       <span className="badge mt-3">Forwarding only</span>
                     </div>
-                    <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="flex flex-col gap-4">
                       {setupFacts.map((fact) => (
                         <SetupFactCard
                           key={fact.eyebrow}
@@ -248,11 +248,11 @@ export default function ExtensionPage() {
                 </div>
 
                 <div className="border-t border-black/5 px-6 py-6 md:px-7 md:py-7">
-                  <div className="grid gap-6 lg:grid-cols-[180px_1fr] lg:gap-8">
+                  <div className="flex flex-col gap-6">
                     <div>
                       <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">Before you start</p>
                     </div>
-                    <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+                    <div className="flex flex-col gap-6">
                       <ul className="space-y-3">
                         {setupChecklist.map((item, index) => (
                           <li key={item} className="flex items-start gap-3">
@@ -261,7 +261,7 @@ export default function ExtensionPage() {
                           </li>
                         ))}
                       </ul>
-                      <div className="border-l-2 border-vigil-200 pl-4 lg:pl-5">
+                      <div className="border-l-2 border-vigil-200 pl-4">
                         <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">Best order</p>
                         <p className="mt-2 text-sm text-gray-700 leading-relaxed max-w-none">
                           Create account, make a watcher, then open the extension and let it wire forwarding into Gmail or Outlook.
@@ -272,11 +272,11 @@ export default function ExtensionPage() {
                 </div>
 
                 <div className="border-t border-black/5 px-6 py-6 md:px-7 md:py-7">
-                  <div className="grid gap-6 lg:grid-cols-[180px_1fr] lg:gap-8">
+                  <div className="flex flex-col gap-6">
                     <div>
                       <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">Boundaries</p>
                     </div>
-                    <div className="grid gap-6 md:grid-cols-2">
+                    <div className="flex flex-col gap-6">
                       <div>
                         <p className="text-sm font-semibold text-gray-900">What it does</p>
                         <ul className="mt-4 space-y-3 text-sm text-gray-600">
@@ -320,7 +320,7 @@ export default function ExtensionPage() {
                   </p>
                 </div>
 
-                <div className="grid gap-3">
+                <div className="flex flex-col gap-3">
                   <MiniStat value="1" label="Create one watcher before opening the extension" />
                   <MiniStat value="30 sec" label="Typical setup time once the watcher exists" />
                   <MiniStat value="0" label="Inbox permissions requested" />
@@ -340,7 +340,7 @@ export default function ExtensionPage() {
               </p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+            <div className="flex flex-col gap-4">
               {setupSteps.map((step) => (
                 <StepCard key={step.num} num={step.num} title={step.title} desc={step.desc} />
               ))}
@@ -349,7 +349,7 @@ export default function ExtensionPage() {
         </section>
 
         <section id="local-install" className="landing-section px-6 lg:px-8 mt-18 scroll-mt-28">
-          <div className="max-w-6xl mx-auto grid gap-6 lg:grid-cols-[0.95fr_1.05fr] items-start">
+          <div className="max-w-6xl mx-auto flex flex-col gap-6 items-stretch">
             <div className="panel p-6 md:p-7">
               <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Local Install</p>
               <h2 className="text-2xl font-display font-semibold text-gray-900 mb-3">Load it in Chrome while the Web Store listing is pending.</h2>
@@ -366,10 +366,10 @@ export default function ExtensionPage() {
               </ol>
             </div>
 
-            <div className="grid gap-6">
+            <div className="flex flex-col gap-6">
               <div className="panel p-6 md:p-7">
                 <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Supported Providers</p>
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="flex flex-col gap-3">
                   {providers.map((provider) => (
                     <ProviderCard key={provider.name} {...provider} />
                   ))}
@@ -377,7 +377,7 @@ export default function ExtensionPage() {
               </div>
 
               <div className="panel p-6 md:p-7">
-                <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
+                <div className="flex flex-col gap-4">
                   <div>
                     <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Start Order</p>
                     <h2 className="text-2xl font-display font-semibold text-gray-900 mb-3">Create the watcher first, then use the extension.</h2>
