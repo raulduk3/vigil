@@ -257,12 +257,19 @@ async function findOrCreateUser(
     provider: OAuthProvider
 ): Promise<UserRecord | null> {
     // V2 schema: accounts table has id, email, oauth_provider, oauth_id
-    const existing = queryOne<{ id: string; email: string }>(
-        `SELECT id, email FROM accounts WHERE email = ?`,
+    const existing = queryOne<{ id: string; email: string; oauth_provider: string | null }>(
+        `SELECT id, email, oauth_provider FROM accounts WHERE email = ?`,
         [email]
     );
 
     if (existing) {
+        if (existing.oauth_provider !== provider) {
+            query(
+                `UPDATE accounts SET oauth_provider = ? WHERE id = ?`,
+                [provider, existing.id]
+            );
+        }
+
         return {
             user_id: existing.id,
             account_id: existing.id,
