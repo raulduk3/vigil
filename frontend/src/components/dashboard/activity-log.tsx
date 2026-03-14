@@ -192,9 +192,9 @@ function ActionCard({ action }: { action: Action }) {
       </div>
 
       {expanded && action.reasoning && (
-        <p className="mt-3 rounded-lg bg-surface-sunken px-3 py-3 text-xs leading-6 text-gray-500">
+        <div className="mt-2 w-full rounded bg-surface-sunken px-3 py-2.5 text-xs leading-relaxed text-gray-500">
           {action.reasoning}
-        </p>
+        </div>
       )}
     </article>
   );

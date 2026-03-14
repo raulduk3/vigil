@@ -235,7 +235,7 @@ export function EmailDetail({ thread, watcherId, onClose, onStatusChange }: Emai
                       <span className="text-gray-400 shrink-0 tabular-nums">{formatFullTimestamp(action.created_at, timezone)}</span>
                     </div>
                     {action.reasoning && (
-                      <p className="text-gray-500 mt-1 pl-6 leading-relaxed">{action.reasoning}</p>
+                      <div className="w-full mt-1.5 rounded bg-surface-sunken px-3 py-2 text-xs leading-relaxed text-gray-500">{action.reasoning}</div>
                     )}
                     {action.error && (
                       <p className="text-red-600 mt-1 pl-6">{action.error}</p>
