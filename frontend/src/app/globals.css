@@ -930,31 +930,35 @@ html {
  * Minimal typographic rhythm for Learn pages
  */
 .prose {
-  line-height: 1.8;
+  line-height: 1.7;
+}
+
+.prose h1 {
+  @apply mb-4;
 }
 
 .prose h2 {
-  @apply text-2xl font-display font-semibold text-gray-900 tracking-tight mt-14 mb-5;
+  @apply text-2xl font-display font-semibold text-gray-900 tracking-tight mt-10 mb-3;
   text-wrap: balance;
 }
 
 .prose h3 {
-  @apply text-xl font-display font-semibold text-gray-900 tracking-tight mt-10 mb-4;
+  @apply text-xl font-display font-semibold text-gray-900 tracking-tight mt-8 mb-3;
   text-wrap: balance;
 }
 
 .prose h4 {
-  @apply text-lg font-semibold text-gray-900 mt-8 mb-3;
+  @apply text-lg font-semibold text-gray-900 mt-6 mb-2;
   text-wrap: balance;
 }
 
 .prose p {
-  @apply text-gray-700 mb-5 text-base;
-  line-height: 1.8;
+  @apply text-gray-700 mb-4 text-base;
+  line-height: 1.7;
 }
 
 .prose ul, .prose ol {
-  @apply mb-5 pl-7;
+  @apply mb-4 pl-7;
 }
 
 .prose ul {
@@ -966,8 +970,8 @@ html {
 }
 
 .prose li {
-  @apply text-gray-700 mb-3 text-base;
-  line-height: 1.7;
+  @apply text-gray-700 mb-2 text-base;
+  line-height: 1.65;
 }
 
 .prose li strong {
@@ -1000,7 +1004,7 @@ html {
 }
 
 .prose blockquote {
-  @apply border-l-2 border-gray-300 pl-4 italic text-gray-600 my-6;
+  @apply border-l-2 border-gray-300 pl-4 italic text-gray-600 my-5;
 }
 
 /* Gray variant for consistent tone */

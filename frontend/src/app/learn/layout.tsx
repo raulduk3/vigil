@@ -20,7 +20,7 @@ function PageNav({ currentPath }: { currentPath: string }) {
   const next = currentIdx < PAGES.length - 1 ? PAGES[currentIdx + 1] : null;
 
   return (
-    <div className="flex items-center justify-between mt-14 pt-6 border-t border-gray-200">
+    <div className="flex items-center justify-between mt-10 pt-6 border-t border-gray-200">
       {prev ? (
         <Link href={prev.href} className="text-sm text-gray-500 hover:text-vigil-700 transition-colors">
           ← {prev.label}
