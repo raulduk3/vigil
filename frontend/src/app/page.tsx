@@ -401,9 +401,8 @@ export default function HomePage() {
             <div className="landing-section-kicker">Pricing</div>
             <h2 className="landing-section-title mt-3" style={{ wordSpacing: '0.08em' }}>Half a cent per email. No tiers.</h2>
             <p className="text-base text-gray-600 mt-4 leading-relaxed">
-              50 emails free every month. After that, $0.005 per processed email plus model token costs at provider rates
-              (GPT-4.1 at $3/$12 per million tokens, GPT-4.1-mini at $0.40/$1.60, GPT-4.1-nano at $0.10/$0.40).
-              Alerts cost $0.005 each. No seat pricing. No annual contracts.
+              50 emails free every month. After that, half a cent per email Vigil processes.
+              No tiers. No seat pricing. No annual contracts. No token math.
             </p>
             <div className="mt-6 flex gap-4">
               <Link href="/auth/register" className="btn btn-primary">Start free</Link>
@@ -413,9 +412,8 @@ export default function HomePage() {
           <div className="panel p-6 space-y-3">
             {[
               ['50 free emails', 'Every month, no card needed'],
-              ['$0.005 per email', 'Platform fee per processed email'],
-              ['Model costs at provider rates', 'GPT-4.1-nano from $0.10/M tokens'],
-              ['$0.005 per alert', 'Only when the agent decides to notify you'],
+              ['$0.005 per email', 'Half a cent per processed email'],
+              ['Alerts included', 'No extra charge for notifications'],
               ['Unlimited watchers', 'As many email streams as you need'],
             ].map(([label, desc]) => (
               <div key={label} className="flex items-start gap-3">
@@ -471,7 +469,7 @@ export default function HomePage() {
             <div className="landing-cta-pricing px-6 py-8 md:px-8 md:py-10 text-white">
               <p className="text-vigil-200 text-sm uppercase tracking-[0.22em] mb-4">Pay per use</p>
               <ul className="text-sm space-y-2 text-vigil-100 text-left">
-                {['50 free emails every month', '$0.005 per processed email', 'Model tokens at provider rates', '$0.005 per alert sent', 'Full audit trail and memory'].map((item) => (
+                {['50 free emails every month', '$0.005 per processed email', 'Alerts included', 'Unlimited watchers and memory', 'Full audit trail'].map((item) => (
                   <li key={item} className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-vigil-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

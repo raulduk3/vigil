@@ -238,7 +238,7 @@ async function loadDashboard() {
         const actions = actionsResult.status === "fulfilled" ? actionsResult.value : [];
         const wu = usage?.watchers?.find(w => w.watcher_id === currentWatcher.id) || {};
 
-        const activeThreads = threads.filter(t => t.status === "active");
+        const activeThreads = threads.filter(t => t.status === "watching" || t.status === "active");
         const recentAlerts = actions.filter(a => a.tool === "send_alert" && a.result === "success").slice(0, 5);
         const recentActions = actions.slice(0, 8);
 
@@ -395,7 +395,7 @@ async function loadInbox() {
             return;
         }
         container.innerHTML = threads.map(t => `
-            <div class="inbox-item ${t.status === 'active' ? 'inbox-active' : ''}">
+            <div class="inbox-item ${(t.status === 'watching' || t.status === 'active') ? 'inbox-active' : ''}">
                 <div class="inbox-subject">${escapeHtml(t.subject || "No subject")}</div>
                 <div class="inbox-meta">
                     <span class="inbox-status inbox-status-${t.status}">${t.status}</span>
