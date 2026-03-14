@@ -3,6 +3,12 @@ import Link from 'next/link';
 import { PublicHeader } from '@/components/layout';
 import { useEffect, useRef, useState } from 'react';
 
+const heroPromptSamples = [
+  'Watch my work emails and text me when a client is waiting.',
+  'Track invoices and alert me before anything goes overdue.',
+  'Monitor support requests and send urgent ones to Slack.',
+];
+
 // Hook for scroll reveal animations
 function useScrollReveal() {
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
@@ -46,6 +52,20 @@ function Section({ children, className = '', id }: { children: React.ReactNode; 
 
 export default function HomePage() {
   const isRevealed = useScrollReveal();
+  const [intent, setIntent] = useState('');
+  const [heroPromptIndex, setHeroPromptIndex] = useState(0);
+
+  useEffect(() => {
+    if (intent) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setHeroPromptIndex((current) => (current + 1) % heroPromptSamples.length);
+    }, 2600);
+
+    return () => window.clearInterval(interval);
+  }, [intent]);
 
   return (
     <div className="min-h-screen bg-surface-page">
