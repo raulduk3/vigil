@@ -4,6 +4,12 @@
     box-sizing: border-box;
 }
 
+html,
+body {
+    margin: 0;
+    padding: 0;
+}
+
 body {
     width: 320px;
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;

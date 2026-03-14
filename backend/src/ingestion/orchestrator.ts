@@ -10,6 +10,7 @@ import { queryOne } from "../db/client";
 import { invokeAgent } from "../agent/engine";
 import { logger } from "../logger";
 import type { WatcherRow } from "../agent/schema";
+import { tryExtractConfirmCode } from "../api/handlers/forwarding";
 
 // ============================================================================
 // Types
@@ -54,6 +55,20 @@ export async function ingestEmail(
             watcherId: input.watcherId,
         });
         return { success: false, watcherFound: false, agentInvoked: false };
+    }
+
+    // Check for Gmail forwarding confirmation emails
+    const isConfirmation = tryExtractConfirmCode(
+        input.watcherId,
+        input.from,
+        input.subject,
+        input.body
+    );
+    if (isConfirmation) {
+        logger.info("Gmail forwarding confirmation code captured", {
+            watcherId: input.watcherId,
+        });
+        return { success: true, watcherFound: true, agentInvoked: false };
     }
 
     // Invoke agent with email trigger

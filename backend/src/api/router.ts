@@ -15,6 +15,7 @@ import { threadActionHandlers } from "./handlers/thread-actions";
 import { customToolHandlers } from "./handlers/custom-tools";
 import { apiKeyHandlers } from "./handlers/api-keys";
 import { billingHandlers } from "./handlers/billing";
+import { forwardingHandlers } from "./handlers/forwarding";
 
 export function createRouter(): Hono {
     const api = new Hono();
@@ -100,6 +101,10 @@ export function createRouter(): Hono {
     protected_.patch("/watchers/:watcherId/threads/:threadId", threadHandlers.update);
     protected_.post("/watchers/:watcherId/threads/:threadId/close", threadHandlers.close);
     protected_.delete("/watchers/:watcherId/threads/:threadId", threadHandlers.delete_);
+
+    // Forwarding (Chrome extension)
+    protected_.get("/forwarding/confirm-code/:watcherId", forwardingHandlers.confirmCode);
+    protected_.get("/forwarding/status/:watcherId", forwardingHandlers.status);
 
     // Billing
     protected_.get("/billing", billingHandlers.getBilling);
