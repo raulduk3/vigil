@@ -276,7 +276,6 @@ class VigilAPI {
         return data.watcher || data;
     }
 
-    // Forwarding
     async getConfirmCode(watcherId) {
         return this.request(`/forwarding/confirm-code/${watcherId}`);
     }
