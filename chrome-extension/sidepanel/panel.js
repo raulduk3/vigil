@@ -385,80 +385,463 @@ async function loadStats() {
         const usage = usageResult.status === "fulfilled" ? usageResult.value?.usage : null;
         const watcher = watcherResult.status === "fulfilled" ? watcherResult.value : null;
         const memories = memoriesResult.status === "fulfilled" ? memoriesResult.value : [];
-        const watcherUsage = usage?.watchers?.find(w => w.watcher_id === currentWatcher.id);
+        const watcherUsage = usage?.watchers?.find((item) => item.watcher_id === currentWatcher.id);
 
         const active = status?.forwarding_active ?? false;
         const cost = watcherUsage?.cost ?? 0;
 
         container.innerHTML = `
             <div class="status-card">
-                <div class="status-row"><span>Status</span><span class="status-value" style="color:${active ? '#3d6b4f' : '#8b7234'}">${active ? 'Active' : 'Waiting'}</span></div>
+                <div class="status-row"><span>Status</span><span class="status-value" style="color:${active ? "#3d6b4f" : "#8b7234"}">${active ? "Active" : "Waiting"}</span></div>
                 <div class="status-row"><span>Emails processed</span><span class="status-value">${(watcherUsage?.emails ?? status?.total_emails ?? 0).toLocaleString()}</span></div>
                 <div class="status-row"><span>Emails (24h)</span><span class="status-value">${(status?.emails_24h ?? 0).toLocaleString()}</span></div>
                 <div class="status-row"><span>Agent invocations</span><span class="status-value">${(watcherUsage?.invocations ?? 0).toLocaleString()}</span></div>
                 <div class="status-row"><span>Alerts sent</span><span class="status-value">${(watcherUsage?.alerts ?? 0).toLocaleString()}</span></div>
-                <div class="status-row"><span>Last email</span><span class="status-value">${status?.last_email_at ? timeAgo(status.last_email_at) : 'None'}</span></div>
-                <div class="status-row"><span>Model</span><span class="status-value">${watcher?.model ?? '—'}</span></div>
-                <div class="status-row"><span>Cost (this month)</span><span class="status-value">${cost > 0 ? '$' + cost.toFixed(4) : '$0.00'}</span></div>
+                <div class="status-row"><span>Last email</span><span class="status-value">${status?.last_email_at ? timeAgo(status.last_email_at) : "None"}</span></div>
+                <div class="status-row"><span>Model</span><span class="status-value">${watcher?.model ?? "—"}</span></div>
+                <div class="status-row"><span>Cost (this month)</span><span class="status-value">${cost > 0 ? "$" + cost.toFixed(4) : "$0.00"}</span></div>
                 <div class="status-row"><span>Memories</span><span class="status-value">${memories.length}</span></div>
             </div>
             ${memories.length > 0 ? `
                 <div class="memories-section">
                     <h3>Recent Memories</h3>
-                    ${memories.slice(0, 8).map(m => `
+                    ${memories.slice(0, 8).map((memory) => `
                         <div class="memory-item">
-                            <div class="memory-content">${escapeHtml(m.content)}</div>
-                            <div class="memory-meta">importance: ${m.importance || '—'} ${m.created_at ? '· ' + timeAgo(m.created_at) : ''}</div>
+                            <div class="memory-content">${escapeHtml(memory.content)}</div>
+                            <div class="memory-meta">importance: ${memory.importance || "—"} ${memory.created_at ? "· " + timeAgo(memory.created_at) : ""}</div>
                         </div>
                     `).join("")}
                 </div>
-            ` : ''}
+            ` : ""}
         `;
-    } catch (e) {
-        container.innerHTML = `<div class="error">${escapeHtml(e.message)}</div>`;
+    } catch (error) {
+        container.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
     }
 }
 
-// ============================================================================
-// Setup
-// ============================================================================
+async function getActiveSetupContext() {
+    try {
+        const context = await chrome.runtime.sendMessage({ type: "GET_ACTIVE_CONTEXT" });
+        if (!context?.supported || !context.tabId) {
+            return context || { supported: false, provider: null, tabId: null };
+        }
 
-async function loadSetup() {
-    if (!currentWatcher) return;
+        try {
+            const page = await chrome.tabs.sendMessage(context.tabId, { type: "GET_SETUP_STATE" });
+            return { ...context, page };
+        } catch (error) {
+            return {
+                ...context,
+                page: null,
+                error: error.message || "Setup helper unavailable on this page.",
+            };
+        }
+    } catch (error) {
+        return {
+            supported: false,
+            provider: null,
+            tabId: null,
+            error: error.message || "Unable to inspect the active tab.",
+        };
+    }
+}
 
-    const addr = currentWatcher.ingestion_address ||
-        `${currentWatcher.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${currentWatcher.ingest_token}@vigil.run`;
-    document.getElementById("setup-address").textContent = addr;
+function updateSetupVisibility() {
+    const emptyState = document.getElementById("watcher-empty-state");
+    const setupSections = document.getElementById("watcher-setup-sections");
+    emptyState.classList.toggle("hidden", Boolean(currentWatcher));
+    setupSections.classList.toggle("hidden", !currentWatcher);
+}
+
+function renderSetupContext() {
+    const statusText = document.getElementById("provider-status-text");
+    const statusDetail = document.getElementById("provider-status-detail");
+    const assistButton = document.getElementById("btn-assist-setup");
+
+    if (!currentSetupContext?.supported) {
+        statusText.textContent = "Open Gmail or Outlook in the active tab to enable setup assistance.";
+        statusDetail.textContent = "The extension can open either provider's forwarding settings directly.";
+        assistButton.disabled = true;
+        return;
+    }
+
+    const providerName = currentSetupContext.provider === "gmail" ? "Gmail" : "Outlook";
+    const onForwardingPage = Boolean(currentSetupContext.page?.onForwardingPage);
+    const detailParts = [];
+    const pageActions = currentSetupContext.page?.actions || {};
+
+    if (currentSetupContext.page?.note) {
+        detailParts.push(currentSetupContext.page.note);
+    }
+    if (pageActions.fillAddress) {
+        detailParts.push("The forwarding address field is visible.");
+    }
+    if (pageActions.fillConfirmCode) {
+        detailParts.push("A confirmation code field is visible.");
+    }
+    if (pageActions.save && currentSetupContext.provider === "outlook") {
+        detailParts.push("Outlook save controls are available.");
+    }
+
+    statusText.textContent = onForwardingPage
+        ? `${providerName} forwarding settings are open in the active tab.`
+        : `${providerName} is open in the active tab, but not on the forwarding settings page.`;
+    statusDetail.textContent = detailParts.join(" ") || "Use the provider buttons below to jump to the forwarding settings page.";
+    assistButton.disabled = false;
+}
+
+async function refreshConfirmCodeStatus() {
+    const confirmBox = document.getElementById("gmail-confirm-box");
+    const confirmStatus = document.getElementById("gmail-confirm-status");
+    const confirmCode = document.getElementById("gmail-confirm-code");
+    const insertButton = document.getElementById("btn-insert-confirm-code");
+
+    const shouldShow = Boolean(currentWatcher) && currentSetupContext?.provider === "gmail";
+    confirmBox.classList.toggle("hidden", !shouldShow);
+    if (!shouldShow) {
+        currentConfirmCode = null;
+        insertButton.disabled = true;
+        return;
+    }
 
     try {
-        const w = await vigilAPI.getWatcher(currentWatcher.id);
-        document.getElementById("setup-prompt").value = w.system_prompt || "";
-        document.getElementById("setup-model").value = w.model || "gpt-4.1";
-    } catch (e) {
+        const result = await vigilAPI.getConfirmCode(currentWatcher.id);
+        currentConfirmCode = result.code || null;
+
+        if (currentConfirmCode) {
+            confirmStatus.textContent = "Confirmation code received. Insert it into Gmail from here.";
+            confirmCode.textContent = currentConfirmCode;
+            insertButton.disabled = false;
+        } else {
+            confirmStatus.textContent = "Waiting for Gmail to send the confirmation email to Vigil.";
+            confirmCode.textContent = "Not available yet";
+            insertButton.disabled = true;
+        }
+    } catch (error) {
+        currentConfirmCode = null;
+        confirmStatus.textContent = `Could not load confirmation code: ${error.message}`;
+        confirmCode.textContent = "Unavailable";
+        insertButton.disabled = true;
+    }
+}
+
+function stopConfirmCodePolling() {
+    if (confirmCodeTimer) {
+        clearInterval(confirmCodeTimer);
+        confirmCodeTimer = null;
+    }
+}
+
+function startConfirmCodePolling() {
+    stopConfirmCodePolling();
+    confirmCodeTimer = setInterval(() => {
+        if (!currentWatcher || currentSetupContext?.provider !== "gmail") {
+            stopConfirmCodePolling();
+            return;
+        }
+        refreshConfirmCodeStatus().catch(console.error);
+    }, 4000);
+}
+
+async function refreshSetupContext() {
+    currentSetupContext = await getActiveSetupContext();
+    renderSetupContext();
+    await refreshConfirmCodeStatus();
+
+    if (currentSetupContext?.provider === "gmail" && currentWatcher) {
+        startConfirmCodePolling();
+    } else {
+        stopConfirmCodePolling();
+    }
+}
+
+async function loadSetup() {
+    updateSetupVisibility();
+    hideStatus(document.getElementById("setup-automation-status"));
+
+    if (!currentWatcher) {
+        stopConfirmCodePolling();
+        return;
+    }
+
+    document.getElementById("setup-address").textContent = getSetupAddress();
+
+    try {
+        const watcher = await vigilAPI.getWatcher(currentWatcher.id);
+        currentWatcher = watcher;
+        document.getElementById("setup-address").textContent = getSetupAddress();
+        document.getElementById("setup-prompt").value = watcher.system_prompt || "";
+        document.getElementById("setup-model").value = watcher.model || "gpt-4.1";
+    } catch {
         document.getElementById("setup-prompt").value = currentWatcher.system_prompt || "";
         document.getElementById("setup-model").value = currentWatcher.model || "gpt-4.1";
     }
+
+    await refreshSetupContext();
 }
 
-// ============================================================================
-// Helpers
-// ============================================================================
+async function openProviderPage(provider) {
+    const response = await chrome.runtime.sendMessage({
+        type: "OPEN_PROVIDER_PAGE",
+        provider,
+        destination: "forwarding",
+    });
 
-function escapeHtml(str) {
-    const div = document.createElement("div");
-    div.textContent = str || "";
-    return div.innerHTML;
+    if (response?.error) {
+        throw new Error(response.error);
+    }
+
+    setTimeout(() => {
+        refreshSetupContext().catch(console.error);
+    }, 800);
 }
 
-function timeAgo(dateStr) {
-    const now = Date.now();
-    const then = new Date(dateStr).getTime();
-    const diff = now - then;
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return "just now";
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    const days = Math.floor(hrs / 24);
-    return `${days}d ago`;
+async function assistCurrentPage(options = {}) {
+    if (!currentWatcher) {
+        setStatus(document.getElementById("setup-automation-status"), "Create a watcher first.", "error");
+        return;
+    }
+
+    currentSetupContext = await getActiveSetupContext();
+    renderSetupContext();
+
+    if (!currentSetupContext?.supported || !currentSetupContext.tabId) {
+        setStatus(
+            document.getElementById("setup-automation-status"),
+            "Open Gmail or Outlook in the active tab before using setup assistance.",
+            "error"
+        );
+        return;
+    }
+
+    try {
+        const result = await chrome.tabs.sendMessage(currentSetupContext.tabId, {
+            type: "APPLY_SETUP",
+            address: getSetupAddress(),
+            confirmCode: options.confirmCode || currentConfirmCode,
+            save: currentSetupContext.provider === "outlook",
+        });
+
+        if (result?.error) {
+            throw new Error(result.error);
+        }
+
+        setStatus(
+            document.getElementById("setup-automation-status"),
+            result?.message || "Setup assistance completed.",
+            result?.ok ? "success" : "info"
+        );
+
+        currentSetupContext = await getActiveSetupContext();
+        renderSetupContext();
+        await refreshConfirmCodeStatus();
+    } catch (error) {
+        setStatus(document.getElementById("setup-automation-status"), error.message, "error");
+    }
 }
+
+async function createWatcher() {
+    const nameInput = document.getElementById("new-watcher-name");
+    const notesInput = document.getElementById("new-watcher-notes");
+    const status = document.getElementById("create-watcher-status");
+    const name = nameInput.value.trim();
+    const notes = notesInput.value.trim();
+
+    if (!name) {
+        setStatus(status, "Watcher name is required.", "error");
+        return;
+    }
+
+    const systemPrompt = notes
+        ? `${DEFAULT_WATCHER_PROMPT}\n\nAdditional instructions:\n${notes}`
+        : DEFAULT_WATCHER_PROMPT;
+
+    try {
+        setStatus(status, "Creating watcher...", "info");
+        const watcher = await vigilAPI.createWatcher(name, systemPrompt, "general");
+        currentWatcher = watcher;
+        nameInput.value = "";
+        notesInput.value = "";
+        await loadWatchers();
+        setStatus(status, "Watcher created. Finish forwarding setup below.", "success");
+        showView("setup");
+    } catch (error) {
+        setStatus(status, error.message, "error");
+    }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+    window.onerror = function(message, src, line) {
+        const error = document.createElement("div");
+        error.style.cssText = "position:fixed;bottom:0;left:0;right:0;padding:12px;background:#8b4242;color:white;font-size:12px;z-index:9999;";
+        error.textContent = `Error: ${message} (line ${line})`;
+        document.body.appendChild(error);
+    };
+
+    document.querySelectorAll(".nav-tab").forEach((tab) => {
+        tab.addEventListener("click", () => showView(tab.dataset.view));
+    });
+
+    document.getElementById("panel-btn-connect").addEventListener("click", async () => {
+        const key = document.getElementById("panel-api-key").value.trim();
+        if (!key) return;
+        const error = document.getElementById("panel-auth-error");
+        error.classList.add("hidden");
+
+        try {
+            await vigilAPI.loginWithApiKey(key);
+            await loadWatchers();
+            showAuthenticatedShell(currentWatcher ? "dashboard" : "setup");
+        } catch (err) {
+            error.textContent = err.message;
+            error.classList.remove("hidden");
+        }
+    });
+
+    document.getElementById("panel-btn-login").addEventListener("click", async () => {
+        const email = document.getElementById("panel-email").value.trim();
+        const password = document.getElementById("panel-password").value;
+        if (!email || !password) return;
+        const error = document.getElementById("panel-auth-error");
+        error.classList.add("hidden");
+
+        try {
+            await vigilAPI.login(email, password);
+            await loadWatchers();
+            showAuthenticatedShell(currentWatcher ? "dashboard" : "setup");
+        } catch (err) {
+            error.textContent = err.message;
+            error.classList.remove("hidden");
+        }
+    });
+
+    document.getElementById("panel-api-key").addEventListener("keydown", (event) => {
+        if (event.key === "Enter") document.getElementById("panel-btn-connect").click();
+    });
+    document.getElementById("panel-password").addEventListener("keydown", (event) => {
+        if (event.key === "Enter") document.getElementById("panel-btn-login").click();
+    });
+
+    const chatInput = document.getElementById("chat-input");
+    const sendButton = document.getElementById("btn-send");
+    chatInput.addEventListener("input", () => {
+        sendButton.disabled = !chatInput.value.trim() || !currentWatcher;
+        chatInput.style.height = "auto";
+        chatInput.style.height = `${Math.min(chatInput.scrollHeight, 120)}px`;
+    });
+    chatInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !event.shiftKey) {
+            event.preventDefault();
+            if (chatInput.value.trim()) sendChat();
+        }
+    });
+    sendButton.addEventListener("click", sendChat);
+
+    document.querySelectorAll(".chat-suggestion").forEach((button) => {
+        button.addEventListener("click", () => {
+            chatInput.value = button.dataset.msg;
+            sendButton.disabled = !currentWatcher;
+            sendChat();
+        });
+    });
+
+    document.getElementById("btn-settings").addEventListener("click", () => showView("setup"));
+
+    document.getElementById("watcher-select").addEventListener("change", (event) => {
+        const watcher = watchers.find((item) => item.id === event.target.value);
+        if (!watcher) return;
+        currentWatcher = watcher;
+        chatHistory = [];
+        renderChat();
+        if (document.getElementById("view-setup").classList.contains("active")) {
+            loadSetup();
+        } else {
+            loadDashboard();
+        }
+    });
+
+    document.getElementById("btn-copy-setup-address").addEventListener("click", async () => {
+        const address = document.getElementById("setup-address").textContent;
+        await navigator.clipboard.writeText(address);
+        const button = document.getElementById("btn-copy-setup-address");
+        button.textContent = "Copied";
+        setTimeout(() => {
+            button.textContent = "Copy";
+        }, 2000);
+    });
+
+    document.getElementById("btn-open-gmail-settings").addEventListener("click", async () => {
+        try {
+            await openProviderPage("gmail");
+        } catch (error) {
+            setStatus(document.getElementById("setup-automation-status"), error.message, "error");
+        }
+    });
+
+    document.getElementById("btn-open-outlook-settings").addEventListener("click", async () => {
+        try {
+            await openProviderPage("outlook");
+        } catch (error) {
+            setStatus(document.getElementById("setup-automation-status"), error.message, "error");
+        }
+    });
+
+    document.getElementById("btn-refresh-setup-context").addEventListener("click", () => {
+        refreshSetupContext().catch((error) => {
+            setStatus(document.getElementById("setup-automation-status"), error.message, "error");
+        });
+    });
+
+    document.getElementById("btn-assist-setup").addEventListener("click", () => {
+        assistCurrentPage().catch(console.error);
+    });
+
+    document.getElementById("btn-insert-confirm-code").addEventListener("click", () => {
+        if (currentConfirmCode) {
+            assistCurrentPage({ confirmCode: currentConfirmCode }).catch(console.error);
+        }
+    });
+
+    document.getElementById("btn-create-watcher").addEventListener("click", () => {
+        createWatcher().catch(console.error);
+    });
+
+    document.getElementById("btn-save-config").addEventListener("click", async () => {
+        if (!currentWatcher) return;
+        const prompt = document.getElementById("setup-prompt").value.trim();
+        const model = document.getElementById("setup-model").value;
+        const status = document.getElementById("config-status");
+
+        try {
+            const updates = {};
+            if (prompt) updates.system_prompt = prompt;
+            if (model) updates.model = model;
+            const watcher = await vigilAPI.updateWatcher(currentWatcher.id, updates);
+            currentWatcher = watcher;
+            setStatus(status, "Saved.", "success");
+        } catch (error) {
+            setStatus(status, `Error: ${error.message}`, "error");
+        }
+    });
+
+    document.getElementById("btn-logout").addEventListener("click", async () => {
+        await vigilAPI.logout({ preserveApiBase: true });
+        currentWatcher = null;
+        watchers = [];
+        chatHistory = [];
+        showAuthShell();
+    });
+
+    renderChat();
+
+    try {
+        const authed = await vigilAPI.isAuthenticated();
+        if (authed) {
+            await loadWatchers();
+            showAuthenticatedShell(currentWatcher ? "dashboard" : "setup");
+            renderChat();
+        }
+    } catch (error) {
+        console.error("[vigil] auth check failed:", error);
+    }
+});
