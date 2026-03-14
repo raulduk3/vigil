@@ -320,8 +320,11 @@ export async function invokeAgent(
     let contextTokens = 0;
     let costUsd = 0;
 
-    // Use watcher's configured model (fallback to env var, then default)
-    const model = watcher.model || process.env.VIGIL_MODEL || "gpt-4.1";
+    // Ticks always use gpt-4.1 to control costs (ticks are overhead, not user-triggered)
+    // Email processing and chat use the watcher's chosen model
+    const model = trigger.type === "scheduled_tick"
+        ? "gpt-4.1"
+        : (watcher.model || process.env.VIGIL_MODEL || "gpt-4.1");
 
     try {
         const result = await callLLM(systemPrompt, userPrompt, model);
@@ -475,11 +478,13 @@ export async function invokeAgent(
         durationMs: Date.now() - startMs,
     });
 
-    // Report flat $0.01 per invocation to Stripe (actual AI cost tracked internally in costUsd)
-    const FLAT_RATE_PER_INVOCATION = 0.01;
-    reportInvocationCost(watcher.account_id, FLAT_RATE_PER_INVOCATION).catch((err) =>
-        logger.error("Failed to report invocation cost", { watcherId, err })
-    );
+    // Bill $0.01 per email processed. Ticks are overhead (not billed). Chat billed separately above.
+    if (trigger.type === "email_received") {
+        const FLAT_RATE_PER_EMAIL = 0.01;
+        reportInvocationCost(watcher.account_id, FLAT_RATE_PER_EMAIL).catch((err) =>
+            logger.error("Failed to report invocation cost", { watcherId, err })
+        );
+    }
 
     return agentResponse;
 }

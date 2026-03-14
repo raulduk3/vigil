@@ -654,6 +654,12 @@ html {
   .landing-section-copy {
     @apply text-lg text-gray-600 leading-relaxed;
     max-width: 62rem;
+    text-wrap: pretty;
+  }
+
+  .landing-hero-copy {
+    max-width: 50rem;
+    text-wrap: pretty;
   }
 
   .landing-section-header.text-center .landing-section-title,

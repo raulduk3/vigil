@@ -128,7 +128,7 @@ export default function HomePage() {
               An AI agent that reads<br />
               your email and acts on it.
             </h1>
-            <p className="text-xl text-gray-600 mb-8 leading-relaxed max-w-3xl mx-auto">
+            <p className="landing-hero-copy text-xl text-gray-600 mb-8 leading-relaxed mx-auto">
               Forward an email. Your agent reads it, remembers what matters, and does
               whatever you told it to do. Send a text. Fire a webhook. Connect to another system.
               Prompt it like you'd prompt anything else. It works for you.
