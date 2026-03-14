@@ -83,17 +83,23 @@ export function EmailDetail({ thread, watcherId, onClose, onStatusChange, onDele
     }
   };
 
+  const [threadEmails, setThreadEmails] = useState<any[]>([]);
+
   useEffect(() => {
     setLoadingActions(true);
-    api.getActions(watcherId, { threadId: thread.id, limit: 50 })
-      .then((res) => {
-        const actions = (res.actions || []).filter(
-          (a: Action) => a.trigger_type !== 'user_chat'
-        );
-        setThreadActions(actions);
-      })
-      .catch(() => setThreadActions([]))
-      .finally(() => setLoadingActions(false));
+    // Load both actions and thread detail (which includes emails)
+    Promise.all([
+      api.getActions(watcherId, { threadId: thread.id, limit: 50 }),
+      api.getThread(watcherId, thread.id).catch(() => null),
+    ]).then(([actRes, threadRes]) => {
+      const actions = (actRes.actions || []).filter(
+        (a: Action) => a.trigger_type !== 'user_chat'
+      );
+      setThreadActions(actions);
+      setThreadEmails((threadRes as any)?.emails || []);
+    }).catch(() => {
+      setThreadActions([]);
+    }).finally(() => setLoadingActions(false));
   }, [watcherId, thread.id]);
 
   const handleStatusChange = async (newStatus: Thread['status']) => {
@@ -155,9 +161,31 @@ export function EmailDetail({ thread, watcherId, onClose, onStatusChange, onDele
           </div>
 
           {thread.summary && (
-            <div>
+            <div className="mb-3">
               <div className="data-label mb-1">Agent Summary</div>
               <div className="text-sm text-gray-700 bg-surface-sunken rounded px-3 py-2.5 w-full">{thread.summary}</div>
+            </div>
+          )}
+
+          {/* Email timeline with original + received timestamps */}
+          {threadEmails.length > 0 && (
+            <div>
+              <div className="data-label mb-1.5">Emails</div>
+              <div className="space-y-2">
+                {threadEmails.map((email: any) => (
+                  <div key={email.id} className="panel-inset px-3 py-2 text-xs">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="font-medium text-gray-700">{email.from_addr}</div>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 text-gray-500 mt-1">
+                      {email.original_date && (
+                        <span>Sent: {formatFullTimestamp(email.original_date, timezone)}</span>
+                      )}
+                      <span>Received by Vigil: {formatFullTimestamp(email.received_at, timezone)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

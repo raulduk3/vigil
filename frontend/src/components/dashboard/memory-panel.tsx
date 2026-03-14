@@ -308,9 +308,9 @@ export function MemoryPanel({ watcherId, memories, onMemoriesChange }: MemoryPan
       <div className="flex-1 overflow-y-auto px-4 py-5">
         <div className="mx-auto max-w-4xl space-y-3">
           {sorted.length === 0 && (
-            <div className="rounded-xl border border-dashed border-gray-300 bg-surface-raised px-6 py-12 text-center">
-              <p className="mb-1 text-sm font-medium text-gray-700">{searchQuery ? 'No matching memories' : 'No memories yet'}</p>
-              <p className="max-w-none text-sm text-gray-500">{searchQuery ? 'Try a different term or include retired memories.' : 'Add a memory to give this watcher durable context.'}</p>
+            <div className="flex flex-col items-center rounded-xl border border-dashed border-gray-300 bg-surface-raised px-6 py-12 text-center">
+              <p className="mb-1 text-center text-sm font-medium text-gray-700">{searchQuery ? 'No matching memories' : 'No memories yet'}</p>
+              <p className="text-center text-sm text-gray-500">{searchQuery ? 'Try a different term or include retired memories.' : 'Add a memory to give this watcher durable context.'}</p>
             </div>
           )}
 
