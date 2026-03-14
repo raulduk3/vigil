@@ -87,411 +87,267 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("panel-password").addEventListener("keydown", e => {
         if (e.key === "Enter") document.getElementById("panel-btn-login").click();
     });
+
+    // Chat input
+    const chatInput = document.getElementById("chat-input");
+    const btnSend = document.getElementById("btn-send");
+
+    chatInput.addEventListener("input", () => {
+        btnSend.disabled = !chatInput.value.trim();
+        chatInput.style.height = "auto";
+        chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + "px";
+    });
+
+    chatInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            if (chatInput.value.trim()) sendChat();
+        }
+    });
+
+    btnSend.addEventListener("click", sendChat);
+
+    // Chat suggestions
+    document.querySelectorAll(".chat-suggestion").forEach(btn => {
+        btn.addEventListener("click", () => {
+            chatInput.value = btn.dataset.msg;
+            btnSend.disabled = false;
+            sendChat();
+        });
+    });
+
+    // Settings button
+    document.getElementById("btn-settings").addEventListener("click", () => {
+        showView("setup");
+    });
+
+    // Watcher dropdown
+    document.getElementById("watcher-select").addEventListener("change", (e) => {
+        const w = watchers.find(w => w.id === e.target.value);
+        if (w) {
+            currentWatcher = w;
+            chatHistory = [];
+            renderChat();
+        }
+    });
+
+    // Copy setup address
+    document.getElementById("btn-copy-setup-address").addEventListener("click", () => {
+        const addr = document.getElementById("setup-address").textContent;
+        navigator.clipboard.writeText(addr);
+        document.getElementById("btn-copy-setup-address").textContent = "Copied";
+        setTimeout(() => document.getElementById("btn-copy-setup-address").textContent = "Copy", 2000);
+    });
 });
 
 // ============================================================================
-// Step 2: Provider Detection
+// Watchers
 // ============================================================================
 
-async function initStep2() {
-    const statusEl = document.getElementById("provider-status");
-    const messageEl = document.getElementById("provider-message");
-
-    // Check current tab
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    const url = tab?.url || "";
-
-    if (url.includes("mail.google.com")) {
-        detectedProvider = "gmail";
-        statusEl.classList.add("found");
-        messageEl.textContent = "Gmail detected! Ready to set up forwarding.";
-        setTimeout(() => goToStep(3), 1500);
-    } else if (url.includes("outlook.live.com") || url.includes("outlook.office.com")) {
-        detectedProvider = "outlook";
-        statusEl.classList.add("found");
-        messageEl.textContent = "Outlook detected! Ready to set up forwarding.";
-        setTimeout(() => goToStep(3), 1500);
-    } else {
-        messageEl.textContent = "Open Gmail or Outlook in this tab, then come back.";
-
-        // Auto-detect when tab changes
-        chrome.tabs.onUpdated.addListener(function listener(tabId, info) {
-            if (info.url) {
-                if (info.url.includes("mail.google.com")) {
-                    detectedProvider = "gmail";
-                    chrome.tabs.onUpdated.removeListener(listener);
-                    goToStep(3);
-                } else if (info.url.includes("outlook.live.com") || info.url.includes("outlook.office.com")) {
-                    detectedProvider = "outlook";
-                    chrome.tabs.onUpdated.removeListener(listener);
-                    goToStep(3);
-                }
-            }
-        });
-    }
-}
-
-// ============================================================================
-// Step 3: Watcher Selection
-// ============================================================================
-
-function buildSystemPrompt(intent) {
-    if (!intent) {
-        return `You monitor emails and focus on deadlines, obligations, and anything requiring action. Alert the user when someone is waiting on them or when a deadline is approaching. Ignore marketing, newsletters, and automated notifications unless they contain something actionable.`;
-    }
-    return `You are an email monitoring agent. Your instructions from the user:\n\n${intent}\n\nCore behavior:\n- Track deadlines, obligations, and anything requiring the user's action.\n- Alert when someone is waiting on the user or a deadline is approaching.\n- Remember patterns across emails (sender behavior, recurring topics, payment schedules).\n- Ignore noise unless the user's instructions say otherwise.\n- When in doubt about urgency, err on the side of alerting.`;
-}
-
-async function initStep3() {
-    const listEl = document.getElementById("watcher-list");
-    const errorEl = document.getElementById("watcher-error");
-    const intentEl = document.getElementById("watcher-intent");
-
+async function loadWatchers() {
     try {
-        const watchers = await vigilAPI.getWatchers();
-        listEl.innerHTML = "";
-
+        watchers = await vigilAPI.getWatchers();
+        const select = document.getElementById("watcher-select");
+        select.innerHTML = "";
+        for (const w of watchers) {
+            const opt = document.createElement("option");
+            opt.value = w.id;
+            opt.textContent = `${w.name} (${w.total_emails || 0})`;
+            select.appendChild(opt);
+        }
         if (watchers.length > 0) {
-            for (const w of watchers) {
-                const item = document.createElement("div");
-                item.className = "watcher-item";
-                const stats = [
-                    `${(w.total_emails || 0).toLocaleString()} emails`,
-                    `${w.active_threads || 0} threads`,
-                    `${w.memories || 0} memories`,
-                ].join(" · ");
-                item.innerHTML = `
-                    <div class="name">${escapeHtml(w.name)}</div>
-                    <div class="meta">${stats}</div>
-                `;
-                item.addEventListener("click", async () => {
-                    document.querySelectorAll(".watcher-item").forEach(i => i.classList.remove("selected"));
-                    item.classList.add("selected");
-                    selectedWatcher = w;
-
-                    // If user typed instructions, update the watcher's prompt
-                    const intent = intentEl.value.trim();
-                    if (intent) {
-                        try {
-                            const prompt = buildSystemPrompt(intent);
-                            await vigilAPI.updateWatcher(w.id, { system_prompt: prompt });
-                            console.log("[vigil] updated watcher prompt with user intent");
-                        } catch (e) {
-                            console.warn("[vigil] failed to update watcher prompt:", e);
-                        }
-                    }
-
-                    goToStep(4);
-                });
-                listEl.appendChild(item);
-            }
-        } else {
-            listEl.innerHTML = '<p class="step-desc">No watchers yet. Create one below.</p>';
+            currentWatcher = watchers[0];
         }
     } catch (e) {
-        errorEl.textContent = e.message;
-        errorEl.classList.remove("hidden");
+        console.error("[vigil] loadWatchers failed:", e);
     }
-
-    // Create watcher
-    document.getElementById("btn-create-watcher").addEventListener("click", async () => {
-        const name = document.getElementById("watcher-name").value.trim();
-        const intent = intentEl.value.trim();
-        if (!name) return;
-
-        errorEl.classList.add("hidden");
-        try {
-            const prompt = buildSystemPrompt(intent);
-            const watcher = await vigilAPI.createWatcher(name, prompt);
-            selectedWatcher = watcher;
-            goToStep(4);
-        } catch (e) {
-            errorEl.textContent = e.message;
-            errorEl.classList.remove("hidden");
-        }
-    });
 }
 
 // ============================================================================
-// Step 4: Forwarding Setup
+// Chat
 // ============================================================================
 
-function parseIntentToFilters(intent) {
-    if (!intent) return [];
-
-    const filters = [];
-    const lower = intent.toLowerCase();
-
-    // Extract email addresses
-    const emailMatches = intent.match(/[\w.-]+@[\w.-]+\.\w+/g);
-    if (emailMatches) {
-        filters.push({ field: "From", value: emailMatches.join(" OR "), type: "from" });
-    }
-
-    // Extract domain patterns
-    const domainMatches = intent.match(/@([\w.-]+\.\w+)/g);
-    if (domainMatches && !emailMatches) {
-        const domains = domainMatches.map(d => d.slice(1));
-        filters.push({ field: "From", value: domains.map(d => `@${d}`).join(" OR "), type: "from" });
-    }
-
-    // Extract subject keywords
-    const subjectKeywords = [];
-    const subjectPatterns = [
-        /invoic/i, /payment/i, /deadline/i, /urgent/i, /overdue/i,
-        /contract/i, /proposal/i, /quote/i, /estimate/i, /receipt/i,
-        /ticket/i, /support/i, /bug/i, /incident/i, /alert/i,
-    ];
-    for (const p of subjectPatterns) {
-        if (p.test(lower)) {
-            subjectKeywords.push(p.source.replace(/\\i?/g, "").replace(/\//g, ""));
-        }
-    }
-    if (subjectKeywords.length > 0) {
-        filters.push({ field: "Subject", value: subjectKeywords.join(" OR "), type: "subject" });
-    }
-
-    // Detect "client" or "work" patterns
-    if (/client/i.test(lower) || /customer/i.test(lower) || /vendor/i.test(lower)) {
-        if (filters.length === 0) {
-            filters.push({ field: "Has the words", value: "reply needed OR action required OR follow up OR awaiting", type: "words" });
-        }
-    }
-
-    // If nothing specific was extracted, suggest forwarding all
-    if (filters.length === 0 && intent.length > 10) {
-        const words = intent.split(/\s+/).filter(w => w.length > 4).slice(0, 4);
-        if (words.length > 0) {
-            filters.push({ field: "Has the words", value: words.join(" OR "), type: "words" });
-        }
-    }
-
-    return filters;
-}
-
-function renderFilterSuggestions(containerId, filters, provider) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    container.innerHTML = "";
-
-    if (filters.length === 0) {
-        container.innerHTML = '<p style="font-size:12px;color:#787874;">Tip: You can filter by sender (From), subject, or keywords. The agent handles the rest with its instructions.</p>';
+function renderChat() {
+    const container = document.getElementById("chat-messages");
+    if (chatHistory.length === 0) {
+        container.innerHTML = `
+            <div class="chat-welcome">
+                <p class="chat-welcome-title">Talk to ${escapeHtml(currentWatcher?.name || "your watcher")}</p>
+                <p class="chat-welcome-desc">Ask about your inbox, set rules, check obligations, or tell it what to focus on.</p>
+                <div class="chat-suggestions">
+                    <button class="chat-suggestion" data-msg="What needs my attention today?">What needs my attention?</button>
+                    <button class="chat-suggestion" data-msg="Summarize my inbox this week">Summarize this week</button>
+                    <button class="chat-suggestion" data-msg="What deadlines are coming up?">Upcoming deadlines</button>
+                    <button class="chat-suggestion" data-msg="Ignore all emails from noreply addresses">Ignore noreply senders</button>
+                </div>
+            </div>
+        `;
+        container.querySelectorAll(".chat-suggestion").forEach(btn => {
+            btn.addEventListener("click", () => {
+                document.getElementById("chat-input").value = btn.dataset.msg;
+                document.getElementById("btn-send").disabled = false;
+                sendChat();
+            });
+        });
         return;
     }
 
-    for (const f of filters) {
-        const div = document.createElement("div");
-        div.className = "filter-suggestion";
-        div.innerHTML = `<span class="filter-field">${escapeHtml(f.field)}:</span> <span class="filter-value">${escapeHtml(f.value)}</span>`;
-        container.appendChild(div);
-    }
-
-    const tip = document.createElement("p");
-    tip.style.cssText = "font-size:11px;color:#787874;margin-top:6px;";
-    if (provider === "gmail") {
-        tip.textContent = "Enter these in Gmail's filter creation form. You can combine multiple fields.";
-    } else {
-        tip.textContent = "Use these as conditions in your Outlook rule.";
-    }
-    container.appendChild(tip);
+    container.innerHTML = chatHistory.map(msg => `
+        <div class="chat-msg chat-msg-${msg.role}">
+            <div class="chat-msg-label">${msg.role === "user" ? "You" : currentWatcher?.name || "Vigil"}</div>
+            <div class="chat-msg-body">${escapeHtml(msg.text)}</div>
+        </div>
+    `).join("");
+    container.scrollTop = container.scrollHeight;
 }
 
-let forwardingApproach = "all";
+async function sendChat() {
+    const input = document.getElementById("chat-input");
+    const msg = input.value.trim();
+    if (!msg || !currentWatcher) return;
 
-async function initStep4() {
-    if (!selectedWatcher) return;
+    input.value = "";
+    input.style.height = "auto";
+    document.getElementById("btn-send").disabled = true;
 
-    // Build forwarding address
-    const slug = selectedWatcher.name.toLowerCase().replace(/[^a-z0-9]/g, "-");
-    const token = selectedWatcher.ingest_token || selectedWatcher.ingestion_address?.split("@")[0]?.split("-").pop();
-    const address = selectedWatcher.ingestion_address || `${slug}-${token}@vigil.run`;
+    chatHistory.push({ role: "user", text: msg });
+    chatHistory.push({ role: "assistant", text: "Thinking..." });
+    renderChat();
 
-    document.getElementById("forwarding-address").textContent = address;
-
-    // Get the user's intent for filter suggestions
-    const intent = document.getElementById("watcher-intent")?.value?.trim() || "";
-    const filters = parseIntentToFilters(intent);
-
-    // Approach toggle
-    const btnAll = document.getElementById("btn-forward-all");
-    const btnFilter = document.getElementById("btn-forward-filter");
-
-    function showSteps() {
-        // Hide all step sets
-        document.getElementById("gmail-steps").classList.add("hidden");
-        document.getElementById("gmail-filter-steps").classList.add("hidden");
-        document.getElementById("outlook-steps").classList.add("hidden");
-        document.getElementById("outlook-rule-steps").classList.add("hidden");
-
-        if (detectedProvider === "gmail") {
-            if (forwardingApproach === "all") {
-                document.getElementById("gmail-steps").classList.remove("hidden");
-            } else {
-                document.getElementById("gmail-filter-steps").classList.remove("hidden");
-                renderFilterSuggestions("gmail-filter-suggestions", filters, "gmail");
-            }
-        } else if (detectedProvider === "outlook") {
-            if (forwardingApproach === "all") {
-                document.getElementById("outlook-steps").classList.remove("hidden");
-            } else {
-                document.getElementById("outlook-rule-steps").classList.remove("hidden");
-                renderFilterSuggestions("outlook-rule-suggestions", filters, "outlook");
-            }
-        }
+    try {
+        const response = await vigilAPI.chat(currentWatcher.id, msg);
+        chatHistory[chatHistory.length - 1].text = response;
+    } catch (e) {
+        chatHistory[chatHistory.length - 1].text = `Error: ${e.message}`;
     }
-
-    btnAll.addEventListener("click", () => {
-        forwardingApproach = "all";
-        btnAll.classList.add("active");
-        btnFilter.classList.remove("active");
-        showSteps();
-    });
-
-    btnFilter.addEventListener("click", () => {
-        forwardingApproach = "filter";
-        btnFilter.classList.add("active");
-        btnAll.classList.remove("active");
-        showSteps();
-    });
-
-    // If user provided specific filters in their intent, default to filter mode
-    if (filters.length > 0) {
-        forwardingApproach = "filter";
-        btnFilter.classList.add("active");
-        btnAll.classList.remove("active");
-    }
-
-    showSteps();
-
-    document.getElementById("forwarding-instructions").textContent =
-        detectedProvider === "gmail"
-            ? "Follow these steps to forward your Gmail to Vigil."
-            : "Follow these steps to forward your Outlook email to Vigil.";
-
-    // Copy address button
-    document.getElementById("btn-copy-address").addEventListener("click", () => {
-        navigator.clipboard.writeText(address);
-        document.getElementById("btn-copy-address").textContent = "Copied";
-        setTimeout(() => document.getElementById("btn-copy-address").textContent = "Copy", 2000);
-    });
-
-    // Gmail settings buttons
-    document.getElementById("btn-gmail-settings")?.addEventListener("click", () => {
-        chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-            chrome.tabs.update(tab.id, { url: "https://mail.google.com/mail/u/0/#settings/fwdandpop" });
-        });
-    });
-    document.getElementById("btn-gmail-settings-filter")?.addEventListener("click", () => {
-        chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-            chrome.tabs.update(tab.id, { url: "https://mail.google.com/mail/u/0/#settings/fwdandpop" });
-        });
-    });
-    document.getElementById("btn-gmail-filters")?.addEventListener("click", () => {
-        chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-            chrome.tabs.update(tab.id, { url: "https://mail.google.com/mail/u/0/#settings/filters" });
-        });
-    });
-
-    // Outlook settings buttons
-    document.getElementById("btn-outlook-settings")?.addEventListener("click", () => {
-        chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-            chrome.tabs.update(tab.id, { url: "https://outlook.live.com/mail/0/options/mail/forwarding" });
-        });
-    });
-    document.getElementById("btn-outlook-rules")?.addEventListener("click", () => {
-        chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
-            chrome.tabs.update(tab.id, { url: "https://outlook.live.com/mail/0/options/mail/rules" });
-        });
-    });
-
-    // Verify button
-    document.getElementById("btn-verify-forwarding").addEventListener("click", async () => {
-        const btn = document.getElementById("btn-verify-forwarding");
-        btn.textContent = "Checking...";
-        btn.disabled = true;
-        try {
-            const status = await vigilAPI.getForwardingStatus(selectedWatcher.id);
-            if (status.forwarding_active) {
-                goToStep(5);
-            } else {
-                btn.textContent = "No emails received yet. Forwarding may take a moment.";
-                setTimeout(() => {
-                    btn.textContent = "Check Forwarding Status";
-                    btn.disabled = false;
-                }, 3000);
-            }
-        } catch (e) {
-            console.error("Verify failed:", e);
-            btn.textContent = "Check Forwarding Status";
-            btn.disabled = false;
-        }
-    });
-
-    // Skip button
-    document.getElementById("btn-skip-verify").addEventListener("click", () => {
-        goToStep(5);
-    });
+    renderChat();
 }
 
-
-
 // ============================================================================
-// Step 5: Confirmation
+// Inbox
 // ============================================================================
 
-async function initStep5() {
-    if (!selectedWatcher) return;
+async function loadInbox() {
+    if (!currentWatcher) return;
+    const container = document.getElementById("inbox-list");
+    container.innerHTML = '<div class="loading-state">Loading threads...</div>';
 
-    // Fetch all stats in parallel
-    const [statusResult, usageResult, watcherResult] = await Promise.allSettled([
-        vigilAPI.getForwardingStatus(selectedWatcher.id),
-        vigilAPI.getUsage(),
-        vigilAPI.getWatcher(selectedWatcher.id),
-    ]);
+    try {
+        const threads = await vigilAPI.getThreads(currentWatcher.id);
 
-    const status = statusResult.status === "fulfilled" ? statusResult.value : null;
-    const usage = usageResult.status === "fulfilled" ? usageResult.value?.usage : null;
-    const watcher = watcherResult.status === "fulfilled" ? watcherResult.value : null;
+        if (!threads.length) {
+            container.innerHTML = '<div class="empty-state">No threads yet. Forward an email to get started.</div>';
+            return;
+        }
 
-    // Find this watcher's usage stats
-    const watcherUsage = usage?.watchers?.find(w => w.watcher_id === selectedWatcher.id);
+        container.innerHTML = threads.map(t => `
+            <div class="inbox-item ${t.status === 'active' ? 'inbox-active' : ''}">
+                <div class="inbox-subject">${escapeHtml(t.subject || "No subject")}</div>
+                <div class="inbox-meta">
+                    <span class="inbox-status inbox-status-${t.status}">${t.status}</span>
+                    <span>${t.email_count || 0} emails</span>
+                    ${t.last_activity ? `<span>${timeAgo(t.last_activity)}</span>` : ""}
+                </div>
+                ${t.summary ? `<div class="inbox-summary">${escapeHtml(t.summary)}</div>` : ""}
+            </div>
+        `).join("");
+    } catch (e) {
+        container.innerHTML = `<div class="error">${e.message}</div>`;
+    }
+}
 
-    // Status
-    const active = status?.forwarding_active ?? false;
-    document.getElementById("status-active").textContent = active ? "Active" : "Waiting...";
-    document.getElementById("status-active").style.color = active ? "#3d6b4f" : "#8b7234";
+// ============================================================================
+// Stats
+// ============================================================================
 
-    // Email counts
-    document.getElementById("status-total-emails").textContent =
-        (watcherUsage?.emails ?? status?.total_emails ?? 0).toLocaleString();
-    document.getElementById("status-email-count").textContent =
-        (status?.emails_24h ?? 0).toLocaleString();
+async function loadStats() {
+    if (!currentWatcher) return;
+    const container = document.getElementById("stats-content");
+    container.innerHTML = '<div class="loading-state">Loading stats...</div>';
 
-    // Agent stats
-    document.getElementById("status-invocations").textContent =
-        (watcherUsage?.invocations ?? 0).toLocaleString();
-    document.getElementById("status-alerts").textContent =
-        (watcherUsage?.alerts ?? 0).toLocaleString();
+    try {
+        const [statusResult, usageResult, watcherResult, memoriesResult] = await Promise.allSettled([
+            vigilAPI.getForwardingStatus(currentWatcher.id),
+            vigilAPI.getUsage(),
+            vigilAPI.getWatcher(currentWatcher.id),
+            vigilAPI.getMemories(currentWatcher.id),
+        ]);
 
-    // Last email
-    document.getElementById("status-last-email").textContent = status?.last_email_at
-        ? new Date(status.last_email_at).toLocaleString()
-        : "No emails yet";
+        const status = statusResult.status === "fulfilled" ? statusResult.value : null;
+        const usage = usageResult.status === "fulfilled" ? usageResult.value?.usage : null;
+        const watcher = watcherResult.status === "fulfilled" ? watcherResult.value : null;
+        const memories = memoriesResult.status === "fulfilled" ? memoriesResult.value : [];
+        const watcherUsage = usage?.watchers?.find(w => w.watcher_id === currentWatcher.id);
 
-    // Model
-    document.getElementById("status-model").textContent =
-        watcher?.model ?? selectedWatcher.model ?? "—";
+        const active = status?.forwarding_active ?? false;
+        const cost = watcherUsage?.cost ?? 0;
 
-    // Cost
-    const cost = watcherUsage?.cost ?? 0;
-    document.getElementById("status-cost").textContent =
-        cost > 0 ? `$${cost.toFixed(4)}` : "$0.00";
+        container.innerHTML = `
+            <div class="status-card">
+                <div class="status-row">
+                    <span>Status</span>
+                    <span class="status-value" style="color:${active ? '#3d6b4f' : '#8b7234'}">${active ? 'Active' : 'Waiting'}</span>
+                </div>
+                <div class="status-row">
+                    <span>Emails processed</span>
+                    <span class="status-value">${(watcherUsage?.emails ?? status?.total_emails ?? 0).toLocaleString()}</span>
+                </div>
+                <div class="status-row">
+                    <span>Emails (24h)</span>
+                    <span class="status-value">${(status?.emails_24h ?? 0).toLocaleString()}</span>
+                </div>
+                <div class="status-row">
+                    <span>Agent invocations</span>
+                    <span class="status-value">${(watcherUsage?.invocations ?? 0).toLocaleString()}</span>
+                </div>
+                <div class="status-row">
+                    <span>Alerts sent</span>
+                    <span class="status-value">${(watcherUsage?.alerts ?? 0).toLocaleString()}</span>
+                </div>
+                <div class="status-row">
+                    <span>Last email</span>
+                    <span class="status-value">${status?.last_email_at ? timeAgo(status.last_email_at) : 'None'}</span>
+                </div>
+                <div class="status-row">
+                    <span>Model</span>
+                    <span class="status-value">${watcher?.model ?? '—'}</span>
+                </div>
+                <div class="status-row">
+                    <span>Cost (this month)</span>
+                    <span class="status-value">${cost > 0 ? '$' + cost.toFixed(4) : '$0.00'}</span>
+                </div>
+                <div class="status-row">
+                    <span>Memories</span>
+                    <span class="status-value">${memories.length}</span>
+                </div>
+            </div>
 
-    document.getElementById("btn-restart").addEventListener("click", () => {
-        selectedWatcher = null;
-        detectedProvider = null;
-        goToStep(2);
-    });
+            ${memories.length > 0 ? `
+                <div class="memories-section">
+                    <h3>Recent Memories</h3>
+                    ${memories.slice(0, 8).map(m => `
+                        <div class="memory-item">
+                            <div class="memory-content">${escapeHtml(m.content)}</div>
+                            <div class="memory-meta">importance: ${m.importance || '—'} · ${m.created_at ? timeAgo(m.created_at) : ''}</div>
+                        </div>
+                    `).join("")}
+                </div>
+            ` : ''}
+        `;
+    } catch (e) {
+        container.innerHTML = `<div class="error">${e.message}</div>`;
+    }
+}
+
+// ============================================================================
+// Setup
+// ============================================================================
+
+function loadSetup() {
+    if (!currentWatcher) return;
+    const addr = currentWatcher.ingestion_address ||
+        `${currentWatcher.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${currentWatcher.ingest_token}@vigil.run`;
+    document.getElementById("setup-address").textContent = addr;
 }
 
 // ============================================================================
