@@ -74,11 +74,8 @@ export default function ExtensionPage() {
       <PublicHeader />
 
       <main className="pt-24 md:pt-28 pb-20">
-        <section className="relative overflow-hidden px-6 lg:px-8">
-          <div className="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-[#dbe4e8]/70 via-white/35 to-transparent pointer-events-none" />
-          <div className="absolute left-1/2 top-8 h-56 w-[48rem] max-w-full -translate-x-1/2 rounded-full bg-[radial-gradient(circle,_rgba(45,82,97,0.12),_transparent_65%)] pointer-events-none" />
-
-          <div className="max-w-6xl mx-auto relative z-10">
+        <section className="px-6 lg:px-8">
+          <div className="max-w-6xl mx-auto">
             <div className="max-w-4xl mx-auto text-center mb-8 md:mb-10">
               <div className="landing-section-header text-center items-center mx-auto gap-3 md:gap-4">
                 <div className="landing-section-kicker">Chrome Extension</div>
@@ -114,7 +111,7 @@ export default function ExtensionPage() {
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr] items-stretch">
-              <div className="landing-cta-shell panel p-4 md:p-5">
+              <div className="panel p-6 md:p-7">
                 <div className="grid gap-4 md:grid-cols-[1.05fr_0.95fr]">
                   <div className="panel-inset rounded-md p-5 md:p-6 text-left">
                     <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">What it does</p>
@@ -126,17 +123,17 @@ export default function ExtensionPage() {
                     </div>
                   </div>
 
-                  <div className="rounded-md bg-vigil-900 p-5 md:p-6 text-left shadow-[0_18px_36px_rgba(11,31,42,0.14)]">
-                    <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-300 mb-3">What it does not do</p>
-                    <ul className="space-y-3 text-sm text-vigil-100/92">
+                  <div className="panel-inset rounded-md p-5 md:p-6 text-left">
+                    <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">What it does not do</p>
+                    <ul className="space-y-3 text-sm text-gray-600">
                       {guarantees.map((item) => (
                         <li key={item} className="flex items-start gap-2.5">
-                          <span className="mt-0.5 text-vigil-300">•</span>
+                          <span className="mt-0.5 text-vigil-700">•</span>
                           <span>{item}</span>
                         </li>
                       ))}
                     </ul>
-                    <p className="mt-5 text-sm leading-relaxed text-vigil-200/82">
+                    <p className="mt-5 text-sm leading-relaxed text-gray-600">
                       Vigil processes forwarded email server-side. The extension only helps you configure the forwarding rule.
                     </p>
                   </div>
@@ -192,7 +189,7 @@ export default function ExtensionPage() {
               <ol className="space-y-3 text-sm text-gray-600">
                 {manualInstallSteps.map((step, index) => (
                   <li key={index} className="flex items-start gap-3">
-                    <span className="landing-step-index h-8 w-8 rounded-full text-sm">{index + 1}</span>
+                    <StepBadge className="h-8 w-8 text-sm">{index + 1}</StepBadge>
                     <span className="pt-1">{step}</span>
                   </li>
                 ))}
@@ -209,26 +206,26 @@ export default function ExtensionPage() {
                 </div>
               </div>
 
-              <div className="landing-cta-shell panel overflow-hidden">
-                <div className="grid gap-0 md:grid-cols-[1.1fr_0.9fr]">
-                  <div className="p-6 md:p-8">
+              <div className="panel p-6 md:p-7">
+                <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr]">
+                  <div>
                     <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Account Required</p>
                     <h2 className="text-2xl font-display font-semibold text-gray-900 mb-3">Install the extension after you have a watcher.</h2>
                     <p className="text-sm md:text-base text-gray-600 leading-relaxed max-w-none">
                       The setup flow is faster when your watcher already exists. Create one first, then use the extension to wire forwarding in.
                     </p>
                   </div>
-                  <div className="landing-cta-pricing p-6 md:p-8 text-white flex flex-col justify-center">
-                    <p className="text-sm uppercase tracking-[0.2em] text-vigil-300 mb-2">Start free</p>
-                    <p className="text-3xl font-display font-semibold mb-2">50 emails included</p>
-                    <p className="text-sm text-vigil-100/82 leading-relaxed mb-5 max-w-none">
+                  <div className="panel-inset rounded-md p-5 md:p-6 flex flex-col justify-center">
+                    <p className="text-sm uppercase tracking-[0.2em] text-vigil-700/80 mb-2">Start free</p>
+                    <p className="text-3xl font-display font-semibold text-gray-900 mb-2">50 emails included</p>
+                    <p className="text-sm text-gray-600 leading-relaxed mb-5 max-w-none">
                       No credit card required. Set up a watcher, install the extension, and let the agent start learning from the first thread.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3">
                       <Link href="/auth/register" className="btn btn-secondary">
                         Create account
                       </Link>
-                      <Link href="/learn/email-ingestion" className="btn btn-ghost text-white hover:bg-white/10 hover:text-white">
+                      <Link href="/learn/email-ingestion" className="btn btn-ghost">
                         Read setup docs
                       </Link>
                     </div>
@@ -265,13 +262,21 @@ function MiniStat({ value, label }: { value: string; label: string }) {
 
 function StepCard({ num, title, desc }: { num: number; title: string; desc: string }) {
   return (
-    <div className="landing-step-card panel p-6 flex flex-col gap-4">
-      <div className="landing-step-index h-10 w-10 rounded-full text-sm">{num}</div>
+    <div className="panel p-6 flex flex-col gap-4">
+      <StepBadge>{num}</StepBadge>
       <div>
         <h3 className="text-lg font-display font-semibold text-gray-900 mb-2">{title}</h3>
         <p className="text-sm text-gray-600 leading-relaxed max-w-none">{desc}</p>
       </div>
     </div>
+  );
+}
+
+function StepBadge({ children, className = 'h-10 w-10' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <span className={`inline-flex items-center justify-center rounded-full bg-surface-sunken text-sm font-semibold text-vigil-700 ${className}`.trim()}>
+      {children}
+    </span>
   );
 }
 

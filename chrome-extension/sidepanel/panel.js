@@ -214,27 +214,157 @@ async function initStep3() {
 // Step 4: Forwarding Setup
 // ============================================================================
 
+function parseIntentToFilters(intent) {
+    if (!intent) return [];
+
+    const filters = [];
+    const lower = intent.toLowerCase();
+
+    // Extract email addresses
+    const emailMatches = intent.match(/[\w.-]+@[\w.-]+\.\w+/g);
+    if (emailMatches) {
+        filters.push({ field: "From", value: emailMatches.join(" OR "), type: "from" });
+    }
+
+    // Extract domain patterns
+    const domainMatches = intent.match(/@([\w.-]+\.\w+)/g);
+    if (domainMatches && !emailMatches) {
+        const domains = domainMatches.map(d => d.slice(1));
+        filters.push({ field: "From", value: domains.map(d => `@${d}`).join(" OR "), type: "from" });
+    }
+
+    // Extract subject keywords
+    const subjectKeywords = [];
+    const subjectPatterns = [
+        /invoic/i, /payment/i, /deadline/i, /urgent/i, /overdue/i,
+        /contract/i, /proposal/i, /quote/i, /estimate/i, /receipt/i,
+        /ticket/i, /support/i, /bug/i, /incident/i, /alert/i,
+    ];
+    for (const p of subjectPatterns) {
+        if (p.test(lower)) {
+            subjectKeywords.push(p.source.replace(/\\i?/g, "").replace(/\//g, ""));
+        }
+    }
+    if (subjectKeywords.length > 0) {
+        filters.push({ field: "Subject", value: subjectKeywords.join(" OR "), type: "subject" });
+    }
+
+    // Detect "client" or "work" patterns
+    if (/client/i.test(lower) || /customer/i.test(lower) || /vendor/i.test(lower)) {
+        if (filters.length === 0) {
+            filters.push({ field: "Has the words", value: "reply needed OR action required OR follow up OR awaiting", type: "words" });
+        }
+    }
+
+    // If nothing specific was extracted, suggest forwarding all
+    if (filters.length === 0 && intent.length > 10) {
+        const words = intent.split(/\s+/).filter(w => w.length > 4).slice(0, 4);
+        if (words.length > 0) {
+            filters.push({ field: "Has the words", value: words.join(" OR "), type: "words" });
+        }
+    }
+
+    return filters;
+}
+
+function renderFilterSuggestions(containerId, filters, provider) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = "";
+
+    if (filters.length === 0) {
+        container.innerHTML = '<p style="font-size:12px;color:#787874;">Tip: You can filter by sender (From), subject, or keywords. The agent handles the rest with its instructions.</p>';
+        return;
+    }
+
+    for (const f of filters) {
+        const div = document.createElement("div");
+        div.className = "filter-suggestion";
+        div.innerHTML = `<span class="filter-field">${escapeHtml(f.field)}:</span> <span class="filter-value">${escapeHtml(f.value)}</span>`;
+        container.appendChild(div);
+    }
+
+    const tip = document.createElement("p");
+    tip.style.cssText = "font-size:11px;color:#787874;margin-top:6px;";
+    if (provider === "gmail") {
+        tip.textContent = "Enter these in Gmail's filter creation form. You can combine multiple fields.";
+    } else {
+        tip.textContent = "Use these as conditions in your Outlook rule.";
+    }
+    container.appendChild(tip);
+}
+
+let forwardingApproach = "all";
+
 async function initStep4() {
     if (!selectedWatcher) return;
 
     // Build forwarding address
     const slug = selectedWatcher.name.toLowerCase().replace(/[^a-z0-9]/g, "-");
-    const token = selectedWatcher.ingest_token;
-    const address = `${slug}-${token}@vigil.run`;
+    const token = selectedWatcher.ingest_token || selectedWatcher.ingestion_address?.split("@")[0]?.split("-").pop();
+    const address = selectedWatcher.ingestion_address || `${slug}-${token}@vigil.run`;
 
     document.getElementById("forwarding-address").textContent = address;
 
-    // Show provider-specific steps
-    document.getElementById("gmail-steps").classList.toggle("hidden", detectedProvider !== "gmail");
-    document.getElementById("outlook-steps").classList.toggle("hidden", detectedProvider !== "outlook");
+    // Get the user's intent for filter suggestions
+    const intent = document.getElementById("watcher-intent")?.value?.trim() || "";
+    const filters = parseIntentToFilters(intent);
 
-    if (detectedProvider === "gmail") {
-        document.getElementById("forwarding-instructions").textContent =
-            "Follow these steps to forward your Gmail to Vigil.";
-    } else {
-        document.getElementById("forwarding-instructions").textContent =
-            "Follow these steps to forward your Outlook email to Vigil.";
+    // Approach toggle
+    const btnAll = document.getElementById("btn-forward-all");
+    const btnFilter = document.getElementById("btn-forward-filter");
+
+    function showSteps() {
+        // Hide all step sets
+        document.getElementById("gmail-steps").classList.add("hidden");
+        document.getElementById("gmail-filter-steps").classList.add("hidden");
+        document.getElementById("outlook-steps").classList.add("hidden");
+        document.getElementById("outlook-rule-steps").classList.add("hidden");
+
+        if (detectedProvider === "gmail") {
+            if (forwardingApproach === "all") {
+                document.getElementById("gmail-steps").classList.remove("hidden");
+            } else {
+                document.getElementById("gmail-filter-steps").classList.remove("hidden");
+                renderFilterSuggestions("gmail-filter-suggestions", filters, "gmail");
+            }
+        } else if (detectedProvider === "outlook") {
+            if (forwardingApproach === "all") {
+                document.getElementById("outlook-steps").classList.remove("hidden");
+            } else {
+                document.getElementById("outlook-rule-steps").classList.remove("hidden");
+                renderFilterSuggestions("outlook-rule-suggestions", filters, "outlook");
+            }
+        }
     }
+
+    btnAll.addEventListener("click", () => {
+        forwardingApproach = "all";
+        btnAll.classList.add("active");
+        btnFilter.classList.remove("active");
+        showSteps();
+    });
+
+    btnFilter.addEventListener("click", () => {
+        forwardingApproach = "filter";
+        btnFilter.classList.add("active");
+        btnAll.classList.remove("active");
+        showSteps();
+    });
+
+    // If user provided specific filters in their intent, default to filter mode
+    if (filters.length > 0) {
+        forwardingApproach = "filter";
+        btnFilter.classList.add("active");
+        btnAll.classList.remove("active");
+    }
+
+    showSteps();
+
+    document.getElementById("forwarding-instructions").textContent =
+        detectedProvider === "gmail"
+            ? "Follow these steps to forward your Gmail to Vigil."
+            : "Follow these steps to forward your Outlook email to Vigil.";
 
     // Copy address button
     document.getElementById("btn-copy-address").addEventListener("click", () => {
@@ -243,21 +373,36 @@ async function initStep4() {
         setTimeout(() => document.getElementById("btn-copy-address").textContent = "Copy", 2000);
     });
 
-    // Gmail settings button
+    // Gmail settings buttons
     document.getElementById("btn-gmail-settings")?.addEventListener("click", () => {
         chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
             chrome.tabs.update(tab.id, { url: "https://mail.google.com/mail/u/0/#settings/fwdandpop" });
         });
     });
+    document.getElementById("btn-gmail-settings-filter")?.addEventListener("click", () => {
+        chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+            chrome.tabs.update(tab.id, { url: "https://mail.google.com/mail/u/0/#settings/fwdandpop" });
+        });
+    });
+    document.getElementById("btn-gmail-filters")?.addEventListener("click", () => {
+        chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+            chrome.tabs.update(tab.id, { url: "https://mail.google.com/mail/u/0/#settings/filters" });
+        });
+    });
 
-    // Outlook settings button
+    // Outlook settings buttons
     document.getElementById("btn-outlook-settings")?.addEventListener("click", () => {
         chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
             chrome.tabs.update(tab.id, { url: "https://outlook.live.com/mail/0/options/mail/forwarding" });
         });
     });
+    document.getElementById("btn-outlook-rules")?.addEventListener("click", () => {
+        chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
+            chrome.tabs.update(tab.id, { url: "https://outlook.live.com/mail/0/options/mail/rules" });
+        });
+    });
 
-    // Verify button — checks if emails are flowing
+    // Verify button
     document.getElementById("btn-verify-forwarding").addEventListener("click", async () => {
         const btn = document.getElementById("btn-verify-forwarding");
         btn.textContent = "Checking...";
@@ -280,7 +425,7 @@ async function initStep4() {
         }
     });
 
-    // Skip button — user confirms they've set it up
+    // Skip button
     document.getElementById("btn-skip-verify").addEventListener("click", () => {
         goToStep(5);
     });

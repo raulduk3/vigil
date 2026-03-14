@@ -97,7 +97,16 @@
                 </div>
             </div>
 
-            <!-- Gmail steps -->
+            <!-- Forwarding approach selector -->
+            <div class="forwarding-approach">
+                <p class="step-desc" style="margin-bottom:8px;font-weight:600;color:#1a1a18;">What do you want to forward?</p>
+                <div style="display:flex;gap:8px;">
+                    <button id="btn-forward-all" class="btn secondary small approach-btn active">All email</button>
+                    <button id="btn-forward-filter" class="btn secondary small approach-btn">Only matching emails</button>
+                </div>
+            </div>
+
+            <!-- Gmail steps: forward all -->
             <div id="gmail-steps" class="setup-steps hidden">
                 <div class="step-item">
                     <span class="step-num">1</span>
@@ -109,24 +118,61 @@
                 <div class="step-item">
                     <span class="step-num">2</span>
                     <div>
-                        <p>Click "Add a forwarding address" and paste the address above</p>
+                        <p>Click "Add a forwarding address" and paste the Vigil address above</p>
                     </div>
                 </div>
                 <div class="step-item">
                     <span class="step-num">3</span>
                     <div>
-                        <p>Gmail will send a confirmation email to that address. Open your inbox and click the confirmation link in the email from Google.</p>
+                        <p>Gmail will send a confirmation email. Open your inbox and click the confirmation link from Google.</p>
                     </div>
                 </div>
                 <div class="step-item">
                     <span class="step-num">4</span>
                     <div>
-                        <p>Back in Gmail Settings, select "Forward a copy of incoming mail to..." and choose your Vigil address, then click Save Changes.</p>
+                        <p>Back in Settings, select "Forward a copy of incoming mail to..." and choose your Vigil address. Click Save Changes.</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Outlook steps -->
+            <!-- Gmail steps: filter-based forwarding -->
+            <div id="gmail-filter-steps" class="setup-steps hidden">
+                <div class="step-item">
+                    <span class="step-num">1</span>
+                    <div>
+                        <p>First, register the forwarding address: open Gmail Settings, then Forwarding and POP/IMAP</p>
+                        <button id="btn-gmail-settings-filter" class="btn secondary small">Open Settings</button>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <span class="step-num">2</span>
+                    <div>
+                        <p>Click "Add a forwarding address", paste the Vigil address, and confirm via the link Gmail sends. Do NOT enable "Forward a copy" globally.</p>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <span class="step-num">3</span>
+                    <div>
+                        <p>Now create a filter. Click the search options icon in Gmail's search bar (or go to Settings, then Filters and Blocked Addresses, then "Create a new filter").</p>
+                        <button id="btn-gmail-filters" class="btn secondary small">Open Filters</button>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <span class="step-num">4</span>
+                    <div>
+                        <p>Set your filter criteria:</p>
+                        <div id="gmail-filter-suggestions" class="filter-suggestions"></div>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <span class="step-num">5</span>
+                    <div>
+                        <p>Click "Create filter", then check "Forward it to" and select your Vigil address. Click "Create filter" again.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Outlook steps: forward all -->
             <div id="outlook-steps" class="setup-steps hidden">
                 <div class="step-item">
                     <span class="step-num">1</span>
@@ -138,19 +184,43 @@
                 <div class="step-item">
                     <span class="step-num">2</span>
                     <div>
-                        <p>Enable "Enable forwarding"</p>
+                        <p>Enable forwarding and paste the Vigil address above</p>
                     </div>
                 </div>
                 <div class="step-item">
                     <span class="step-num">3</span>
                     <div>
-                        <p>Paste the forwarding address above</p>
+                        <p>Check "Keep a copy of forwarded messages" and save</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Outlook steps: rule-based forwarding -->
+            <div id="outlook-rule-steps" class="setup-steps hidden">
+                <div class="step-item">
+                    <span class="step-num">1</span>
+                    <div>
+                        <p>Open Outlook Settings, then Mail, then Rules</p>
+                        <button id="btn-outlook-rules" class="btn secondary small">Open Rules</button>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <span class="step-num">2</span>
+                    <div>
+                        <p>Click "Add new rule" and set up your conditions:</p>
+                        <div id="outlook-rule-suggestions" class="filter-suggestions"></div>
+                    </div>
+                </div>
+                <div class="step-item">
+                    <span class="step-num">3</span>
+                    <div>
+                        <p>Under "Add an action", select "Forward to" and paste the Vigil address above.</p>
                     </div>
                 </div>
                 <div class="step-item">
                     <span class="step-num">4</span>
                     <div>
-                        <p>Check "Keep a copy of forwarded messages" and save</p>
+                        <p>Name the rule, click Save, and make sure it's enabled.</p>
                     </div>
                 </div>
             </div>

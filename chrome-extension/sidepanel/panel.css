@@ -440,6 +440,50 @@ input::placeholder {
     color: #3d6b4f;
 }
 
+/* Approach toggle */
+.approach-btn {
+    flex: 1;
+    text-align: center;
+}
+.approach-btn.active {
+    background: #0B1F2A;
+    color: #f8f8f7;
+    box-shadow: none;
+}
+
+/* Filter suggestions */
+.filter-suggestions {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.filter-suggestion {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #f0f0ee;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #3d3d3a;
+    box-shadow: inset 0 1px 1px rgba(0,0,0,0.04);
+}
+
+.filter-suggestion .filter-field {
+    font-weight: 600;
+    color: #1a1a18;
+    white-space: nowrap;
+    min-width: 48px;
+}
+
+.filter-suggestion .filter-value {
+    font-family: 'SF Mono', Monaco, Inconsolata, 'Fira Mono', Consolas, monospace;
+    color: #2d5261;
+    word-break: break-all;
+}
+
 /* Utility */
 .hidden {
     display: none !important;
