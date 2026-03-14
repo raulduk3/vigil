@@ -449,6 +449,20 @@ function formatWatcher(row: WatcherRow) {
         tools = JSON.parse(row.tools);
     } catch {}
 
+    // Counts
+    const emailCount = queryOne<{ count: number }>(
+        `SELECT COUNT(*) as count FROM emails WHERE watcher_id = ?`,
+        [row.id]
+    );
+    const threadCount = queryOne<{ count: number }>(
+        `SELECT COUNT(*) as count FROM threads WHERE watcher_id = ? AND status = 'active'`,
+        [row.id]
+    );
+    const memoryCount = queryOne<{ count: number }>(
+        `SELECT COUNT(*) as count FROM memories WHERE watcher_id = ? AND obsolete = FALSE`,
+        [row.id]
+    );
+
     return {
         id: row.id,
         name: row.name,
@@ -466,6 +480,9 @@ function formatWatcher(row: WatcherRow) {
         last_tick_at: row.last_tick_at,
         created_at: row.created_at,
         updated_at: row.updated_at,
+        total_emails: emailCount?.count ?? 0,
+        active_threads: threadCount?.count ?? 0,
+        memories: memoryCount?.count ?? 0,
     };
 }
 

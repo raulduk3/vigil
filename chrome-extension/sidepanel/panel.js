@@ -158,9 +158,14 @@ async function initStep3() {
             for (const w of watchers) {
                 const item = document.createElement("div");
                 item.className = "watcher-item";
+                const stats = [
+                    `${(w.total_emails || 0).toLocaleString()} emails`,
+                    `${w.active_threads || 0} threads`,
+                    `${w.memories || 0} memories`,
+                ].join(" · ");
                 item.innerHTML = `
                     <div class="name">${escapeHtml(w.name)}</div>
-                    <div class="meta">${w.total_emails || 0} emails · ${w.status}</div>
+                    <div class="meta">${stats}</div>
                 `;
                 item.addEventListener("click", async () => {
                     document.querySelectorAll(".watcher-item").forEach(i => i.classList.remove("selected"));
