@@ -2,84 +2,21 @@
 
 import Link from 'next/link';
 import { PublicHeader } from '@/components/layout';
-import { ConnectionIndicator } from '@/components/system/connection-indicator';
 
-const plans = [
-  {
-    name: 'Free',
-    price: 0,
-    period: 'forever',
-    description: 'Get started with basic email monitoring',
-    features: [
-      '50 emails per week',
-      '2 watchers',
-      '2 notification channels',
-    ],
-    notIncluded: [
-      'Advanced reporting',
-      'Webhook notifications',
-    ],
-    cta: 'Get started',
-    ctaHref: '/auth/register',
-    highlight: false,
-  },
-  {
-    name: 'Starter',
-    price: 9.99,
-    period: '/month',
-    description: 'For individuals and small teams',
-    features: [
-      '200 emails per week',
-      '5 watchers',
-      '5 notification channels',
-      'Webhook notifications',
-      'Email support',
-    ],
-    notIncluded: [
-      'Advanced reporting',
-    ],
-    cta: 'Start free trial',
-    ctaHref: '/auth/register?plan=starter',
-    highlight: false,
-  },
-  {
-    name: 'Professional',
-    price: 29.99,
-    period: '/month',
-    description: 'For professionals and growing teams',
-    features: [
-      '1,000 emails per week',
-      '20 watchers',
-      '10 notification channels',
-      'Advanced reporting',
-      'Webhook notifications',
-      'Priority support',
-    ],
-    notIncluded: [],
-    cta: 'Start free trial',
-    ctaHref: '/auth/register?plan=pro',
-    highlight: true,
-  },
-  {
-    name: 'Enterprise',
-    price: null,
-    period: '',
-    description: 'Unlimited usage for large organizations',
-    features: [
-      'Unlimited emails',
-      'Unlimited watchers',
-      'Unlimited notification channels',
-      'Advanced reporting',
-      'Webhook notifications',
-      'Dedicated support',
-      'Custom integrations',
-      'SLA guarantee',
-    ],
-    notIncluded: [],
-    cta: 'Contact sales',
-    ctaHref: 'mailto:sales@vigil.run',
-    highlight: false,
-  },
+const models = [
+  { name: 'GPT-4.1 Nano', cost: '$0.10', speed: 'Fastest', quality: 'Basic triage', recommended: false },
+  { name: 'GPT-4.1 Mini', cost: '$0.40', speed: 'Fast', quality: 'Good balance', recommended: true },
+  { name: 'Gemini 2.5 Flash', cost: '$0.15', speed: 'Fast', quality: 'Good balance', recommended: false },
+  { name: 'GPT-4.1', cost: '$2.00', speed: 'Moderate', quality: 'High accuracy', recommended: false },
+  { name: 'Claude Sonnet 4', cost: '$3.00', speed: 'Moderate', quality: 'Strongest reasoning', recommended: false },
+  { name: 'Gemini 2.5 Pro', cost: '$1.25', speed: 'Moderate', quality: 'High accuracy', recommended: false },
+];
+
+const examples = [
+  { emails: 10, label: '10 emails/day', monthly: '~$0.12/mo', model: 'GPT-4.1 Mini' },
+  { emails: 50, label: '50 emails/day', monthly: '~$0.60/mo', model: 'GPT-4.1 Mini' },
+  { emails: 200, label: '200 emails/day', monthly: '~$2.40/mo', model: 'GPT-4.1 Mini' },
+  { emails: 50, label: '50 emails/day', monthly: '~$3.00/mo', model: 'GPT-4.1 (full)' },
 ];
 
 export default function PricingPage() {
@@ -88,214 +25,144 @@ export default function PricingPage() {
       <PublicHeader />
 
       <main className="pt-28 pb-20">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto px-6 lg:px-8">
           {/* Header */}
-          <div className="text-center mb-16">
-            <p className="text-sm font-medium text-vigil-700 uppercase tracking-wider mb-3">
-              Pricing
-            </p>
+          <div className="text-center mb-14">
+            <p className="text-sm font-medium text-vigil-700 uppercase tracking-wider mb-3">Pricing</p>
             <h1 className="text-4xl md:text-5xl font-display font-semibold text-gray-900 tracking-tight mb-5">
-              Simple, transparent pricing
+              Pay for what you use.
             </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              Start free. Upgrade when you need more capacity. 
-              No hidden fees. Cancel anytime.
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+              No tiers. No subscriptions. You pay the AI cost of processing each email, 
+              plus $0.005 per alert sent. That's it.
             </p>
           </div>
 
-          {/* Pricing cards */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-            {plans.map((plan) => (
-              <div
-                key={plan.name}
-                className={`panel p-6 flex flex-col ${
-                  plan.highlight 
-                    ? 'ring-2 ring-vigil-500 relative' 
-                    : ''
-                }`}
-              >
-                <div className="mb-5">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                    {plan.name}
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    {plan.description}
-                  </p>
-                </div>
-
-                <div className="mb-6">
-                  {plan.price !== null ? (
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-display font-semibold text-gray-900">
-                        ${plan.price}
-                      </span>
-                      <span className="text-gray-500">{plan.period}</span>
-                    </div>
-                  ) : (
-                    <div className="text-4xl font-display font-semibold text-gray-900">
-                      Custom
-                    </div>
-                  )}
-                </div>
-
-                <ul className="space-y-3 mb-6 flex-grow">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2 text-sm">
-                      <svg 
-                        className="w-5 h-5 text-vigil-600 flex-shrink-0 mt-0.5" 
-                        fill="none" 
-                        viewBox="0 0 24 24" 
-                        stroke="currentColor"
-                      >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          strokeWidth={2} 
-                          d="M5 13l4 4L19 7" 
-                        />
-                      </svg>
-                      <span className="text-gray-700">{feature}</span>
-                    </li>
-                  ))}
-                  {plan.notIncluded.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2 text-sm">
-                      <svg 
-                        className="w-5 h-5 text-gray-300 flex-shrink-0 mt-0.5" 
-                        fill="none" 
-                        viewBox="0 0 24 24" 
-                        stroke="currentColor"
-                      >
-                        <path 
-                          strokeLinecap="round" 
-                          strokeLinejoin="round" 
-                          strokeWidth={2} 
-                          d="M6 18L18 6M6 6l12 12" 
-                        />
-                      </svg>
-                      <span className="text-gray-400">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <Link
-                  href={plan.ctaHref}
-                  className={`btn w-full justify-center ${
-                    plan.highlight ? 'btn-primary' : 'btn-secondary'
-                  }`}
-                >
-                  {plan.cta}
-                </Link>
+          {/* Core pricing */}
+          <div className="panel p-8 mb-8">
+            <div className="grid md:grid-cols-3 gap-8 text-center">
+              <div>
+                <div className="text-3xl font-display font-semibold text-gray-900 mb-1">$0.005</div>
+                <div className="text-sm text-gray-500">per alert email sent</div>
               </div>
-            ))}
-          </div>
-
-          {/* FAQ Section */}
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl font-display font-semibold text-gray-900 text-center mb-8">
-              Frequently asked questions
-            </h2>
-            
-            <div className="space-y-6">
-              <div className="panel p-5">
-                <h3 className="font-medium text-gray-900 mb-2">
-                  What counts as an email?
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Each email forwarded to your watcher address counts as one email. 
-                  Follow-up messages in the same thread each count separately since 
-                  they may contain new deadlines or obligations.
-                </p>
+              <div>
+                <div className="text-3xl font-display font-semibold text-gray-900 mb-1">~$0.0004</div>
+                <div className="text-sm text-gray-500">per email processed (GPT-4.1 Mini)</div>
               </div>
-
-              <div className="panel p-5">
-                <h3 className="font-medium text-gray-900 mb-2">
-                  When does my usage reset?
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Email limits reset every Monday at 00:00 UTC. You can track your 
-                  current usage in the dashboard.
-                </p>
-              </div>
-
-              <div className="panel p-5">
-                <h3 className="font-medium text-gray-900 mb-2">
-                  Can I change plans anytime?
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Yes. Upgrades take effect immediately with prorated billing. 
-                  Downgrades take effect at the end of your current billing period.
-                </p>
-              </div>
-
-              <div className="panel p-5">
-                <h3 className="font-medium text-gray-900 mb-2">
-                  What happens if I exceed my limits?
-                </h3>
-                <p className="text-sm text-gray-600">
-                  You'll receive a notification when approaching your limit. 
-                  Once reached, new emails won't be processed until the next period 
-                  or you upgrade. Existing reminders and alerts continue working.
-                </p>
-              </div>
-
-              <div className="panel p-5">
-                <h3 className="font-medium text-gray-900 mb-2">
-                  Do you offer refunds?
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Yes. If you're not satisfied within the first 14 days, contact us 
-                  for a full refund. No questions asked.
-                </p>
+              <div>
+                <div className="text-3xl font-display font-semibold text-gray-900 mb-1">$0</div>
+                <div className="text-sm text-gray-500">platform fee, watchers, storage</div>
               </div>
             </div>
+          </div>
+
+          {/* What's free */}
+          <div className="panel p-6 mb-8 bg-vigil-900 text-white">
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-vigil-200 mb-4">Always free</h3>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {[
+                'Unlimited watchers',
+                'Unlimited threads and memory',
+                'Full audit trail of every decision',
+                'Agent chat (conversational control)',
+                'Thread tracking and obligation alerts',
+                'Webhook integrations',
+                'Model selection (9 models, 3 providers)',
+                'Reactivity control per watcher',
+              ].map((item) => (
+                <div key={item} className="flex items-center gap-2 text-sm text-vigil-100">
+                  <svg className="w-4 h-4 text-vigil-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Model pricing table */}
+          <div className="mb-8">
+            <h2 className="text-xl font-display font-semibold text-gray-900 mb-1">Choose your model</h2>
+            <p className="text-sm text-gray-500 mb-4">Cost per 1M input tokens. Each email uses ~500-2000 tokens depending on length.</p>
+            <div className="panel overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-surface-sunken">
+                    <th className="text-left px-4 py-3 font-medium text-gray-700">Model</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-700">Cost/1M tokens</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-700">Speed</th>
+                    <th className="text-left px-4 py-3 font-medium text-gray-700">Quality</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {models.map((m) => (
+                    <tr key={m.name} className={`border-b border-gray-100 ${m.recommended ? 'bg-vigil-50' : ''}`}>
+                      <td className="px-4 py-3 font-medium text-gray-900">
+                        {m.name}
+                        {m.recommended && <span className="ml-2 badge badge-sm badge-ok">default</span>}
+                      </td>
+                      <td className="px-4 py-3 text-gray-700 font-mono">{m.cost}</td>
+                      <td className="px-4 py-3 text-gray-600">{m.speed}</td>
+                      <td className="px-4 py-3 text-gray-600">{m.quality}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Cost examples */}
+          <div className="mb-14">
+            <h2 className="text-xl font-display font-semibold text-gray-900 mb-1">What it actually costs</h2>
+            <p className="text-sm text-gray-500 mb-4">Real monthly estimates based on email volume.</p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {examples.map((ex) => (
+                <div key={ex.label + ex.model} className="panel p-5">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <div className="font-medium text-gray-900">{ex.label}</div>
+                      <div className="text-xs text-gray-500">{ex.model}</div>
+                    </div>
+                    <div className="text-xl font-display font-semibold text-gray-900">{ex.monthly}</div>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-1.5">
+                    <div className="bg-vigil-500 h-1.5 rounded-full" style={{ width: `${Math.min(100, (ex.emails / 200) * 100)}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* FAQ */}
+          <div className="max-w-3xl mx-auto mb-14">
+            <h2 className="text-2xl font-display font-semibold text-gray-900 text-center mb-8">Questions</h2>
+            <div className="space-y-4">
+              {[
+                { q: 'What counts as a processed email?', a: 'Each email forwarded to your watcher address. Follow-ups in the same thread count separately since each may contain new obligations or deadlines.' },
+                { q: 'What counts as an alert?', a: 'Each email sent by Vigil to notify you about something. Silence alerts, urgency alerts, and weekly digests each count as one alert ($0.005 each).' },
+                { q: 'Is there a minimum charge?', a: 'No. If you send 0 emails in a month, you pay $0. No platform fees, no minimum commitments.' },
+                { q: 'Can I set a spending cap?', a: 'Coming soon. For now, you control costs by choosing cheaper models and adjusting your reactivity level (fewer alerts = lower cost).' },
+                { q: 'How do I pay?', a: 'Usage is tracked per account. Billing is monthly via Stripe. You can see your current usage and estimated cost in the dashboard.' },
+              ].map((faq) => (
+                <div key={faq.q} className="panel p-5">
+                  <h3 className="font-medium text-gray-900 mb-2">{faq.q}</h3>
+                  <p className="text-sm text-gray-600">{faq.a}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA */}
+          <div className="text-center">
+            <Link href="/auth/register" className="btn btn-primary btn-lg">Start for free</Link>
+            <p className="text-sm text-gray-500 mt-3">No credit card required. Pay only when you use it.</p>
           </div>
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-gray-200 bg-surface-page">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8 py-12">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <p className="font-display font-semibold text-gray-900 mb-3">Vigil</p>
-              <p className="text-sm text-gray-500">
-                Email oversight.<br />
-                Powered by GPT-4o-mini.
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-3">Product</p>
-              <ul className="space-y-2 text-sm text-gray-500">
-                <li><Link href="/#how-it-works" className="hover:text-gray-700">How it works</Link></li>
-                <li><Link href="/#features" className="hover:text-gray-700">Features</Link></li>
-                <li><Link href="/pricing" className="hover:text-gray-700">Pricing</Link></li>
-              </ul>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-3">Documentation</p>
-              <ul className="space-y-2 text-sm text-gray-500">
-                <li><Link href="/learn/watchers" className="hover:text-gray-700">Watchers</Link></li>
-                <li><Link href="/learn/email-ingestion" className="hover:text-gray-700">Email ingestion</Link></li>
-                <li><Link href="/learn/reminders" className="hover:text-gray-700">Reminders</Link></li>
-                <li><Link href="/learn/architecture" className="hover:text-gray-700">Architecture</Link></li>
-              </ul>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-3">Company</p>
-              <ul className="space-y-2 text-sm text-gray-500">
-                <li><Link href="/blog" className="hover:text-gray-700">Blog</Link></li>
-                <li><Link href="/support" className="hover:text-gray-700">Support</Link></li>
-                <li><Link href="/privacy" className="hover:text-gray-700">Privacy policy</Link></li>
-                <li><Link href="/terms" className="hover:text-gray-700">Terms of service</Link></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-200 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
-            <p>© {new Date().getFullYear()} Vigil. All rights reserved.</p>
-            <div className="flex items-center gap-2">
-              <ConnectionIndicator />
-            </div>
-          </div>
+        <div className="max-w-6xl mx-auto px-6 lg:px-8 py-8 text-center text-sm text-gray-500">
+          © {new Date().getFullYear()} Vigil. All rights reserved.
         </div>
       </footer>
     </div>

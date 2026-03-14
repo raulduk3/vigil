@@ -84,16 +84,16 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto px-6 lg:px-8 relative z-10">
           <div className="relative max-w-4xl">
             <p className="text-base font-medium text-vigil-700 mb-5 uppercase tracking-wider">
-              AI email agent · No inbox access required
+              AI email agent · Pay per use · No inbox access
             </p>
             <h1 className="text-5xl md:text-6xl font-display font-semibold text-gray-900 tracking-tight mb-7 text-balance leading-[1.1]">
-              An email agent that<br />
-              never sees your inbox.
+              Never lose track of<br />
+              an email obligation.
             </h1>
             <p className="text-xl text-gray-600 mb-8 leading-relaxed max-w-2xl">
-              Forward emails to Vigil. An AI agent reads each one, tracks conversations, builds memory,
-              and alerts you when something needs attention. Email bodies are processed and discarded.
-              Nothing is stored. Nothing is accessed.
+              Forward emails to Vigil. An AI agent tracks your conversations, remembers deadlines,
+              and alerts you when someone is waiting or a thread has gone quiet.
+              Pay only for what you use. No subscriptions.
             </p>
             <div className="flex items-center gap-4">
               <Link href="/auth/register" className="btn btn-primary btn-lg">
@@ -183,12 +183,12 @@ export default function HomePage() {
         <div className="mb-8 md:mb-12">
           <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Why Vigil</p>
           <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4">
-            Privacy you don't have to trust.
+            Your obligations, tracked automatically.
           </h2>
           <p className="text-lg text-gray-600 leading-relaxed max-w-none">
-            Most email tools ask for inbox access. Vigil never touches your inbox.
-            You forward what matters. The agent processes it in memory and discards the content.
-            What remains: metadata, the agent's analysis, and its growing memory of your email patterns.
+            Vigil doesn't just filter email. It tracks what you owe people, what people owe you,
+            and what conversations have gone quiet. When a thread needs your attention, 
+            or when a deadline is approaching without confirmation, you'll know.
           </p>
         </div>
 
@@ -422,34 +422,27 @@ export default function HomePage() {
             Vigil is not magic. Every decision is logged. Every action is traceable.
             Read how it works, what it stores, and why you can trust it.
           </p>
-          <p className="text-sm text-vigil-700 font-medium mt-3">Click any card below to open the full guide.</p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5">
           {[
-            { href: '/learn/watchers', title: 'Watchers', description: 'Create agents that monitor email streams. Configure prompts, tools, and alert thresholds.', delay: 0.1 },
-            { href: '/learn/email-ingestion', title: 'Email forwarding', description: 'How to forward emails to Vigil, what gets processed, and how threads are detected.', delay: 0.2 },
-            { href: '/learn/agent', title: 'The agent', description: 'How the AI agent analyzes email, builds memory, and decides when to alert you.', delay: 0.3 },
-            { href: '/learn/memory', title: 'Memory system', description: 'How the agent remembers context across emails and surfaces relevant memories.', delay: 0.1 },
-            { href: '/learn/architecture', title: 'Architecture', description: 'The full technical design: data flow, privacy model, and why no email bodies are stored.', delay: 0.2 },
-            { href: '/learn/security', title: 'Security & privacy', description: 'What Vigil stores, what it discards, and how data flows through the system.', delay: 0.3 },
+            { title: 'Watchers', description: 'Create agents that monitor email streams. Configure prompts, tools, and alert thresholds.' },
+            { title: 'Email forwarding', description: 'How to forward emails to Vigil, what gets processed, and how threads are detected.' },
+            { title: 'The agent', description: 'How the AI agent analyzes email, builds memory, and decides when to alert you.' },
+            { title: 'Memory system', description: 'How the agent remembers context across emails and surfaces relevant memories.' },
+            { title: 'Architecture', description: 'The full technical design: data flow, privacy model, and why no email bodies are stored.' },
+            { title: 'Security & privacy', description: 'What Vigil stores, what it discards, and how data flows through the system.' },
           ].map((item, idx) => (
-            <Link
-              key={item.href}
+            <div
+              key={item.title}
               data-reveal
               id={`learn-${idx}`}
-              href={item.href}
-              className="panel p-5 hover:shadow-raised hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-vigil-500/40 transition-all duration-150 group opacity-0 cursor-pointer"
-              style={{ animation: isRevealed(`learn-${idx}`) ? `slideUpIn 0.6s ease-out ${item.delay}s forwards` : 'none' }}
-              aria-label={`Open documentation: ${item.title}`}
+              className="panel p-5 opacity-0"
+              style={{ animation: isRevealed(`learn-${idx}`) ? `slideUpIn 0.6s ease-out ${0.1 + idx * 0.05}s forwards` : 'none' }}
             >
-              <h3 className="font-semibold text-gray-900 mb-1.5 group-hover:text-vigil-800 transition-colors">{item.title}</h3>
+              <h3 className="font-semibold text-gray-900 mb-1.5">{item.title}</h3>
               <p className="text-sm text-gray-600 leading-relaxed">{item.description}</p>
-              <div className="mt-3 flex items-center gap-2 text-sm font-medium text-vigil-700">
-                <span>Learn more</span>
-                <span aria-hidden className="transition-transform duration-150 group-hover:translate-x-0.5">{'→'}</span>
-              </div>
-            </Link>
+            </div>
           ))}
         </div>
       </Section>
@@ -466,9 +459,9 @@ export default function HomePage() {
           </p>
           <div className="panel p-6 bg-vigil-900 text-white inline-block w-full max-w-sm">
             <div className="mb-6">
-              <p className="text-vigil-200 text-sm mb-3">Free plan:</p>
+              <p className="text-vigil-200 text-sm mb-3">Pay per use:</p>
               <ul className="text-sm space-y-1.5 text-vigil-100 text-left">
-                {['2 watchers', '50 emails per week', 'Full audit trail', 'Email alerts'].map((item) => (
+                {['~$0.0004 per email processed', '$0.005 per alert sent', 'Unlimited watchers and memory', '9 AI models, 3 providers', 'Full audit trail'].map((item) => (
                   <li key={item} className="flex items-center gap-2">
                     <svg className="w-4 h-4 text-vigil-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -479,9 +472,9 @@ export default function HomePage() {
               </ul>
             </div>
             <Link href="/auth/register" className="btn bg-white text-vigil-900 hover:bg-gray-100 w-full justify-center py-3 font-medium">
-              Create free account
+              Start for free
             </Link>
-            <p className="text-center text-vigil-300 text-xs mt-3">No credit card required</p>
+            <p className="text-center text-vigil-300 text-xs mt-3">No credit card required · Pay only when you use it</p>
           </div>
           <div className="mt-4">
             <span className="text-sm text-gray-500">Already have an account? </span>
@@ -507,19 +500,11 @@ export default function HomePage() {
               </ul>
             </div>
             <div>
-              <p className="text-sm font-medium text-gray-700 mb-3">Documentation</p>
-              <ul className="space-y-2 text-sm text-gray-500">
-                <li><Link href="/learn/watchers" className="hover:text-gray-700">Watchers</Link></li>
-                <li><Link href="/learn/agent" className="hover:text-gray-700">The agent</Link></li>
-                <li><Link href="/learn/architecture" className="hover:text-gray-700">Architecture</Link></li>
-                <li><Link href="/learn/security" className="hover:text-gray-700">Security</Link></li>
-              </ul>
-            </div>
-            <div>
               <p className="text-sm font-medium text-gray-700 mb-3">Account</p>
               <ul className="space-y-2 text-sm text-gray-500">
                 <li><Link href="/auth/register" className="hover:text-gray-700">Sign up</Link></li>
                 <li><Link href="/auth/login" className="hover:text-gray-700">Sign in</Link></li>
+                <li><Link href="/pricing" className="hover:text-gray-700">Pricing</Link></li>
               </ul>
             </div>
           </div>
