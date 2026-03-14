@@ -173,6 +173,11 @@ export function InboxPanel({
             watcherId={watcher.id}
             onClose={() => setSelectedThreadId(null)}
             onStatusChange={onThreadStatusChange}
+            onDelete={(id) => {
+              setSelectedThreadId(null);
+              onThreadStatusChange(id, 'ignored');
+              onRefresh();
+            }}
           />
         </div>
       </div>

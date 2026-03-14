@@ -8,6 +8,7 @@ interface EmailDetailProps {
   watcherId: string;
   onClose: () => void;
   onStatusChange: (threadId: string, status: Thread['status']) => void;
+  onDelete?: (threadId: string) => void;
 }
 
 const TIMEZONE_OPTIONS = [
@@ -61,11 +62,13 @@ function statusBadgeClass(status: Thread['status']) {
 
 const STATUSES: Thread['status'][] = ['active', 'watching', 'resolved', 'ignored'];
 
-export function EmailDetail({ thread, watcherId, onClose, onStatusChange }: EmailDetailProps) {
+export function EmailDetail({ thread, watcherId, onClose, onStatusChange, onDelete }: EmailDetailProps) {
   const [threadActions, setThreadActions] = useState<Action[]>([]);
   const [timezone, setTimezone] = useState('browser');
   const [loadingActions, setLoadingActions] = useState(false);
   const [changingStatus, setChangingStatus] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -165,25 +168,54 @@ export function EmailDetail({ thread, watcherId, onClose, onStatusChange }: Emai
           )}
         </div>
 
-        {/* Status controls */}
+        {/* Status controls + delete */}
         <div className="px-4 py-3 border-b border-gray-100">
-          <div className="data-label mb-2">Change Status</div>
-          <div className="flex gap-1.5 flex-wrap">
-            {STATUSES.map((s) => (
+          <div className="flex items-center justify-between mb-2">
+            <div className="data-label">Change Status</div>
+            {onDelete && !confirmDelete && (
               <button
-                key={s}
-                onClick={() => handleStatusChange(s)}
-                disabled={changingStatus !== null}
-                className={`btn btn-sm btn-xs capitalize transition-all ${
-                  thread.status === s
-                    ? 'btn-primary'
-                    : 'btn-secondary'
-                } disabled:opacity-50`}
+                onClick={() => setConfirmDelete(true)}
+                className="text-xs text-gray-400 hover:text-red-600 transition-colors"
               >
-                {changingStatus === s ? <span className="spinner-sm" /> : s}
+                Delete thread
               </button>
-            ))}
+            )}
           </div>
+          {confirmDelete ? (
+            <div className="flex items-center gap-2 bg-red-50 rounded px-3 py-2 text-xs">
+              <span className="text-red-700">Delete this thread and all its emails?</span>
+              <button
+                onClick={async () => {
+                  setDeleting(true);
+                  try {
+                    await api.deleteThread(watcherId, thread.id);
+                    onDelete?.(thread.id);
+                    onClose();
+                  } catch { setDeleting(false); setConfirmDelete(false); }
+                }}
+                disabled={deleting}
+                className="btn btn-sm text-xs bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleting ? 'Deleting...' : 'Yes, delete'}
+              </button>
+              <button onClick={() => setConfirmDelete(false)} className="btn btn-sm btn-secondary text-xs">Cancel</button>
+            </div>
+          ) : (
+            <div className="flex gap-1.5 flex-wrap">
+              {STATUSES.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => handleStatusChange(s)}
+                  disabled={changingStatus !== null}
+                  className={`btn btn-sm btn-xs capitalize transition-all ${
+                    thread.status === s ? 'btn-primary' : 'btn-secondary'
+                  } disabled:opacity-50`}
+                >
+                  {changingStatus === s ? <span className="spinner-sm" /> : s}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Recent actions */}
