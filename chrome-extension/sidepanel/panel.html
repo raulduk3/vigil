@@ -7,171 +7,95 @@
 </head>
 <body>
     <div class="panel">
-        <!-- Header -->
         <div class="panel-header">
             <div class="header-row">
                 <div class="logo">Vigil</div>
                 <div id="header-controls" class="header-controls hidden">
                     <select id="watcher-select" class="watcher-dropdown"></select>
-                    <button id="btn-settings" class="btn-icon" title="Settings">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                    </button>
                 </div>
             </div>
-            <!-- Nav tabs -->
             <div id="nav-tabs" class="nav-tabs hidden">
-                <button class="nav-tab active" data-view="dashboard">Overview</button>
-                <button class="nav-tab" data-view="inbox">Threads</button>
+                <button class="nav-tab active" data-view="overview">Overview</button>
+                <button class="nav-tab" data-view="threads">Threads</button>
                 <button class="nav-tab" data-view="chat">Chat</button>
-                <button class="nav-tab" data-view="setup">Config</button>
+                <button class="nav-tab" data-view="config">Config</button>
             </div>
         </div>
 
-        <!-- Auth View -->
+        <!-- Auth -->
         <div class="view active" id="view-auth">
-            <h2>Connect Your Account</h2>
-            <p class="step-desc">Enter your Vigil API key or sign in to get started.</p>
-            <input type="text" id="panel-api-key" placeholder="vk_your_api_key" spellcheck="false">
-            <button id="panel-btn-connect" class="btn primary">Connect</button>
-            <div class="divider"><span>or</span></div>
-            <input type="email" id="panel-email" placeholder="Email">
-            <input type="password" id="panel-password" placeholder="Password">
-            <button id="panel-btn-login" class="btn primary">Sign In</button>
-            <p class="help">Don't have an account? <a href="https://vigil.run" target="_blank" rel="noopener noreferrer">Sign up at vigil.run</a></p>
-            <div id="panel-auth-error" class="error hidden"></div>
-        </div>
-
-        <!-- Dashboard View -->
-        <div class="view" id="view-dashboard">
-            <div id="dashboard-content" class="dashboard-content">
-                <div class="loading-state">Loading...</div>
+            <div class="auth-form">
+                <h2>Sign in to Vigil</h2>
+                <p class="muted">Enter your API key or email to connect.</p>
+                <input type="text" id="auth-apikey" placeholder="vk_your_api_key" spellcheck="false">
+                <button id="btn-auth-apikey" class="btn primary w-full">Connect with API key</button>
+                <div class="divider"><span>or</span></div>
+                <input type="email" id="auth-email" placeholder="Email">
+                <input type="password" id="auth-password" placeholder="Password">
+                <button id="btn-auth-login" class="btn primary w-full">Sign in</button>
+                <p class="muted small">No account? <a href="https://vigil.run/auth/register" target="_blank">Sign up at vigil.run</a></p>
+                <div id="auth-error" class="error hidden"></div>
             </div>
         </div>
 
-        <!-- Chat View -->
+        <!-- Overview -->
+        <div class="view" id="view-overview"><div id="overview-content" class="scroll-content"><div class="loading">Loading...</div></div></div>
+
+        <!-- Threads -->
+        <div class="view" id="view-threads"><div id="threads-content" class="scroll-content"><div class="loading">Loading...</div></div></div>
+
+        <!-- Chat -->
         <div class="view" id="view-chat">
-            <div id="chat-messages" class="chat-messages">
-                <div class="chat-welcome">
-                    <p class="chat-welcome-title">Talk to your watcher</p>
-                    <p class="chat-welcome-desc">Ask about your inbox, set rules, check obligations, or tell it what to focus on.</p>
-                    <div class="chat-suggestions">
-                        <button class="chat-suggestion" data-msg="What needs my attention today?">What needs my attention?</button>
-                        <button class="chat-suggestion" data-msg="Summarize my inbox this week">Summarize this week</button>
-                        <button class="chat-suggestion" data-msg="What deadlines are coming up?">Upcoming deadlines</button>
-                        <button class="chat-suggestion" data-msg="Ignore all emails from noreply addresses">Ignore noreply senders</button>
-                    </div>
-                </div>
-            </div>
-            <div class="chat-input-area">
-                <textarea id="chat-input" placeholder="Ask your watcher anything..." rows="1"></textarea>
-                <button id="btn-send" class="btn primary btn-send" disabled>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                </button>
+            <div id="chat-messages" class="chat-messages"></div>
+            <div class="chat-bar">
+                <textarea id="chat-input" rows="1" placeholder="Talk to your watcher..."></textarea>
+                <button id="btn-chat-send" class="btn primary btn-send" disabled>Send</button>
             </div>
         </div>
 
-        <!-- Inbox View -->
-        <div class="view" id="view-inbox">
-            <div id="inbox-list" class="inbox-list">
-                <div class="loading-state">Loading threads...</div>
-            </div>
-        </div>
-
-        <!-- Stats View -->
-        <div class="view" id="view-stats">
-            <div id="stats-content" class="stats-content">
-                <div class="loading-state">Loading stats...</div>
-            </div>
-        </div>
-
-        <!-- Setup View (forwarding + watcher config) -->
-        <div class="view" id="view-setup">
-            <div id="setup-content" class="setup-content">
-                <div id="watcher-empty-state" class="setup-empty hidden">
-                    <h2>Create Your First Watcher</h2>
-                    <p class="step-desc">A watcher gives you the forwarding address and instructions Vigil needs to process mail.</p>
-                    <input id="new-watcher-name" type="text" placeholder="Watcher name, for example Work or Clients">
-                    <textarea id="new-watcher-notes" rows="4" placeholder="Optional: tell Vigil what this watcher should prioritize."></textarea>
-                    <button id="btn-create-watcher" class="btn primary">Create Watcher</button>
-                    <div id="create-watcher-status" class="setup-status hidden"></div>
-                </div>
-
-                <div id="watcher-setup-sections" class="watcher-required">
-                <h2>Forwarding</h2>
-                <p class="step-desc">Connect your email to this watcher.</p>
-
-                <div id="provider-status-card" class="provider-status-card">
-                    <div class="provider-status-header">
-                        <span class="provider-status-title">Current page</span>
-                        <button id="btn-refresh-setup-context" class="btn secondary">Refresh Status</button>
-                    </div>
-                    <div id="provider-status-text" class="provider-status-text">Checking your active tab…</div>
-                    <div id="provider-status-detail" class="provider-status-detail"></div>
-                </div>
-
-                <div class="forwarding-address-box">
-                    <label>Your Vigil forwarding address:</label>
-                    <div class="copy-box">
-                        <code id="setup-address">loading...</code>
-                        <button id="btn-copy-setup-address" class="btn-icon" title="Copy">Copy</button>
+        <!-- Config -->
+        <div class="view" id="view-config">
+            <div class="scroll-content" id="config-content">
+                <div class="config-section">
+                    <h3>Forwarding Address</h3>
+                    <div class="copy-row">
+                        <code id="config-address">loading...</code>
+                        <button id="btn-copy-addr" class="btn-sm">Copy</button>
                     </div>
                 </div>
 
-                <div id="gmail-confirm-box" class="gmail-confirm-box hidden">
-                    <div class="provider-status-header">
-                        <span class="provider-status-title">Gmail confirmation code</span>
-                        <button id="btn-insert-confirm-code" class="btn secondary" disabled>Insert Code</button>
+                <div class="config-section">
+                    <h3>Quick Setup</h3>
+                    <p class="muted small">Open your email settings and add the forwarding address above.</p>
+                    <div class="btn-row">
+                        <button id="btn-gmail-fwd" class="btn secondary flex-1">Gmail Settings</button>
+                        <button id="btn-gmail-filter" class="btn secondary flex-1">Gmail Filters</button>
                     </div>
-                    <div id="gmail-confirm-status" class="provider-status-text">Waiting for Gmail to send the confirmation email.</div>
-                    <code id="gmail-confirm-code" class="gmail-confirm-code">Not available yet</code>
+                    <button id="btn-outlook-fwd" class="btn secondary w-full">Outlook Forwarding</button>
+                    <a href="https://vigil.run/extension" target="_blank" class="link small">Full setup guide</a>
                 </div>
 
-                <div class="setup-steps">
-                    <div class="step-item">
-                        <span class="step-num">1</span>
-                        <div><p>Open your email settings (Gmail: Settings, Forwarding and POP/IMAP. Outlook: Settings, Mail, Forwarding)</p></div>
-                    </div>
-                    <div class="step-item">
-                        <span class="step-num">2</span>
-                        <div><p>Add the forwarding address above and confirm via the link Gmail sends</p></div>
-                    </div>
-                    <div class="step-item">
-                        <span class="step-num">3</span>
-                        <div><p>Enable forwarding for all mail, or create a filter to forward only specific senders or subjects</p></div>
-                    </div>
+                <div class="config-section">
+                    <h3>Agent Instructions</h3>
+                    <textarea id="config-prompt" rows="5" placeholder="What should this watcher focus on?"></textarea>
                 </div>
 
-                <div class="setup-actions">
-                    <button id="btn-open-gmail-settings" class="btn secondary">Open Gmail</button>
-                    <button id="btn-open-outlook-settings" class="btn secondary">Open Outlook</button>
-                    <button id="btn-assist-setup" class="btn primary">Assist On Current Page</button>
+                <div class="config-section">
+                    <h3>Model</h3>
+                    <select id="config-model" class="w-full">
+                        <option value="gpt-4.1-mini">GPT-4.1 Mini — $0.40/$1.60 per M tokens</option>
+                        <option value="gpt-4.1-nano">GPT-4.1 Nano — $0.10/$0.40 per M tokens</option>
+                        <option value="gpt-4.1">GPT-4.1 — $3.00/$12.00 per M tokens</option>
+                        <option value="gpt-4o">GPT-4o — $2.50/$10.00 per M tokens</option>
+                        <option value="gpt-4o-mini">GPT-4o Mini — $0.15/$0.60 per M tokens</option>
+                    </select>
                 </div>
 
-                <div id="setup-automation-status" class="setup-status hidden"></div>
+                <button id="btn-save-config" class="btn primary w-full">Save changes</button>
+                <div id="config-status" class="hidden"></div>
 
-                <a href="../getting-started.html" target="_blank" rel="noopener noreferrer" class="btn secondary setup-guide-link">Full setup guide</a>
-
-                <div class="watcher-config-section">
-                    <h2>Watcher Config</h2>
-                    <p class="step-desc watcher-config-desc">Edit the agent's instructions for this watcher.</p>
-                    <textarea id="setup-prompt" rows="5" placeholder="Agent instructions..." class="setup-prompt"></textarea>
-                    <div class="watcher-config-controls">
-                        <select id="setup-model" class="setup-model">
-                            <option value="gpt-4.1-mini">GPT-4.1 Mini ($0.40/$1.60)</option>
-                            <option value="gpt-4.1">GPT-4.1 ($3/$12 per M tokens)</option>
-                            <option value="gpt-4.1-nano">GPT-4.1 Nano ($0.10/$0.40)</option>
-                            <option value="gpt-4o-mini">GPT-4o Mini ($0.15/$0.60)</option>
-                            <option value="gpt-4o">GPT-4o ($2.50/$10)</option>
-                        </select>
-                        <button id="btn-save-config" class="btn primary">Save</button>
-                    </div>
-                    <div id="config-status" class="setup-status hidden"></div>
-                </div>
-
-                <div class="disconnect-section">
-                    <button id="btn-logout" class="btn secondary disconnect-button">Disconnect account</button>
-                </div>
-                </div>
+                <div class="config-section" style="margin-top:24px;padding-top:16px;border-top:1px solid #e4e4e1;">
+                    <button id="btn-logout" class="btn secondary w-full" style="color:#8b4242;">Disconnect</button>
                 </div>
             </div>
         </div>

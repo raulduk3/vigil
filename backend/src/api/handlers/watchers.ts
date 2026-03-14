@@ -455,7 +455,7 @@ function formatWatcher(row: WatcherRow) {
         [row.id]
     );
     const threadCount = queryOne<{ count: number }>(
-        `SELECT COUNT(*) as count FROM threads WHERE watcher_id = ? AND status = 'active'`,
+        `SELECT COUNT(*) as count FROM threads WHERE watcher_id = ? AND status IN ('active', 'watching')`,
         [row.id]
     );
     const memoryCount = queryOne<{ count: number }>(

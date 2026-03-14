@@ -32,6 +32,12 @@ export const threadHandlers = {
 
         sql += ` ORDER BY last_activity DESC`;
 
+        const limit = parseInt(c.req.query("limit") ?? "100", 10);
+        if (limit > 0 && limit <= 500) {
+            sql += ` LIMIT ?`;
+            params.push(limit);
+        }
+
         const rawThreads = queryMany<ThreadRow>(sql, params);
 
         // Enrich with original_date from the earliest email in each thread
