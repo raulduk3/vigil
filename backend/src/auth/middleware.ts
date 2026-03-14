@@ -1,11 +1,12 @@
 /**
  * Authentication Middleware
  *
- * JWT verification for protected routes.
+ * Supports JWT and API key (vk_...) auth.
  */
 
 import type { Context, Next } from "hono";
 import { verifyAccessToken, type TokenPayload } from "./jwt";
+import { lookupApiKey } from "../api/handlers/api-keys";
 
 // Extend Hono context with user info
 declare module "hono" {
@@ -15,7 +16,7 @@ declare module "hono" {
 }
 
 /**
- * Middleware that requires valid JWT authentication.
+ * Middleware that requires valid JWT or API key authentication.
  */
 export async function requireAuth(
     c: Context,
@@ -28,8 +29,25 @@ export async function requireAuth(
     }
 
     const token = authHeader.slice(7);
-    const payload = verifyAccessToken(token);
 
+    // API key auth: vk_ prefix
+    if (token.startsWith("vk_")) {
+        const account = await lookupApiKey(token);
+        if (!account) {
+            return c.json({ error: "Invalid API key" }, 401);
+        }
+        c.set("user", {
+            user_id: account.account_id,
+            account_id: account.account_id,
+            email: account.email,
+            role: "user",
+        } as TokenPayload);
+        await next();
+        return;
+    }
+
+    // JWT auth
+    const payload = verifyAccessToken(token);
     if (!payload) {
         return c.json({ error: "Invalid or expired token" }, 401);
     }
