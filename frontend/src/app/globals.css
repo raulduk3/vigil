@@ -606,6 +606,202 @@ html {
     box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,0,0,0.05);
   }
 
+  .landing-section {
+    position: relative;
+  }
+
+  .landing-section-banded {
+    background:
+      radial-gradient(circle at top left, rgba(255,255,255,0.62), transparent 34%),
+      linear-gradient(180deg, rgba(255,255,255,0.32), rgba(240,240,238,0.72));
+  }
+
+  .landing-section-header {
+    @apply flex flex-col gap-3;
+    max-width: 52rem;
+  }
+
+  .landing-section-kicker {
+    @apply inline-flex items-center justify-center;
+    min-height: 2rem;
+    padding: 0.375rem 0.8rem;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.88), rgba(255,255,255,0.56));
+    box-shadow: inset 0 0 0 1px rgba(21,45,55,0.08), 0 4px 18px rgba(11,31,42,0.04);
+    color: rgba(21,45,55,0.78);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    width: fit-content;
+  }
+
+  .landing-section-title {
+    @apply text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight;
+    max-width: 18ch;
+    line-height: 1.08;
+  }
+
+  .landing-section-copy {
+    @apply text-lg text-gray-600 leading-relaxed;
+    max-width: 62rem;
+  }
+
+  .landing-step-card,
+  .landing-feature-card,
+  .landing-capability-card,
+  .landing-use-case-card,
+  .landing-doc-card,
+  .landing-architecture-shell,
+  .landing-cta-shell {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .landing-step-card::before,
+  .landing-feature-card::before,
+  .landing-capability-card::before,
+  .landing-use-case-card::before,
+  .landing-doc-card::before,
+  .landing-architecture-shell::before,
+  .landing-cta-shell::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(21,45,55,0.16), rgba(21,45,55,0.03) 48%, transparent);
+    pointer-events: none;
+  }
+
+  .landing-step-card,
+  .landing-feature-card,
+  .landing-capability-card,
+  .landing-doc-card,
+  .landing-use-case-card {
+    background:
+      radial-gradient(circle at top left, rgba(255,255,255,0.82), transparent 32%),
+      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.9));
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.06), 0 14px 32px rgba(11,31,42,0.04);
+  }
+
+  .landing-step-index,
+  .landing-architecture-index {
+    @apply flex items-center justify-center flex-shrink-0 font-semibold text-vigil-700;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(225,233,236,0.98), rgba(209,220,224,0.84));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 6px 18px rgba(21,45,55,0.1);
+  }
+
+  .landing-feature-icon {
+    @apply inline-flex items-center justify-center text-vigil-700 font-semibold;
+    min-width: 3.2rem;
+    height: 2rem;
+    padding: 0 0.8rem;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(209,220,224,0.95), rgba(209,220,224,0.62));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 4px 16px rgba(21,45,55,0.08);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    margin-bottom: 1rem;
+  }
+
+  .landing-capability-card {
+    min-height: 100%;
+  }
+
+  .landing-use-case-card {
+    transition: transform 160ms ease, box-shadow 160ms ease;
+  }
+
+  .landing-use-case-card:hover,
+  .landing-doc-card:hover,
+  .landing-feature-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.06), 0 18px 40px rgba(11,31,42,0.07);
+  }
+
+  .landing-use-case-arrow {
+    @apply inline-flex items-center justify-center text-vigil-700;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    background: rgba(209,220,224,0.56);
+    box-shadow: inset 0 0 0 1px rgba(21,45,55,0.08);
+    font-size: 1rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .landing-architecture-shell {
+    background:
+      radial-gradient(circle at top left, rgba(255,255,255,0.82), transparent 24%),
+      linear-gradient(135deg, rgba(255,255,255,0.96), rgba(232,237,239,0.82));
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.06), 0 18px 36px rgba(11,31,42,0.05);
+  }
+
+  .landing-architecture-grid {
+    position: relative;
+  }
+
+  .landing-architecture-node {
+    padding: 1rem 0.9rem;
+    border-radius: 1rem;
+    background: rgba(255,255,255,0.6);
+    box-shadow: inset 0 0 0 1px rgba(21,45,55,0.06);
+  }
+
+  .landing-architecture-index {
+    margin: 0 auto 0.6rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+  }
+
+  .landing-doc-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.06), 0 12px 28px rgba(11,31,42,0.045);
+  }
+
+  .landing-doc-label {
+    @apply inline-flex items-center text-vigil-700 font-medium;
+    width: fit-content;
+    margin-bottom: 0.85rem;
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .landing-doc-label::before {
+    content: '';
+    width: 0.6rem;
+    height: 0.6rem;
+    border-radius: 999px;
+    background: rgba(21,45,55,0.82);
+    margin-right: 0.5rem;
+  }
+
+  .landing-cta-shell {
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.92));
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.06), 0 22px 48px rgba(11,31,42,0.07);
+  }
+
+  .landing-cta-pricing {
+    background:
+      radial-gradient(circle at top left, rgba(71,111,126,0.34), transparent 28%),
+      linear-gradient(180deg, rgba(15,33,41,0.95), rgba(11,31,42,1));
+  }
+
+  .landing-cta-footnote {
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(255,255,255,0.1);
+  }
+
   /* 
    * BADGES
    * Status indicators - functional, not decorative
