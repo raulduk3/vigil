@@ -41,6 +41,7 @@ export interface Watcher {
   tools: string[];
   silence_hours: number;
   tick_interval: number;
+  reactivity: number; // 1-5, controls alert sensitivity
   status: 'active' | 'paused' | 'deleted';
   template_id: string | null;
   last_tick_at: string | null;

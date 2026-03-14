@@ -438,6 +438,7 @@ function formatWatcher(row: WatcherRow) {
         tick_interval: row.tick_interval,
         model: row.model ?? "gpt-4.1-mini",
         status: row.status,
+        reactivity: row.reactivity ?? 3,
         template_id: row.template_id,
         last_tick_at: row.last_tick_at,
         created_at: row.created_at,

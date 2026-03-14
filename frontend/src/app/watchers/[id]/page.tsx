@@ -50,6 +50,74 @@ interface ThreadDetail {
 }
 
 // ============================================================================
+// Reactivity Slider
+// ============================================================================
+
+const REACTIVITY_LEVELS = [
+  { value: 1, label: 'Minimum', description: 'Security breaches and active fraud only', color: 'bg-blue-500' },
+  { value: 2, label: 'Low', description: 'Security + money at risk + deadlines within 24h', color: 'bg-blue-400' },
+  { value: 3, label: 'Balanced', description: 'Financial events, 48h deadlines, direct requests', color: 'bg-yellow-500' },
+  { value: 4, label: 'High', description: 'All transactions, weekly deadlines, any personal email', color: 'bg-orange-500' },
+  { value: 5, label: 'Maximum', description: 'Everything including subscribed content and events', color: 'bg-red-500' },
+];
+
+function ReactivitySlider({ value, onChange }: { value: number; onChange: (val: number) => void }) {
+  const current = REACTIVITY_LEVELS.find(l => l.value === value) ?? REACTIVITY_LEVELS[2];
+
+  return (
+    <div className="panel p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-700">Alert Reactivity</h3>
+          <p className="text-xs text-gray-500 mt-0.5">How aggressively your watcher alerts you</p>
+        </div>
+        <div className="text-right">
+          <span className="text-lg font-bold text-gray-900 tabular-nums">{value}/5</span>
+          <p className="text-xs text-gray-500">{current?.label}</p>
+        </div>
+      </div>
+
+      {/* Slider track */}
+      <div className="relative mb-4">
+        <input
+          type="range"
+          min={1}
+          max={5}
+          step={1}
+          value={value}
+          onChange={e => onChange(parseInt(e.target.value))}
+          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-vigil-600"
+          style={{
+            background: `linear-gradient(to right, #3b82f6 0%, #eab308 50%, #ef4444 100%)`,
+          }}
+        />
+        {/* Step markers */}
+        <div className="flex justify-between mt-1 px-0.5">
+          {REACTIVITY_LEVELS.map(level => (
+            <button
+              key={level.value}
+              onClick={() => onChange(level.value)}
+              className={`w-6 h-6 rounded-full text-xs font-semibold transition-all ${
+                level.value === value
+                  ? `${level.color} text-white shadow-md scale-110`
+                  : 'bg-gray-200 text-gray-500 hover:bg-gray-300'
+              }`}
+            >
+              {level.value}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Current level description */}
+      <div className="bg-surface-sunken rounded p-3">
+        <p className="text-sm text-gray-700">{current?.description}</p>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // Main Component
 // ============================================================================
 
@@ -78,6 +146,7 @@ function WatcherDetailContent() {
   const [editTools, setEditTools] = useState<string[]>([]);
   const [editSilenceHours, setEditSilenceHours] = useState(48);
   const [editTickInterval, setEditTickInterval] = useState(120);
+  const [editReactivity, setEditReactivity] = useState(3);
   const [isSaving, setIsSaving] = useState(false);
 
   // Memory editing
@@ -136,6 +205,7 @@ function WatcherDetailContent() {
       setEditTools([...watcher.tools]);
       setEditSilenceHours(watcher.silence_hours);
       setEditTickInterval(watcher.tick_interval);
+      setEditReactivity(watcher.reactivity ?? 3);
     }
   }, [watcher]);
 
@@ -159,6 +229,7 @@ function WatcherDetailContent() {
       const result = await api.updateWatcher(watcher.id, {
         name: editName.trim(), system_prompt: editPrompt.trim(), tools: editTools,
         silence_hours: editSilenceHours, tick_interval: editTickInterval,
+        reactivity: editReactivity,
       } as Partial<Watcher>);
       setWatcher(result.watcher);
       setIsEditing(false);
@@ -684,6 +755,19 @@ function WatcherDetailContent() {
         {/* ================================================================ */}
         {activeTab === 'settings' && (
           <div className="space-y-6">
+            {/* Reactivity Slider — always visible, saves immediately */}
+            <ReactivitySlider
+              value={watcher.reactivity ?? 3}
+              onChange={async (val) => {
+                try {
+                  const result = await api.updateWatcher(watcher.id, { reactivity: val } as Partial<Watcher>);
+                  setWatcher(result.watcher);
+                  setEditReactivity(val);
+                  showFlash(`Reactivity set to ${val}/5`);
+                } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); }
+              }}
+            />
+
             <div className="panel p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-sm font-semibold text-gray-700">Watcher Settings</h3>
@@ -691,7 +775,7 @@ function WatcherDetailContent() {
                   <button onClick={() => setIsEditing(true)} className="btn btn-secondary btn-sm">Edit</button>
                 ) : (
                   <div className="flex gap-2">
-                    <button onClick={() => { setIsEditing(false); if (watcher) { setEditName(watcher.name); setEditPrompt(watcher.system_prompt); setEditTools([...watcher.tools]); setEditSilenceHours(watcher.silence_hours); setEditTickInterval(watcher.tick_interval); }}} className="btn btn-secondary btn-sm">Cancel</button>
+                    <button onClick={() => { setIsEditing(false); if (watcher) { setEditName(watcher.name); setEditPrompt(watcher.system_prompt); setEditTools([...watcher.tools]); setEditSilenceHours(watcher.silence_hours); setEditTickInterval(watcher.tick_interval); setEditReactivity(watcher.reactivity ?? 3); }}} className="btn btn-secondary btn-sm">Cancel</button>
                     <button onClick={handleSaveSettings} disabled={isSaving} className="btn btn-primary btn-sm">{isSaving ? 'Saving...' : 'Save'}</button>
                   </div>
                 )}
