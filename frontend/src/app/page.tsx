@@ -45,6 +45,30 @@ function Section({ children, className = '', id }: { children: React.ReactNode; 
   );
 }
 
+function SectionHeader({
+  eyebrow,
+  title,
+  description,
+  align = 'left',
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  align?: 'left' | 'center';
+}) {
+  const alignmentClass = align === 'center' ? 'text-center items-center mx-auto' : 'text-left items-start';
+
+  return (
+    <div className={`landing-section-header ${alignmentClass}`}>
+      <div className="landing-section-kicker">{eyebrow}</div>
+      <h2 className="landing-section-title" style={{ wordSpacing: '0.08em' }}>
+        {title}
+      </h2>
+      <p className="landing-section-copy">{description}</p>
+    </div>
+  );
+}
+
 export default function HomePage() {
   const isRevealed = useScrollReveal();
   const [intent, setIntent] = useState('');
@@ -215,22 +239,19 @@ export default function HomePage() {
       </header>
 
       {/* How It Works */}
-      <Section id="how-it-works" className="py-12 md:py-16">
+      <Section id="how-it-works" className="landing-section py-14 md:py-20">
         <div className="mb-8 md:mb-12" data-reveal id="hiw-header" style={{ opacity: 0, animation: isRevealed('hiw-header') ? 'slideUpIn 0.6s ease-out forwards' : 'none' }}>
-          <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">How it works</p>
-          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.08em' }}>
-            Analyze. Remember. Act.
-          </h2>
-          <p className="text-lg text-gray-600 leading-relaxed max-w-none">
-            Set up a forwarding rule. Your agent reads each email, builds context across conversations,
-            and alerts you only when something needs action.
-          </p>
+          <SectionHeader
+            eyebrow="How it works"
+            title="Analyze. Remember. Act."
+            description="Set up a forwarding rule. Your agent reads each email, builds context across conversations, and alerts you only when something needs action."
+          />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-          <div data-reveal id="hiw-1" className="panel p-7 flex flex-col opacity-0" style={{ animation: isRevealed('hiw-1') ? 'slideUpIn 0.6s ease-out 0.1s forwards' : 'none' }}>
+          <div data-reveal id="hiw-1" className="landing-step-card panel p-7 flex flex-col opacity-0" style={{ animation: isRevealed('hiw-1') ? 'slideUpIn 0.6s ease-out 0.1s forwards' : 'none' }}>
             <div className="flex items-center gap-4 mb-5">
-              <span className="w-12 h-12 rounded-full bg-vigil-100 text-vigil-700 text-base font-semibold flex items-center justify-center flex-shrink-0">1</span>
+              <span className="landing-step-index">1</span>
               <h3 className="text-lg font-semibold text-gray-900">Forward emails</h3>
             </div>
             <p className="text-base text-gray-600 leading-relaxed mb-5 flex-grow">
@@ -243,9 +264,9 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div data-reveal id="hiw-2" className="panel p-7 flex flex-col opacity-0" style={{ animation: isRevealed('hiw-2') ? 'slideUpIn 0.6s ease-out 0.2s forwards' : 'none' }}>
+          <div data-reveal id="hiw-2" className="landing-step-card panel p-7 flex flex-col opacity-0" style={{ animation: isRevealed('hiw-2') ? 'slideUpIn 0.6s ease-out 0.2s forwards' : 'none' }}>
             <div className="flex items-center gap-4 mb-5">
-              <span className="w-12 h-12 rounded-full bg-vigil-100 text-vigil-700 text-base font-semibold flex items-center justify-center flex-shrink-0">2</span>
+              <span className="landing-step-index">2</span>
               <h3 className="text-lg font-semibold text-gray-900">Agent analyzes</h3>
             </div>
             <p className="text-base text-gray-600 leading-relaxed mb-5 flex-grow">
@@ -265,9 +286,9 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div data-reveal id="hiw-3" className="panel p-7 flex flex-col opacity-0" style={{ animation: isRevealed('hiw-3') ? 'slideUpIn 0.6s ease-out 0.3s forwards' : 'none' }}>
+          <div data-reveal id="hiw-3" className="landing-step-card panel p-7 flex flex-col opacity-0" style={{ animation: isRevealed('hiw-3') ? 'slideUpIn 0.6s ease-out 0.3s forwards' : 'none' }}>
             <div className="flex items-center gap-4 mb-5">
-              <span className="w-12 h-12 rounded-full bg-vigil-100 text-vigil-700 text-base font-semibold flex items-center justify-center flex-shrink-0">3</span>
+              <span className="landing-step-index">3</span>
               <h3 className="text-lg font-semibold text-gray-900">You get alerted</h3>
             </div>
             <p className="text-base text-gray-600 leading-relaxed mb-5 flex-grow">
@@ -284,16 +305,13 @@ export default function HomePage() {
       </Section>
 
       {/* What makes it different */}
-      <Section id="features" className="bg-surface-sunken border-y border-gray-200 py-12 md:py-16">
+      <Section id="features" className="landing-section landing-section-banded border-y border-gray-200 py-14 md:py-20">
         <div className="mb-8 md:mb-12" data-reveal id="feat-header" style={{ opacity: 0, animation: isRevealed('feat-header') ? 'slideUpIn 0.6s ease-out forwards' : 'none' }}>
-          <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Why Vigil</p>
-          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.08em' }}>
-            Your agent. Your rules. Your data stays yours.
-          </h2>
-          <p className="text-lg text-gray-600 leading-relaxed max-w-none">
-            Google and Microsoft help you read email. Vigil makes sure you never drop an obligation.
-            Privacy by architecture, not policy. Configurable by design, not as an afterthought.
-          </p>
+          <SectionHeader
+            eyebrow="Why Vigil"
+            title="Your agent. Your rules. Your data stays yours."
+            description="Google and Microsoft help you read email. Vigil makes sure you never drop an obligation. Privacy by architecture, not policy. Configurable by design, not as an afterthought."
+          />
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -333,12 +351,12 @@ export default function HomePage() {
               key={feature.title}
               data-reveal
               id={`feature-${idx}`}
-              className="panel p-5 opacity-0"
+              className="landing-feature-card panel p-5 opacity-0"
               style={{
                 animation: isRevealed(`feature-${idx}`) ? `slideUpIn 0.6s ease-out ${0.1 + idx * 0.05}s forwards` : 'none',
               }}
             >
-              <div className="inline-flex items-center justify-center h-7 px-2.5 rounded-full bg-vigil-100 text-vigil-700 text-[11px] font-semibold tracking-wide mb-3">{feature.icon}</div>
+              <div className="landing-feature-icon">{feature.icon}</div>
               <h3 className="font-semibold text-gray-900 mb-2">{feature.title}</h3>
               <p className="text-sm text-gray-600 leading-relaxed">{feature.description}</p>
             </div>
@@ -347,21 +365,19 @@ export default function HomePage() {
       </Section>
 
       {/* Agent capabilities */}
-      <Section id="agent" className="py-12 md:py-16">
+      <Section id="agent" className="landing-section py-14 md:py-20">
         <div className="mb-8 md:mb-12" data-reveal id="agent-header" style={{ opacity: 0, animation: isRevealed('agent-header') ? 'slideUpIn 0.6s ease-out forwards' : 'none' }}>
-          <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">The agent</p>
-          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.08em' }}>
-            More than a filter. An actual agent.
-          </h2>
-          <p className="text-lg text-gray-600 leading-relaxed max-w-none">
-            Not a rules engine. Not a keyword matcher. Each watcher runs an AI agent with its own prompt, memory, and tools — your agent, configured your way.
-          </p>
+          <SectionHeader
+            eyebrow="The agent"
+            title="More than a filter. An actual agent."
+            description="Not a rules engine. Not a keyword matcher. Each watcher runs an AI agent with its own prompt, memory, and tools — your agent, configured your way."
+          />
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
           <div
             data-reveal id="cap-analyze"
-            className="panel p-6 opacity-0"
+            className="landing-capability-card panel p-6 opacity-0"
             style={{ animation: isRevealed('cap-analyze') ? 'slideUpIn 0.6s ease-out 0.1s forwards' : 'none' }}
           >
             <h3 className="font-semibold text-gray-900 mb-3">Analyze</h3>
@@ -378,7 +394,7 @@ export default function HomePage() {
 
           <div
             data-reveal id="cap-remember"
-            className="panel p-6 opacity-0"
+            className="landing-capability-card panel p-6 opacity-0"
             style={{ animation: isRevealed('cap-remember') ? 'slideUpIn 0.6s ease-out 0.2s forwards' : 'none' }}
           >
             <h3 className="font-semibold text-gray-900 mb-3">Remember</h3>
@@ -395,7 +411,7 @@ export default function HomePage() {
 
           <div
             data-reveal id="cap-act"
-            className="panel p-6 opacity-0"
+            className="landing-capability-card panel p-6 opacity-0"
             style={{ animation: isRevealed('cap-act') ? 'slideUpIn 0.6s ease-out 0.3s forwards' : 'none' }}
           >
             <h3 className="font-semibold text-gray-900 mb-3">Act</h3>
@@ -414,18 +430,16 @@ export default function HomePage() {
       </Section>
 
       {/* Use Cases */}
-      <Section id="use-cases" className="bg-surface-sunken border-y border-gray-200 py-10 md:pt-8 md:pb-8">
-        <div className="mb-2 md:mb-8">
-          <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Use cases</p>
-          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.08em' }}>
-            Set up a watcher. Forward what matters.
-          </h2>
-          <p className="text-lg text-gray-600 leading-relaxed max-w-none">
-            Each watcher is a separate agent with its own prompt, memory, and behavior. Create one per context — each learns independently.
-          </p>
+      <Section id="use-cases" className="landing-section landing-section-banded border-y border-gray-200 py-14 md:py-18">
+        <div className="mb-8 md:mb-10">
+          <SectionHeader
+            eyebrow="Use cases"
+            title="Set up a watcher. Forward what matters."
+            description="Each watcher is a separate agent with its own prompt, memory, and behavior. Create one per context — each learns independently."
+          />
         </div>
 
-        <ul className="space-y-4 md:space-y-6">
+        <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {[
             { id: 'uc-vendor', role: 'Vendor follow-up', text: 'Track invoices, flag overdue payments. Webhook to your accounting system when a payment is due.' },
             { id: 'uc-client', role: 'Client communications', text: 'Know when conversations go cold. Trigger a Slack message when a client is waiting.' },
@@ -441,12 +455,12 @@ export default function HomePage() {
               className="opacity-0"
               style={{ animation: isRevealed(item.id) ? `slideUpIn 0.5s ease-out ${0.1 + idx * 0.05}s forwards` : 'none' }}
             >
-              <div className="flex items-start gap-3 md:gap-4">
-                <span className="text-gray-500 text-lg md:text-xl pt-0.5 flex-shrink-0">→</span>
-                <div className="space-y-0.5 md:space-y-1">
+              <div className="landing-use-case-card panel p-5 md:p-6 h-full">
+                <div className="flex items-start justify-between gap-3 mb-4">
                   <p className="text-base md:text-lg font-semibold text-gray-900">{item.role}</p>
-                  <p className="text-sm md:text-base text-gray-700 leading-relaxed">{item.text}</p>
+                  <span className="landing-use-case-arrow" aria-hidden>→</span>
                 </div>
+                <p className="text-sm md:text-base text-gray-700 leading-relaxed">{item.text}</p>
               </div>
             </li>
           ))}
@@ -460,19 +474,16 @@ export default function HomePage() {
       </Section>
 
       {/* Architecture / How it works technically */}
-      <Section id="architecture" className="py-12 md:py-16">
-        <div className="mb-8 md:mb-2">
-          <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Architecture</p>
-          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.08em' }}>
-            Simple by design.
-          </h2>
-          <p className="text-lg text-gray-600 leading-relaxed max-w-none">
-            No OAuth. No inbox connection. No email bodies stored. Vigil works through forwarding rules
-            you already know how to set up. The privacy model isn't a feature. It's the architecture.
-          </p>
+      <Section id="architecture" className="landing-section py-14 md:py-20">
+        <div className="mb-8 md:mb-6">
+          <SectionHeader
+            eyebrow="Architecture"
+            title="Simple by design."
+            description="No OAuth. No inbox connection. No email bodies stored. Vigil works through forwarding rules you already know how to set up. The privacy model isn't a feature. It's the architecture."
+          />
         </div>
 
-        <div className="text-left mb-8">
+        <div className="text-left mb-8 md:mb-10">
           <Link href="/learn/architecture" className="text-sm text-vigil-700 hover:text-vigil-800 font-medium">
             Read the full technical design →
           </Link>
@@ -480,10 +491,10 @@ export default function HomePage() {
 
         <div
           data-reveal id="arch-flow"
-          className="panel p-6 mb-2 opacity-0"
+          className="landing-architecture-shell panel p-6 md:p-8 mb-2 opacity-0"
           style={{ animation: isRevealed('arch-flow') ? 'scaleIn 0.6s ease-out forwards' : 'none' }}
         >
-          <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-0">
+          <div className="landing-architecture-grid flex flex-col md:flex-row items-center justify-center gap-4 md:gap-0">
             {[
               { icon: '01', label: 'Your email', sub: 'forwarding rule' },
               { icon: '02', label: 'Cloudflare', sub: 'receives at MX' },
@@ -492,8 +503,8 @@ export default function HomePage() {
               { icon: '05', label: 'Alert', sub: 'notifies you' },
             ].map((step, idx, steps) => (
               <div key={step.label} className="flex items-center md:items-start">
-                <div className="text-center min-w-[8.5rem]">
-                  <div className="h-10 w-10 mx-auto mb-2 rounded-full bg-vigil-100 text-vigil-700 text-xs font-semibold flex items-center justify-center">{step.icon}</div>
+                <div className="landing-architecture-node text-center min-w-[8.5rem]">
+                  <div className="landing-architecture-index">{step.icon}</div>
                   <p className="font-semibold text-gray-900">{step.label}</p>
                   <p className="text-xs text-gray-500">{step.sub}</p>
                 </div>
@@ -512,16 +523,13 @@ export default function HomePage() {
       </Section>
 
       {/* Documentation */}
-      <Section id="learn-more" className="bg-surface-sunken border-y border-gray-200 py-12 md:py-16">
+      <Section id="learn-more" className="landing-section landing-section-banded border-y border-gray-200 py-14 md:py-20">
         <div className="mb-8 md:mb-12">
-          <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Documentation</p>
-          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.08em' }}>
-            Understand what it does.
-          </h2>
-          <p className="text-lg text-gray-600 leading-relaxed max-w-none">
-            Vigil is not magic. Every decision is logged. Every action is traceable.
-            Read how it works, what it stores, and why you can trust it.
-          </p>
+          <SectionHeader
+            eyebrow="Documentation"
+            title="Understand what it does."
+            description="Vigil is not magic. Every decision is logged. Every action is traceable. Read how it works, what it stores, and why you can trust it."
+          />
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5">
@@ -538,9 +546,10 @@ export default function HomePage() {
               href={item.href}
               data-reveal
               id={`learn-${idx}`}
-              className="panel p-5 opacity-0 hover:shadow-raised hover:-translate-y-0.5 transition-all duration-150 group cursor-pointer"
+              className="landing-doc-card panel p-5 opacity-0 hover:-translate-y-0.5 transition-all duration-150 group cursor-pointer"
               style={{ animation: isRevealed(`learn-${idx}`) ? `slideUpIn 0.6s ease-out ${0.1 + idx * 0.05}s forwards` : 'none' }}
             >
+              <span className="landing-doc-label">Guide</span>
               <h3 className="font-semibold text-gray-900 mb-1.5 group-hover:text-vigil-800 transition-colors">{item.title}</h3>
               <p className="text-sm text-gray-600 leading-relaxed">{item.description}</p>
               <span className="mt-3 flex items-center gap-1.5 text-sm font-medium text-vigil-700">
@@ -552,37 +561,45 @@ export default function HomePage() {
       </Section>
 
       {/* CTA */}
-      <Section id="cta" className="py-12 md:py-16">
-        <div className="max-w-2xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.08em' }}>
-            Start watching in 2 minutes.
-          </h2>
-          <p className="text-lg text-gray-600 mb-8 leading-relaxed">
-            Create a watcher. Set up a forwarding rule. That's it.
-            Your agent starts learning from the first email.
-          </p>
-          <div className="panel p-6 bg-vigil-900 text-white inline-block w-full max-w-sm">
-            <div className="mb-6">
-              <p className="text-vigil-200 text-sm mb-3">Pay per use:</p>
-              <ul className="text-sm space-y-1.5 text-vigil-100 text-left">
-                {['~$0.0004 per email processed', '$0.005 per alert sent', 'Unlimited watchers and memory', '9 AI models, 3 providers', 'Full audit trail'].map((item) => (
+      <Section id="cta" className="landing-section py-14 md:py-20">
+        <div className="landing-cta-shell panel overflow-hidden max-w-4xl mx-auto">
+          <div className="grid gap-0 md:grid-cols-[1.15fr_0.85fr]">
+            <div className="px-6 py-8 md:px-10 md:py-10 text-left">
+              <SectionHeader
+                eyebrow="Start now"
+                title="Start watching in 2 minutes."
+                description="Create a watcher. Set up a forwarding rule. That's it. Your agent starts learning from the first email."
+              />
+              <div className="mt-8 flex flex-col sm:flex-row gap-3">
+                <Link href="/auth/register" className="btn btn-primary btn-lg">
+                  Start for free
+                </Link>
+                <Link href="/pricing" className="btn btn-secondary btn-lg">
+                  View pricing
+                </Link>
+              </div>
+              <p className="mt-4 text-sm text-gray-500 max-w-none">No credit card required. Pay only when the agent actually runs.</p>
+            </div>
+
+            <div className="landing-cta-pricing px-6 py-8 md:px-8 md:py-10 text-white">
+              <p className="text-vigil-200 text-sm uppercase tracking-[0.22em] mb-4">Pay per use</p>
+              <ul className="text-sm space-y-2 text-vigil-100 text-left">
+                {['$0.001 per invocation + model token usage', '$0.005 per alert sent', 'Unlimited watchers and memory', '9 AI models, 3 providers', 'Full audit trail'].map((item) => (
                   <li key={item} className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-vigil-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-4 h-4 text-vigil-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                     {item}
                   </li>
                 ))}
               </ul>
+              <div className="landing-cta-footnote mt-6">
+                <p className="text-vigil-100 text-sm font-medium">Already have an account?</p>
+                <Link href="/auth/login" className="inline-flex mt-2 text-sm text-white/85 hover:text-white font-medium">
+                  Sign in →
+                </Link>
+              </div>
             </div>
-            <Link href="/auth/register" className="btn bg-white text-vigil-900 hover:bg-gray-100 w-full justify-center py-3 font-medium">
-              Start for free
-            </Link>
-            <p className="text-center text-vigil-300 text-xs mt-3">No credit card required · Pay only when you use it</p>
-          </div>
-          <div className="mt-4">
-            <span className="text-sm text-gray-500">Already have an account? </span>
-            <Link href="/auth/login" className="text-sm text-vigil-700 hover:text-vigil-800 font-medium">Sign in</Link>
           </div>
         </div>
       </Section>
