@@ -212,15 +212,25 @@ export async function invokeAgent(
         try {
             const result = await callLLMRaw(chatSystem, chatUser, model);
             const rates = MODEL_CATALOG[model]?.pricing ?? { input: 0.0004, output: 0.0016 };
-            const cost = (result.inputTokens / 1000) * rates.input + (result.outputTokens / 1000) * rates.output;
+            const PLATFORM_FEE = 0.001;
+            const tokenCost = (result.inputTokens / 1000) * rates.input + (result.outputTokens / 1000) * rates.output;
+            const totalCost = tokenCost + PLATFORM_FEE;
 
             // Parse and execute inline action blocks
             const { text: cleanText, actionsExecuted } = await executeChatActions(result.text, ctx);
 
+            // Log the chat invocation cost
+            await logAction(
+                watcherId, null, null, "user_chat",
+                null, "chat", null, null,
+                "success", null, startMs,
+                null, result.inputTokens + result.outputTokens, totalCost, model
+            );
+
             logger.info("Chat invocation complete", {
                 watcherId, model,
                 tokens: result.inputTokens + result.outputTokens,
-                cost, actionsExecuted,
+                cost: totalCost, actionsExecuted,
             });
 
             return {
@@ -373,6 +383,9 @@ export async function invokeAgent(
     for (let i = 0; i < toolResults.length; i++) {
         const action = agentResponse.actions![i]!;
         const result = toolResults[i]!;
+        // Add alert delivery cost to the action's cost if applicable
+        const toolCost = result.result.cost ?? 0;
+        const actionCost = (i === 0 ? costUsd : 0) + toolCost;
         await logAction(
             watcherId, threadId, emailId, trigger.type,
             null,
@@ -382,7 +395,7 @@ export async function invokeAgent(
             result.result.success ? "success" : "failed",
             result.result.error ?? null,
             startMs,
-            null, i === 0 ? contextTokens : 0, i === 0 ? costUsd : 0,
+            null, i === 0 ? contextTokens : 0, actionCost > 0 ? actionCost : null,
             i === 0 ? model : null
         );
     }

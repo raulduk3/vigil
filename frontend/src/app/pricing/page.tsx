@@ -28,14 +28,15 @@ export default function PricingPage() {
       <PublicHeader />
 
       <main className="pt-28 pb-20">
-        <div className="max-w-3xl mx-auto px-6">
+        <div className="max-w-6xl mx-auto px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="text-center mb-14">
             <p className="text-sm font-medium text-vigil-700 uppercase tracking-wider mb-3">Pricing</p>
             <h1 className="text-4xl md:text-5xl font-display font-semibold text-gray-900 tracking-tight mb-5">
               Pay for what you use.
             </h1>
-            <p className="text-xl text-gray-600 leading-relaxed">
+            <p className="max-w-2xl mx-auto text-xl text-gray-600 leading-relaxed">
               No tiers. No subscriptions. Each invocation costs a $0.001 platform fee
               plus the AI token cost for your chosen model. Alerts cost $0.005 each.
             </p>
@@ -43,7 +44,7 @@ export default function PricingPage() {
 
           {/* Core pricing */}
           <div className="panel p-8 mb-8">
-            <div className="grid grid-cols-3 gap-6 text-center">
+            <div className="grid gap-6 text-center md:grid-cols-3">
               <div>
                 <div className="text-3xl font-display font-semibold text-gray-900 mb-1">$0.001</div>
                 <div className="text-sm text-gray-500">platform fee<br />per invocation</div>
@@ -62,7 +63,7 @@ export default function PricingPage() {
           {/* What's free */}
           <div className="panel p-6 mb-8 bg-vigil-900 text-white">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-vigil-200 mb-4">Always free</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               {[
                 'Unlimited watchers',
                 'Unlimited threads and memory',
@@ -118,7 +119,7 @@ export default function PricingPage() {
           <div className="mb-14">
             <h2 className="text-xl font-display font-semibold text-gray-900 mb-1">What it actually costs</h2>
             <p className="text-sm text-gray-500 mb-4">Real monthly estimates based on email volume.</p>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               {examples.map((ex) => (
                 <div key={ex.label + ex.model} className="panel p-5">
                   <div className="flex justify-between items-start mb-2">
@@ -137,7 +138,7 @@ export default function PricingPage() {
           </div>
 
           {/* FAQ */}
-          <div className="mb-14">
+          <div className="max-w-3xl mx-auto mb-14">
             <h2 className="text-2xl font-display font-semibold text-gray-900 text-center mb-8">Questions</h2>
             <div className="space-y-4">
               {[
@@ -160,11 +161,12 @@ export default function PricingPage() {
             <Link href="/auth/register" className="btn btn-primary btn-lg">Start for free</Link>
             <p className="text-sm text-gray-500 mt-3">No credit card required. Pay only when you use it.</p>
           </div>
+          </div>
         </div>
       </main>
 
       <footer className="border-t border-gray-200 bg-surface-page">
-        <div className="max-w-3xl mx-auto px-6 py-8 text-center text-sm text-gray-500">
+        <div className="max-w-6xl mx-auto px-6 lg:px-8 py-8 text-center text-sm text-gray-500">
           © {new Date().getFullYear()} Vigil. All rights reserved.
         </div>
       </footer>

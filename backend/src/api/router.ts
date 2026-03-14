@@ -79,6 +79,85 @@ export function createRouter(): Hono {
     protected_.post("/watchers/:watcherId/threads/:threadId/close", threadHandlers.close);
     protected_.delete("/watchers/:watcherId/threads/:threadId", threadHandlers.delete_);
 
+    // Usage/billing endpoint
+    protected_.get("/usage", async (c) => {
+        const user = c.get("user");
+        const { queryOne, queryMany } = await import("../db/client");
+
+        // Get all watchers for this account
+        const watchers = queryMany<{ id: string; name: string }>(
+            `SELECT id, name FROM watchers WHERE account_id = ? AND status != 'deleted'`,
+            [user.account_id]
+        );
+        const watcherIds = watchers.map(w => w.id);
+
+        if (watcherIds.length === 0) {
+            return c.json({ usage: { total_cost: 0, invocations: 0, alerts: 0, emails_processed: 0, watchers: [] } });
+        }
+
+        const placeholders = watcherIds.map(() => "?").join(",");
+
+        // Total costs across all watchers
+        const totals = queryOne<{ total_cost: number; invocations: number; alerts: number }>(
+            `SELECT 
+                COALESCE(SUM(cost_usd), 0) as total_cost,
+                COUNT(*) as invocations,
+                SUM(CASE WHEN tool = 'send_alert' AND result = 'success' THEN 1 ELSE 0 END) as alerts
+             FROM actions WHERE watcher_id IN (${placeholders})`,
+            watcherIds
+        ) ?? { total_cost: 0, invocations: 0, alerts: 0 };
+
+        const emailCount = queryOne<{ count: number }>(
+            `SELECT COUNT(*) as count FROM emails WHERE watcher_id IN (${placeholders})`,
+            watcherIds
+        );
+
+        // Per-watcher breakdown
+        const perWatcher = watchers.map(w => {
+            const stats = queryOne<{ cost: number; invocations: number; alerts: number; emails: number }>(
+                `SELECT 
+                    COALESCE(SUM(a.cost_usd), 0) as cost,
+                    COUNT(a.id) as invocations,
+                    SUM(CASE WHEN a.tool = 'send_alert' AND a.result = 'success' THEN 1 ELSE 0 END) as alerts,
+                    (SELECT COUNT(*) FROM emails e WHERE e.watcher_id = ?) as emails
+                 FROM actions a WHERE a.watcher_id = ?`,
+                [w.id, w.id]
+            );
+            return {
+                watcher_id: w.id,
+                watcher_name: w.name,
+                cost: stats?.cost ?? 0,
+                invocations: stats?.invocations ?? 0,
+                alerts: stats?.alerts ?? 0,
+                emails: stats?.emails ?? 0,
+            };
+        });
+
+        // Current month costs
+        const monthStart = new Date();
+        monthStart.setDate(1);
+        monthStart.setHours(0, 0, 0, 0);
+        const monthCosts = queryOne<{ cost: number; invocations: number }>(
+            `SELECT COALESCE(SUM(cost_usd), 0) as cost, COUNT(*) as invocations
+             FROM actions WHERE watcher_id IN (${placeholders}) AND created_at >= ?`,
+            [...watcherIds, monthStart.toISOString()]
+        );
+
+        return c.json({
+            usage: {
+                total_cost: totals.total_cost,
+                total_invocations: totals.invocations,
+                total_alerts: totals.alerts,
+                total_emails: emailCount?.count ?? 0,
+                current_month: {
+                    cost: monthCosts?.cost ?? 0,
+                    invocations: monthCosts?.invocations ?? 0,
+                },
+                watchers: perWatcher,
+            },
+        });
+    });
+
     // Models catalog (public, no auth needed for listing)
     protected_.get("/models", async (c) => {
         const { MODEL_CATALOG } = await import("../agent/engine");

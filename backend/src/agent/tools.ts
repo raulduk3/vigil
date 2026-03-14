@@ -144,9 +144,14 @@ async function sendAlertHandler(
         );
     }
 
+    // Track alert delivery cost: $0.005 per email sent
+    const ALERT_COST = 0.005;
+    const alertsCost = destinations.length * ALERT_COST;
+
     return {
         success: allSucceeded,
         message: allSucceeded ? `Alert sent to ${destinations.length} recipient(s)` : "Some alert deliveries failed",
+        cost: alertsCost,
     };
 }
 
