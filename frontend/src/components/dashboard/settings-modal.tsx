@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { api, type Watcher, type Channel } from '@/lib/api/client';
+import { api, type Watcher, type Channel, type CustomTool } from '@/lib/api/client';
 import { ReactivitySlider } from './reactivity-slider';
 import { Term } from '@/components/ui/term';
 
-type Tab = 'general' | 'prompt' | 'channels';
+type Tab = 'general' | 'prompt' | 'channels' | 'tools';
 
 interface SettingsModalProps {
   watcher: Watcher;
@@ -107,6 +107,20 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
 
+  // Custom tools state
+  const [customTools, setCustomTools] = useState<CustomTool[]>([]);
+  const [loadingTools, setLoadingTools] = useState(false);
+  const [showToolForm, setShowToolForm] = useState(false);
+  const [editingTool, setEditingTool] = useState<CustomTool | null>(null);
+  const [toolForm, setToolForm] = useState({
+    name: '', description: '', webhook_url: '',
+    headers: [] as { key: string; value: string }[],
+    params: [] as { key: string; description: string }[],
+  });
+  const [savingTool, setSavingTool] = useState(false);
+  const [testingToolId, setTestingToolId] = useState<string | null>(null);
+  const [testResults, setTestResults] = useState<Record<string, { success: boolean; status?: number; error?: string }>>({});
+
   useEffect(() => {
     if (tab === 'channels') {
       setLoadingChannels(true);
@@ -114,6 +128,13 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
         .then((res) => setChannels(res.channels || []))
         .catch(() => setChannels([]))
         .finally(() => setLoadingChannels(false));
+    }
+    if (tab === 'tools') {
+      setLoadingTools(true);
+      api.getCustomTools(watcher.id)
+        .then((res) => setCustomTools(res.tools || []))
+        .catch(() => setCustomTools([]))
+        .finally(() => setLoadingTools(false));
     }
   }, [tab, watcher.id]);
 
@@ -203,10 +224,72 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
     }
   };
 
+  const openToolForm = (tool?: CustomTool) => {
+    if (tool) {
+      setEditingTool(tool);
+      setToolForm({
+        name: tool.name,
+        description: tool.description,
+        webhook_url: tool.webhook_url,
+        headers: Object.entries(tool.headers || {}).map(([key, value]) => ({ key, value })),
+        params: Object.entries(tool.parameter_schema || {}).map(([key, v]) => ({ key, description: v.description || '' })),
+      });
+    } else {
+      setEditingTool(null);
+      setToolForm({ name: '', description: '', webhook_url: '', headers: [], params: [] });
+    }
+    setShowToolForm(true);
+  };
+
+  const handleSaveTool = async () => {
+    if (!toolForm.name.trim() || !toolForm.description.trim() || !toolForm.webhook_url.trim()) return;
+    setSavingTool(true);
+    try {
+      const headersObj = Object.fromEntries(toolForm.headers.filter(h => h.key).map(h => [h.key, h.value]));
+      const paramSchema = Object.fromEntries(toolForm.params.filter(p => p.key).map(p => [p.key, { type: 'string', description: p.description }]));
+      const data = { name: toolForm.name.trim(), description: toolForm.description.trim(), webhook_url: toolForm.webhook_url.trim(), headers: headersObj, parameter_schema: paramSchema };
+      if (editingTool) {
+        const res = await api.updateCustomTool(watcher.id, editingTool.id, data);
+        setCustomTools(prev => prev.map(t => t.id === editingTool.id ? res.tool : t));
+      } else {
+        const res = await api.createCustomTool(watcher.id, data);
+        setCustomTools(prev => [...prev, res.tool]);
+      }
+      setShowToolForm(false);
+    } catch { /* ignore */ } finally {
+      setSavingTool(false);
+    }
+  };
+
+  const handleDeleteTool = async (toolId: string) => {
+    try {
+      await api.deleteCustomTool(watcher.id, toolId);
+      setCustomTools(prev => prev.filter(t => t.id !== toolId));
+    } catch { /* ignore */ }
+  };
+
+  const handleToggleTool_ = async (tool: CustomTool) => {
+    try {
+      const res = await api.updateCustomTool(watcher.id, tool.id, { enabled: !tool.enabled });
+      setCustomTools(prev => prev.map(t => t.id === tool.id ? res.tool : t));
+    } catch { /* ignore */ }
+  };
+
+  const handleTestTool = async (toolId: string) => {
+    setTestingToolId(toolId);
+    try {
+      const res = await api.testCustomTool(watcher.id, toolId);
+      setTestResults(prev => ({ ...prev, [toolId]: res }));
+    } catch { /* ignore */ } finally {
+      setTestingToolId(null);
+    }
+  };
+
   const tabs: { value: Tab; label: string }[] = [
     { value: 'general', label: 'General' },
     { value: 'prompt', label: 'Prompt' },
     { value: 'channels', label: 'Channels' },
+    { value: 'tools', label: 'Tools' },
   ];
 
   return (
@@ -480,6 +563,249 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
                   </div>
                 </>
               )}
+            </div>
+          )}
+
+          {/* Tools tab */}
+          {tab === 'tools' && (
+            <div className="space-y-5">
+              {/* Built-in Tools */}
+              <div>
+                <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Built-in Tools</h4>
+                <div className="space-y-2">
+                  {TOOLS.map((tool) => (
+                    <label key={tool.id} className="flex items-center gap-3 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={tools.includes(tool.id)}
+                        onChange={() => handleToggleTool(tool.id)}
+                        className="w-4 h-4 accent-vigil-900"
+                      />
+                      <div>
+                        <div className="text-sm font-medium text-gray-700">{tool.label}</div>
+                        <div className="text-xs text-gray-400">{tool.description}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                <button
+                  onClick={handleSaveGeneral}
+                  disabled={saving}
+                  className="btn btn-secondary btn-sm mt-3"
+                >
+                  {saving ? <span className="spinner-sm" /> : 'Save Built-in Tools'}
+                </button>
+              </div>
+
+              {/* Custom Tools */}
+              <div className="border-t border-gray-200 pt-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Custom Tools</h4>
+                  <button
+                    onClick={() => openToolForm()}
+                    className="btn btn-secondary btn-sm"
+                  >
+                    + Add Tool
+                  </button>
+                </div>
+
+                {loadingTools ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <span className="spinner-sm" /> Loading tools...
+                  </div>
+                ) : (
+                  <>
+                    {customTools.length === 0 && !showToolForm && (
+                      <p className="text-sm text-gray-400">No custom tools configured. Custom tools let the agent call external webhooks.</p>
+                    )}
+
+                    {customTools.map((tool) => (
+                      <div key={tool.id} className="panel px-3 py-2.5 mb-2">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-700 font-mono">{tool.name}</div>
+                            <div className="text-xs text-gray-400 truncate">{tool.webhook_url}</div>
+                          </div>
+                          <span className="text-xs text-gray-400 tabular-nums">{tool.execution_count} runs</span>
+                          <button
+                            onClick={() => handleToggleTool_(tool)}
+                            className={`text-xs px-2 py-1 rounded font-medium transition-colors ${
+                              tool.enabled
+                                ? 'text-status-ok bg-status-ok/10 hover:bg-status-ok/20'
+                                : 'text-gray-400 bg-gray-100 hover:bg-gray-200'
+                            }`}
+                          >
+                            {tool.enabled ? 'On' : 'Off'}
+                          </button>
+                        </div>
+                        <div className="flex gap-2 mt-2">
+                          <button onClick={() => openToolForm(tool)} className="text-xs text-gray-500 hover:text-gray-700">Edit</button>
+                          <button
+                            onClick={() => handleTestTool(tool.id)}
+                            disabled={testingToolId === tool.id}
+                            className="text-xs text-blue-500 hover:text-blue-700"
+                          >
+                            {testingToolId === tool.id ? 'Testing...' : 'Test'}
+                          </button>
+                          <button onClick={() => handleDeleteTool(tool.id)} className="text-xs text-red-500 hover:text-red-700">Delete</button>
+                          {testResults[tool.id] && (
+                            <span className={`text-xs font-medium ${testResults[tool.id].success ? 'text-green-600' : 'text-red-600'}`}>
+                              {testResults[tool.id].success ? `OK (${testResults[tool.id].status})` : `Failed${testResults[tool.id].error ? `: ${testResults[tool.id].error}` : ''}`}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Inline Tool Form */}
+                    {showToolForm && (
+                      <div className="panel p-4 space-y-3 mt-3">
+                        <h4 className="text-sm font-semibold text-gray-700">{editingTool ? 'Edit Tool' : 'New Custom Tool'}</h4>
+                        <div className="form-group">
+                          <label className="form-label text-xs">Name (snake_case, e.g. notify_slack)</label>
+                          <input
+                            type="text"
+                            value={toolForm.name}
+                            onChange={(e) => setToolForm(f => ({ ...f, name: e.target.value }))}
+                            placeholder="notify_slack"
+                            className="input py-1.5 text-sm font-mono"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label text-xs">Description (tells the agent when to use this)</label>
+                          <textarea
+                            value={toolForm.description}
+                            onChange={(e) => setToolForm(f => ({ ...f, description: e.target.value }))}
+                            placeholder="Send a message to Slack when something needs attention"
+                            rows={2}
+                            className="input py-1.5 text-sm resize-none"
+                          />
+                        </div>
+                        <div className="form-group">
+                          <label className="form-label text-xs">Webhook URL</label>
+                          <input
+                            type="url"
+                            value={toolForm.webhook_url}
+                            onChange={(e) => setToolForm(f => ({ ...f, webhook_url: e.target.value }))}
+                            placeholder="https://hooks.slack.com/services/..."
+                            className="input py-1.5 text-sm"
+                          />
+                        </div>
+
+                        {/* Headers */}
+                        <div className="form-group">
+                          <div className="flex items-center justify-between">
+                            <label className="form-label text-xs mb-0">Custom Headers (optional)</label>
+                            <button
+                              type="button"
+                              onClick={() => setToolForm(f => ({ ...f, headers: [...f.headers, { key: '', value: '' }] }))}
+                              className="text-xs text-blue-500 hover:text-blue-700"
+                            >
+                              + Add
+                            </button>
+                          </div>
+                          {toolForm.headers.map((h, i) => (
+                            <div key={i} className="flex gap-2 mt-1">
+                              <input
+                                type="text"
+                                value={h.key}
+                                onChange={(e) => {
+                                  const headers = [...toolForm.headers];
+                                  headers[i] = { ...headers[i], key: e.target.value };
+                                  setToolForm(f => ({ ...f, headers }));
+                                }}
+                                placeholder="Header name"
+                                className="input py-1 text-xs flex-1"
+                              />
+                              <input
+                                type="text"
+                                value={h.value}
+                                onChange={(e) => {
+                                  const headers = [...toolForm.headers];
+                                  headers[i] = { ...headers[i], value: e.target.value };
+                                  setToolForm(f => ({ ...f, headers }));
+                                }}
+                                placeholder="Value"
+                                className="input py-1 text-xs flex-1"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setToolForm(f => ({ ...f, headers: f.headers.filter((_, j) => j !== i) }))}
+                                className="text-gray-400 hover:text-red-500 p-1"
+                              >
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Parameters */}
+                        <div className="form-group">
+                          <div className="flex items-center justify-between">
+                            <label className="form-label text-xs mb-0">Parameters (optional)</label>
+                            <button
+                              type="button"
+                              onClick={() => setToolForm(f => ({ ...f, params: [...f.params, { key: '', description: '' }] }))}
+                              className="text-xs text-blue-500 hover:text-blue-700"
+                            >
+                              + Add
+                            </button>
+                          </div>
+                          {toolForm.params.map((p, i) => (
+                            <div key={i} className="flex gap-2 mt-1">
+                              <input
+                                type="text"
+                                value={p.key}
+                                onChange={(e) => {
+                                  const params = [...toolForm.params];
+                                  params[i] = { ...params[i], key: e.target.value };
+                                  setToolForm(f => ({ ...f, params }));
+                                }}
+                                placeholder="Param name"
+                                className="input py-1 text-xs w-32"
+                              />
+                              <input
+                                type="text"
+                                value={p.description}
+                                onChange={(e) => {
+                                  const params = [...toolForm.params];
+                                  params[i] = { ...params[i], description: e.target.value };
+                                  setToolForm(f => ({ ...f, params }));
+                                }}
+                                placeholder="Description (what should the agent extract?)"
+                                className="input py-1 text-xs flex-1"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setToolForm(f => ({ ...f, params: f.params.filter((_, j) => j !== i) }))}
+                                className="text-gray-400 hover:text-red-500 p-1"
+                              >
+                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={handleSaveTool}
+                            disabled={savingTool || !toolForm.name.trim() || !toolForm.description.trim() || !toolForm.webhook_url.trim()}
+                            className="btn btn-primary btn-sm"
+                          >
+                            {savingTool ? <span className="spinner-sm" /> : editingTool ? 'Update Tool' : 'Create Tool'}
+                          </button>
+                          <button
+                            onClick={() => setShowToolForm(false)}
+                            className="btn btn-secondary btn-sm"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>
