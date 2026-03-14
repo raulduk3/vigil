@@ -29,111 +29,148 @@ function getDateKey(isoDate: string): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
-function truncate(str: string, max = 60): string {
+function truncate(str: string, max = 80): string {
   if (!str) return '';
   return str.length > max ? str.slice(0, max).trimEnd() + '…' : str;
 }
 
-function getActionDescription(action: Action): string {
+/**
+ * Determine if an action is user-meaningful (not internal bookkeeping).
+ * We show: send_alert, ignore_thread, email analysis (decision), and scheduled ticks with decisions.
+ * We hide: thread_update, memory_store, memory_obsolete (these are internal state changes).
+ */
+function isMeaningfulAction(action: Action): boolean {
+  // Always show alerts
+  if (action.tool === 'send_alert') return true;
+  // Always show ignore actions
+  if (action.tool === 'ignore_thread') return true;
+  // Show webhook calls
+  if (action.tool === 'webhook') return true;
+  // Show email analyses (no tool, but has a decision with summary)
+  if (!action.tool && action.decision) return true;
+  // Show scheduled tick reviews that have decisions
+  if (action.trigger_type === 'scheduled_tick' && action.decision) return true;
+  // Show user queries/chats
+  if (action.trigger_type === 'user_query' || action.trigger_type === 'user_chat') return true;
+  // Hide everything else (thread_update, memory_store, etc)
+  return false;
+}
+
+function getActionLabel(action: Action): { label: string; badge: string; badgeClass: string } {
   const p = action.tool_params ?? {};
-  switch (action.tool) {
-    case 'send_alert': {
-      const msg = (p.message as string) || (p.subject as string) || '';
-      return `🔴 Sent alert${msg ? `: "${truncate(msg)}"` : ''}`;
-    }
-    case 'update_thread': {
-      const subject = (p.subject as string) || (p.thread_id as string) || 'thread';
-      const status = (p.status as string) || '';
-      return `📋 Updated thread "${truncate(subject, 40)}"${status ? ` → ${status}` : ''}`;
-    }
-    case 'ignore_thread': {
-      const subject = (p.subject as string) || (p.thread_id as string) || 'thread';
-      const reason = (p.reason as string) || '';
-      return `🚫 Ignored thread "${truncate(subject, 40)}"${reason ? `: ${truncate(reason, 40)}` : ''}`;
-    }
-    case 'memory_store': {
-      const content = (p.content as string) || '';
-      return `🧠 Remembered: "${truncate(content)}"`;
-    }
-    case 'memory_obsolete': {
-      return `🗑️ Retired memory`;
-    }
-    case 'thread_update': {
-      const subject = (p.subject as string) || (p.thread_id as string) || 'thread';
-      const status = (p.status as string) || '';
-      return `📋 Thread "${truncate(subject, 40)}"${status ? ` set to ${status}` : ' updated'}`;
-    }
-    case 'webhook': {
-      const url = (p.url as string) || '';
-      return `🔗 Webhook${url ? ` → ${truncate(url, 40)}` : ' triggered'}`;
-    }
-    default: {
-      if (!action.tool) return '👁️ Analyzed email, no action taken';
-      return `⚡ ${action.tool}`;
+
+  if (action.tool === 'send_alert') {
+    const msg = (p as any).message || (p as any).subject || '';
+    return {
+      label: `Alert sent: ${truncate(msg)}`,
+      badge: 'alert',
+      badgeClass: 'badge-critical',
+    };
+  }
+
+  if (action.tool === 'ignore_thread') {
+    const reason = (p as any).reason || '';
+    return {
+      label: `Thread ignored${reason ? `: ${truncate(reason, 60)}` : ''}`,
+      badge: 'ignored',
+      badgeClass: 'badge-inactive',
+    };
+  }
+
+  if (action.tool === 'webhook') {
+    return {
+      label: 'Webhook triggered',
+      badge: 'webhook',
+      badgeClass: 'badge-warning',
+    };
+  }
+
+  if (action.trigger_type === 'scheduled_tick') {
+    return {
+      label: 'Scheduled review completed',
+      badge: 'review',
+      badgeClass: 'badge-neutral',
+    };
+  }
+
+  if (action.trigger_type === 'user_query' || action.trigger_type === 'user_chat') {
+    return {
+      label: 'Agent query',
+      badge: 'chat',
+      badgeClass: 'badge-warning',
+    };
+  }
+
+  // Email analysis (no tool, has decision)
+  if (!action.tool && action.decision) {
+    try {
+      const d = typeof action.decision === 'string' ? JSON.parse(action.decision) : action.decision;
+      const urgency = d.urgency || 'low';
+      const summary = d.summary || d.reasoning || '';
+      return {
+        label: truncate(summary),
+        badge: urgency,
+        badgeClass: urgency === 'high' ? 'badge-critical' : urgency === 'normal' ? 'badge-warning' : 'badge-neutral',
+      };
+    } catch {
+      return {
+        label: truncate(String(action.decision)),
+        badge: 'analysis',
+        badgeClass: 'badge-neutral',
+      };
     }
   }
+
+  return {
+    label: action.tool || 'Unknown action',
+    badge: 'action',
+    badgeClass: 'badge-neutral',
+  };
 }
 
 function ActionCard({ action }: { action: Action }) {
   const [expanded, setExpanded] = useState(false);
-  const description = getActionDescription(action);
+  const { label, badge, badgeClass } = getActionLabel(action);
   const failed = action.result === 'failed';
 
   return (
-    <div className={`panel px-4 py-3 space-y-2 ${failed ? 'border-red-200' : ''}`}>
-      {/* Main description */}
-      <div className="flex items-start justify-between gap-2">
-        <p className={`text-sm font-medium ${failed ? 'text-red-700' : 'text-gray-800'}`}>
-          {description}
-        </p>
-        <span className="text-xs text-gray-400 shrink-0 mt-px">{formatFullTime(action.created_at)}</span>
+    <div className={`panel px-4 py-3 ${failed ? 'border-red-200' : ''}`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-2 min-w-0">
+          <span className={`badge badge-sm ${badgeClass} shrink-0 mt-0.5`}>{badge}</span>
+          <p className={`text-sm ${failed ? 'text-red-700' : 'text-gray-800'} leading-snug`}>
+            {label}
+          </p>
+        </div>
+        <span className="text-xs text-gray-400 shrink-0 tabular-nums">{formatFullTime(action.created_at)}</span>
       </div>
 
-      {/* Decision / email analysis */}
-      {action.decision && (
-        <p className="text-xs text-gray-600 leading-relaxed">{action.decision}</p>
-      )}
-
-      {/* Error */}
       {action.error && (
-        <p className="text-xs text-red-500">{action.error}</p>
+        <p className="text-xs text-red-500 mt-1.5 pl-6">{action.error}</p>
       )}
 
-      {/* Footer: model, cost, duration */}
-      <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
-        {action.trigger_type === 'scheduled_tick' && (
-          <span className="badge badge-sm badge-neutral">scheduled</span>
+      {/* Footer */}
+      <div className="flex items-center gap-3 text-xs text-gray-400 mt-2 pl-6">
+        {action.trigger_type === 'email_received' && (
+          <span>email trigger</span>
         )}
-        {action.trigger_type === 'user_query' && (
-          <span className="badge badge-sm badge-warning">query</span>
-        )}
-        {action.model && (
-          <span className="font-mono">{action.model}</span>
-        )}
-        {action.cost_usd != null && (
+        {action.model && <span className="font-mono">{action.model}</span>}
+        {action.cost_usd != null && action.cost_usd > 0 && (
           <span>${Number(action.cost_usd).toFixed(4)}</span>
         )}
-        {action.duration_ms != null && (
-          <span>{action.duration_ms}ms</span>
-        )}
-        {action.context_tokens != null && (
-          <span>{action.context_tokens.toLocaleString()} tok</span>
-        )}
-
-        {/* Why? toggle */}
+        {action.duration_ms != null && <span>{action.duration_ms}ms</span>}
         {action.reasoning && (
           <button
-            onClick={() => setExpanded((v) => !v)}
+            onClick={() => setExpanded(v => !v)}
             className="ml-auto text-gray-400 hover:text-gray-600 transition-colors"
           >
-            {expanded ? '▲ Hide reasoning' : '▼ Why?'}
+            {expanded ? 'Hide reasoning' : 'Why?'}
           </button>
         )}
       </div>
 
-      {/* Expanded reasoning */}
       {expanded && action.reasoning && (
-        <p className="text-xs text-gray-500 bg-surface-sunken rounded px-2.5 py-2 leading-relaxed">
+        <p className="text-xs text-gray-500 bg-surface-sunken rounded px-2.5 py-2 mt-2 leading-relaxed ml-6">
           {action.reasoning}
         </p>
       )}
@@ -161,18 +198,21 @@ export function ActivityLog({ watcherId }: ActivityLogProps) {
     );
   }
 
-  if (actions.length === 0) {
+  // Filter to meaningful actions only
+  const meaningful = actions.filter(isMeaningfulAction);
+
+  if (meaningful.length === 0) {
     return (
-      <div className="empty-state">
-        <div className="empty-state-title">No activity yet</div>
-        <div className="empty-state-description">Agent actions will appear here after emails are processed.</div>
+      <div className="text-center py-12 text-sm text-gray-500">
+        <p className="font-medium text-gray-700 mb-1">No activity yet</p>
+        <p>Agent actions will appear here after emails are processed.</p>
       </div>
     );
   }
 
   // Group by date
   const groups: { dateKey: string; dateLabel: string; actions: Action[] }[] = [];
-  for (const action of actions) {
+  for (const action of meaningful) {
     const key = getDateKey(action.created_at);
     const last = groups[groups.length - 1];
     if (last && last.dateKey === key) {

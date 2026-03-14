@@ -68,7 +68,7 @@ export interface Action {
   watcher_id: string;
   thread_id: string | null;
   email_id: string | null;
-  trigger_type: 'email_received' | 'scheduled_tick' | 'user_query';
+  trigger_type: 'email_received' | 'scheduled_tick' | 'user_query' | 'user_chat';
   tool: string | null;
   tool_params: Record<string, unknown> | null;
   result: 'success' | 'failed';
