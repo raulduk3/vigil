@@ -69,19 +69,27 @@ async function sendAlertHandler(
         }
     }
 
-    // Build a clean, readable subject line
-    // Priority: explicit subject > thread subject > truncated body
-    let emailSubject: string;
+    // Build a clear, Vigil-branded subject line.
+    // Always prefixed with the urgency emoji + "Vigil" so users can instantly
+    // distinguish Vigil alerts from regular email in their inbox.
+    const urgencyEmoji: Record<string, string> = {
+        high: "🔴",
+        normal: "🟡",
+        low: "🔵",
+    };
+    const emoji = urgencyEmoji[urgency] ?? "🟡";
+
+    let subjectCore: string;
     if (params.subject && params.subject !== alertBody.substring(0, 77)) {
-        emailSubject = params.subject;
+        subjectCore = params.subject;
     } else if (threadSubject) {
-        // Reference the original thread
-        emailSubject = `Re: ${threadSubject}`;
+        subjectCore = threadSubject;
     } else {
-        // Derive a clean subject from the body (first sentence or first 60 chars)
         const firstSentence = (alertBody.split(/[.!?\n]/)[0] ?? "").trim();
-        emailSubject = firstSentence.length > 60 ? firstSentence.substring(0, 57) + "..." : firstSentence;
+        subjectCore = firstSentence.length > 60 ? firstSentence.substring(0, 57) + "..." : firstSentence;
     }
+
+    const emailSubject = `${emoji} Vigil · ${subjectCore}`;
 
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {

@@ -108,6 +108,7 @@ export const watcherHandlers = {
             "tick_interval",
             "model",
             "status",
+            "reactivity",
         ] as const;
 
         for (const key of allowed) {

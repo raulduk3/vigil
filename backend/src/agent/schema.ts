@@ -21,6 +21,7 @@ export interface WatcherRow {
     status: string;
     template_id: string | null;
     last_tick_at: string | null;
+    reactivity: number; // 1-5, controls alert sensitivity
     created_at: string;
     updated_at: string;
 }
