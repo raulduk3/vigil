@@ -457,4 +457,44 @@ export const api = {
     const response = await fetch(`${API_URL}/health`);
     return response.json();
   },
+
+  // Billing
+  async getBilling(): Promise<{ billing: {
+    has_payment_method: boolean;
+    stripe_configured: boolean;
+    trial_emails_used: number;
+    trial_emails_remaining: number;
+    trial_emails_total: number;
+    current_month_cost: number;
+    stripe_customer_id: string | null;
+    stripe_subscription_id: string | null;
+  }}> {
+    return request('/api/billing');
+  },
+
+  async setupBilling(): Promise<{ checkout_url: string }> {
+    return request('/api/billing/setup', { method: 'POST' });
+  },
+
+  async getBillingPortal(): Promise<{ portal_url: string }> {
+    return request('/api/billing/portal', { method: 'POST' });
+  },
+
+  async getUsage(): Promise<{ usage: {
+    total_cost: number;
+    total_invocations: number;
+    total_alerts: number;
+    total_emails: number;
+    current_month: { cost: number; invocations: number };
+    watchers: Array<{
+      watcher_id: string;
+      watcher_name: string;
+      cost: number;
+      invocations: number;
+      alerts: number;
+      emails: number;
+    }>;
+  }}> {
+    return request('/api/usage');
+  },
 };

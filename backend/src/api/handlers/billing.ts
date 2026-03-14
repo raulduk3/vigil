@@ -1,167 +1,217 @@
 /**
- * Billing Handlers — V2 (MVP Stub)
- *
- * Stripe not active in V2 MVP. Returns safe defaults.
+ * Billing Handlers — Metered pay-per-use
  */
 
 import type { Context } from "hono";
 import {
-    getSubscription,
+    createCustomer,
     createCheckoutSession,
-    createPortalSession,
-    handleStripeWebhook,
-    cancelSubscription,
-    resumeSubscription,
-    getInvoices,
+    getCustomerPortalUrl,
+    verifyWebhookSignature,
     isStripeConfigured,
 } from "../../billing/stripe";
-import {
-    getOrCreateUsage,
-    getCurrentPeriodStart,
-    getCurrentPeriodEnd,
-} from "../../billing/usage";
-import { PLAN_LIMITS, type PlanTier } from "../../billing/types";
-import { queryOne } from "../../db/client";
+import { getUsageSummary } from "../../billing/usage";
+import { FREE_TRIAL_EMAILS } from "../../billing/types";
+import { queryOne, run } from "../../db/client";
 import { logger } from "../../logger";
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "https://vigil.run";
+
 export const billingHandlers = {
-    async getSubscription(c: Context) {
+    /** GET /api/billing — billing status + current month cost */
+    async getBilling(c: Context) {
         const user = c.get("user");
-        const subscription = await getSubscription(user.account_id);
-        return c.json({ subscription: subscription ?? { plan: "free", status: "free" } });
-    },
-
-    async createCheckout(c: Context) {
-        const user = c.get("user");
-        const body = await c.req.json();
-        const tier = body.tier || body.plan;
-        const successUrl = body.successUrl || body.success_url;
-        const cancelUrl = body.cancelUrl || body.cancel_url;
-
-        if (!tier || !successUrl || !cancelUrl) {
-            return c.json({ error: "Missing required fields" }, 400);
-        }
-
-        const validTiers: PlanTier[] = ["starter", "pro", "enterprise"];
-        if (!validTiers.includes(tier)) {
-            return c.json({ error: "Invalid tier" }, 400);
-        }
-
-        try {
-            const url = await createCheckoutSession(
-                user.account_id,
-                user.email,
-                tier,
-                successUrl,
-                cancelUrl
-            );
-            return c.json({ checkout_url: url });
-        } catch (error) {
-            logger.error("Checkout failed", { error });
-            return c.json({ error: "Billing not configured" }, 503);
-        }
-    },
-
-    async createPortal(c: Context) {
-        const user = c.get("user");
-        const body = await c.req.json();
-        const returnUrl = body.returnUrl || body.return_url;
-
-        if (!returnUrl) return c.json({ error: "Return URL required" }, 400);
-
-        try {
-            const url = await createPortalSession(user.account_id, returnUrl);
-            return c.json({ portal_url: url });
-        } catch (error) {
-            logger.error("Portal failed", { error });
-            return c.json({ error: "Billing not configured" }, 503);
-        }
-    },
-
-    async stripeWebhook(c: Context) {
-        const signature = c.req.header("stripe-signature");
-        if (!signature) return c.json({ error: "Missing signature" }, 400);
-
-        try {
-            const payload = await c.req.text();
-            await handleStripeWebhook(payload, signature);
-            return c.json({ received: true });
-        } catch (error) {
-            logger.error("Stripe webhook failed", { error });
-            return c.json({ error: "Webhook processing failed" }, 400);
-        }
-    },
-
-    async getUsage(c: Context) {
-        const user = c.get("user");
-
-        const account = queryOne<{ plan: PlanTier }>(
-            `SELECT plan FROM accounts WHERE id = ?`,
-            [user.account_id]
-        );
-        const plan = (account?.plan ?? "free") as PlanTier;
-        const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS["free"];
-        const usage = await getOrCreateUsage(user.account_id, plan);
-
-        const watcherCount = queryOne<{ count: number }>(
-            `SELECT COUNT(*) as count FROM watchers WHERE account_id = ? AND status != 'deleted'`,
-            [user.account_id]
-        );
+        const summary = await getUsageSummary(user.account_id);
 
         return c.json({
-            usage: {
-                current_period: {
-                    start: getCurrentPeriodStart(),
-                    end: getCurrentPeriodEnd(),
-                },
-                emails: {
-                    processed: usage.emails_processed,
-                    limit: limits.emails_per_week,
-                    unlimited: limits.emails_per_week === -1,
-                },
-                watchers: {
-                    count: watcherCount?.count ?? 0,
-                    limit: limits.max_watchers,
-                    unlimited: limits.max_watchers === -1,
-                },
+            billing: {
+                has_payment_method: summary.has_payment_method,
+                stripe_configured: isStripeConfigured(),
+                trial_emails_used: summary.trial_emails_used,
+                trial_emails_remaining: summary.trial_emails_remaining,
+                trial_emails_total: FREE_TRIAL_EMAILS,
+                current_month_cost: summary.current_month_cost,
+                stripe_customer_id: summary.stripe_customer_id,
+                stripe_subscription_id: summary.stripe_subscription_id,
             },
         });
     },
 
-    async getConfig(c: Context) {
-        return c.json({
-            stripe_configured: isStripeConfigured(),
-            publishable_key: process.env.STRIPE_PUBLISHABLE_KEY ?? null,
-        });
-    },
-
-    async cancelSubscription(c: Context) {
-        const user = c.get("user");
-        try {
-            await cancelSubscription(user.account_id);
-            return c.json({ success: true });
-        } catch (error) {
+    /** POST /api/billing/setup — create customer + Stripe Checkout session */
+    async setup(c: Context) {
+        if (!isStripeConfigured()) {
             return c.json({ error: "Billing not configured" }, 503);
         }
+
+        const user = c.get("user");
+
+        // Get or create Stripe customer
+        let stripeCustomerId = queryOne<{ stripe_customer_id: string | null }>(
+            `SELECT stripe_customer_id FROM accounts WHERE id = ?`,
+            [user.account_id]
+        )?.stripe_customer_id;
+
+        if (!stripeCustomerId) {
+            try {
+                stripeCustomerId = await createCustomer(user.email);
+                run(
+                    `UPDATE accounts SET stripe_customer_id = ? WHERE id = ?`,
+                    [stripeCustomerId, user.account_id]
+                );
+                logger.info("Created Stripe customer", { accountId: user.account_id, customerId: stripeCustomerId });
+            } catch (err) {
+                logger.error("Failed to create Stripe customer", { err });
+                return c.json({ error: "Failed to initialize billing" }, 500);
+            }
+        }
+
+        const successUrl = `${APP_URL}/account/billing?setup=success`;
+        const cancelUrl = `${APP_URL}/account/billing?setup=canceled`;
+
+        try {
+            const checkoutUrl = await createCheckoutSession(
+                stripeCustomerId,
+                successUrl,
+                cancelUrl
+            );
+            return c.json({ checkout_url: checkoutUrl });
+        } catch (err) {
+            logger.error("Failed to create Stripe Checkout session", { err });
+            return c.json({ error: "Failed to create checkout session" }, 500);
+        }
     },
 
-    async resumeSubscription(c: Context) {
-        const user = c.get("user");
-        try {
-            await resumeSubscription(user.account_id);
-            return c.json({ success: true });
-        } catch (error) {
+    /** POST /api/billing/portal — get Stripe billing portal URL */
+    async portal(c: Context) {
+        if (!isStripeConfigured()) {
             return c.json({ error: "Billing not configured" }, 503);
         }
+
+        const user = c.get("user");
+        const account = queryOne<{ stripe_customer_id: string | null }>(
+            `SELECT stripe_customer_id FROM accounts WHERE id = ?`,
+            [user.account_id]
+        );
+
+        if (!account?.stripe_customer_id) {
+            return c.json({ error: "No billing account found. Set up billing first." }, 400);
+        }
+
+        const returnUrl = `${APP_URL}/account/billing`;
+
+        try {
+            const portalUrl = await getCustomerPortalUrl(
+                account.stripe_customer_id,
+                returnUrl
+            );
+            return c.json({ portal_url: portalUrl });
+        } catch (err) {
+            logger.error("Failed to create billing portal session", { err });
+            return c.json({ error: "Failed to create portal session" }, 500);
+        }
     },
 
-    async getInvoices(c: Context) {
-        const user = c.get("user");
-        try {
-            const invoices = await getInvoices(user.account_id);
-            return c.json({ invoices });
-        } catch (error) {
-            return c.json({ invoices: [] });
+    /** POST /api/billing/webhook — Stripe webhook (public, no auth) */
+    async stripeWebhook(c: Context) {
+        const signature = c.req.header("stripe-signature");
+        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+        if (!signature) {
+            return c.json({ error: "Missing stripe-signature header" }, 400);
         }
+
+        const payload = await c.req.text();
+
+        // Verify signature if webhook secret is configured
+        if (webhookSecret) {
+            const valid = await verifyWebhookSignature(payload, signature, webhookSecret);
+            if (!valid) {
+                logger.warn("Stripe webhook signature verification failed");
+                return c.json({ error: "Invalid signature" }, 400);
+            }
+        }
+
+        let event: { type: string; data: { object: any } };
+        try {
+            event = JSON.parse(payload);
+        } catch {
+            return c.json({ error: "Invalid JSON" }, 400);
+        }
+
+        logger.info("Stripe webhook received", { type: event.type });
+
+        const obj = event.data.object;
+
+        switch (event.type) {
+            case "checkout.session.completed": {
+                // User completed checkout — store subscription ID and mark has_payment_method
+                const customerId = obj.customer as string;
+                const subscriptionId = obj.subscription as string | null;
+
+                if (customerId) {
+                    run(
+                        `UPDATE accounts
+                         SET has_payment_method = TRUE,
+                             stripe_subscription_id = COALESCE(?, stripe_subscription_id)
+                         WHERE stripe_customer_id = ?`,
+                        [subscriptionId ?? null, customerId]
+                    );
+                    logger.info("Billing activated", { customerId, subscriptionId });
+                }
+                break;
+            }
+
+            case "customer.subscription.updated": {
+                const customerId = obj.customer as string;
+                const status = obj.status as string;
+                const subscriptionId = obj.id as string;
+
+                if (customerId) {
+                    const isPaused = status === "past_due" || status === "canceled" || status === "unpaid";
+                    run(
+                        `UPDATE accounts
+                         SET has_payment_method = ?,
+                             stripe_subscription_id = ?
+                         WHERE stripe_customer_id = ?`,
+                        [isPaused ? 0 : 1, subscriptionId, customerId]
+                    );
+                    logger.info("Subscription updated", { customerId, status });
+                }
+                break;
+            }
+
+            case "customer.subscription.deleted": {
+                const customerId = obj.customer as string;
+                if (customerId) {
+                    run(
+                        `UPDATE accounts
+                         SET has_payment_method = FALSE, stripe_subscription_id = NULL
+                         WHERE stripe_customer_id = ?`,
+                        [customerId]
+                    );
+                    logger.info("Subscription deleted, billing paused", { customerId });
+                }
+                break;
+            }
+
+            case "invoice.payment_failed": {
+                const customerId = obj.customer as string;
+                logger.warn("Invoice payment failed — account may be suspended soon", { customerId });
+                break;
+            }
+
+            case "invoice.payment_succeeded": {
+                const customerId = obj.customer as string;
+                if (customerId) {
+                    run(
+                        `UPDATE accounts SET has_payment_method = TRUE WHERE stripe_customer_id = ?`,
+                        [customerId]
+                    );
+                }
+                break;
+            }
+        }
+
+        return c.json({ received: true });
     },
 };

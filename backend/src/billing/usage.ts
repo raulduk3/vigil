@@ -1,69 +1,117 @@
 /**
- * Usage Tracking — V2 (MVP Stub)
+ * Usage Tracking — Metered billing
  *
- * Usage limits not enforced in V2 MVP.
- * Stripe/billing to be added post-validation.
+ * Tracks per-account usage, enforces the free trial cap,
+ * and reports costs to Stripe meter.
  */
 
-import type { PlanTier } from "./types";
+import { queryOne, queryMany, run } from "../db/client";
+import { reportUsage, isStripeConfigured } from "./stripe";
+import { FREE_TRIAL_EMAILS } from "./types";
+import { logger } from "../logger";
 
-export type { PlanTier };
-
-export interface AccountUsage {
-    account_id: string;
-    period_start: number;
-    period_end: number;
-    emails_processed: number;
-    emails_limit: number;
-    watchers_count: number;
-    watchers_limit: number;
-}
-
-export async function getOrCreateUsage(
+/**
+ * Report an invocation cost to the Stripe meter.
+ * Silently skips if Stripe is not configured or account has no payment method.
+ */
+export async function reportInvocationCost(
     accountId: string,
-    _plan: PlanTier = "free"
-): Promise<AccountUsage> {
+    costUsd: number
+): Promise<void> {
+    if (!isStripeConfigured() || costUsd <= 0) return;
+
+    const account = queryOne<{
+        stripe_customer_id: string | null;
+        has_payment_method: number;
+    }>(
+        `SELECT stripe_customer_id, has_payment_method FROM accounts WHERE id = ?`,
+        [accountId]
+    );
+
+    if (!account?.stripe_customer_id || !account.has_payment_method) return;
+
+    const costCents = costUsd * 100;
+    try {
+        await reportUsage(account.stripe_customer_id, costCents);
+    } catch (err) {
+        logger.error("Failed to report usage to Stripe", { accountId, costUsd, err });
+    }
+}
+
+/**
+ * Check if an account can process another email.
+ * Returns false only if: no payment method AND trial exhausted.
+ */
+export async function canProcessEmail(accountId: string): Promise<boolean> {
+    const account = queryOne<{
+        has_payment_method: number;
+        trial_emails_used: number;
+    }>(
+        `SELECT has_payment_method, trial_emails_used FROM accounts WHERE id = ?`,
+        [accountId]
+    );
+
+    if (!account) return false;
+    if (account.has_payment_method) return true;
+    return account.trial_emails_used < FREE_TRIAL_EMAILS;
+}
+
+/** Increment trial email counter for free accounts. */
+export function incrementTrialUsage(accountId: string): void {
+    run(
+        `UPDATE accounts SET trial_emails_used = trial_emails_used + 1 WHERE id = ?`,
+        [accountId]
+    );
+}
+
+/** Get billing + usage summary for an account. */
+export async function getUsageSummary(accountId: string): Promise<{
+    current_month_cost: number;
+    trial_emails_used: number;
+    trial_emails_remaining: number;
+    has_payment_method: boolean;
+    stripe_customer_id: string | null;
+    stripe_subscription_id: string | null;
+}> {
+    const account = queryOne<{
+        has_payment_method: number;
+        trial_emails_used: number;
+        stripe_customer_id: string | null;
+        stripe_subscription_id: string | null;
+    }>(
+        `SELECT has_payment_method, trial_emails_used, stripe_customer_id, stripe_subscription_id
+         FROM accounts WHERE id = ?`,
+        [accountId]
+    );
+
+    const monthStart = new Date();
+    monthStart.setUTCDate(1);
+    monthStart.setUTCHours(0, 0, 0, 0);
+
+    const watchers = queryMany<{ id: string }>(
+        `SELECT id FROM watchers WHERE account_id = ? AND status != 'deleted'`,
+        [accountId]
+    );
+
+    let currentMonthCost = 0;
+    if (watchers.length > 0) {
+        const placeholders = watchers.map(() => "?").join(",");
+        const watcherIds = watchers.map((w) => w.id);
+        const costResult = queryOne<{ cost: number }>(
+            `SELECT COALESCE(SUM(cost_usd), 0) as cost FROM actions
+             WHERE watcher_id IN (${placeholders}) AND created_at >= ?`,
+            [...watcherIds, monthStart.toISOString()]
+        );
+        currentMonthCost = costResult?.cost ?? 0;
+    }
+
+    const trialUsed = account?.trial_emails_used ?? 0;
     return {
-        account_id: accountId,
-        period_start: getCurrentPeriodStart(),
-        period_end: getCurrentPeriodEnd(),
-        emails_processed: 0,
-        emails_limit: -1,
-        watchers_count: 0,
-        watchers_limit: -1,
+        current_month_cost: currentMonthCost,
+        trial_emails_used: trialUsed,
+        trial_emails_remaining: Math.max(0, FREE_TRIAL_EMAILS - trialUsed),
+        has_payment_method: !!account?.has_payment_method,
+        stripe_customer_id: account?.stripe_customer_id ?? null,
+        stripe_subscription_id: account?.stripe_subscription_id ?? null,
     };
-}
-
-export async function canProcessEmail(
-    _accountId: string,
-    _plan: PlanTier = "free"
-): Promise<boolean> {
-    return true;
-}
-
-export async function canCreateWatcher(
-    _accountId: string,
-    _plan: PlanTier = "free"
-): Promise<boolean> {
-    return true;
-}
-
-export async function incrementEmailCount(_accountId: string): Promise<boolean> {
-    return true;
-}
-
-export async function incrementWatcherCount(_accountId: string): Promise<void> {}
-
-export function getCurrentPeriodStart(): number {
-    const now = new Date();
-    const day = now.getUTCDay();
-    const diff = day === 0 ? 6 : day - 1;
-    const monday = new Date(now);
-    monday.setUTCDate(now.getUTCDate() - diff);
-    monday.setUTCHours(0, 0, 0, 0);
-    return monday.getTime();
-}
-
-export function getCurrentPeriodEnd(): number {
-    return getCurrentPeriodStart() + 7 * 24 * 60 * 60 * 1000;
 }

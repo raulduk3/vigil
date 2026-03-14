@@ -14,6 +14,7 @@
 
 import { queryOne, queryMany, run } from "../db/client";
 import { logger } from "../logger";
+import { reportInvocationCost } from "../billing/usage";
 import {
     buildSystemPrompt,
     buildEmailTriggerPrompt,
@@ -469,6 +470,11 @@ export async function invokeAgent(
         actions: agentResponse.actions?.length ?? 0,
         durationMs: Date.now() - startMs,
     });
+
+    // Report cost to Stripe meter (fire and forget — don't block agent response)
+    reportInvocationCost(watcher.account_id, costUsd).catch((err) =>
+        logger.error("Failed to report invocation cost", { watcherId, err })
+    );
 
     return agentResponse;
 }

@@ -7,9 +7,10 @@
 
 import type { Context } from "hono";
 import PostalMime from "postal-mime";
-import { queryOne } from "../../db/client";
+import { queryOne, run } from "../../db/client";
 import { ingestEmail } from "../../ingestion/orchestrator";
 import { logger } from "../../logger";
+import { canProcessEmail, incrementTrialUsage } from "../../billing/usage";
 
 // ============================================================================
 // Forwarding Confirmation Detection
@@ -300,6 +301,25 @@ export const ingestionHandlers = {
                 return c.json({ error: "Unknown or inactive watcher" }, 404);
             }
 
+            // Billing gate: check trial or payment method
+            const allowed = await canProcessEmail(watcher.account_id);
+            if (!allowed) {
+                logger.warn("Email rejected: trial exhausted, no payment method", { accountId: watcher.account_id });
+                return c.json(
+                    { error: "Free trial limit reached. Add a payment method to continue.", payment_required: true },
+                    402
+                );
+            }
+
+            // Increment trial counter for free accounts
+            const billingRow = queryOne<{ has_payment_method: number }>(
+                `SELECT has_payment_method FROM accounts WHERE id = ?`,
+                [watcher.account_id]
+            );
+            if (billingRow && !billingRow.has_payment_method) {
+                incrementTrialUsage(watcher.account_id);
+            }
+
             const result = await ingestEmail({
                 watcherId: watcher.id,
                 messageId,
@@ -349,6 +369,22 @@ export const ingestionHandlers = {
 
             if (!watcher) {
                 return c.json({ error: "Unknown watcher" }, 404);
+            }
+
+            // Billing gate
+            const allowed = await canProcessEmail(watcher.account_id);
+            if (!allowed) {
+                return c.json(
+                    { error: "Free trial limit reached. Add a payment method to continue.", payment_required: true },
+                    402
+                );
+            }
+            const billingRow2 = queryOne<{ has_payment_method: number }>(
+                `SELECT has_payment_method FROM accounts WHERE id = ?`,
+                [watcher.account_id]
+            );
+            if (billingRow2 && !billingRow2.has_payment_method) {
+                incrementTrialUsage(watcher.account_id);
             }
 
             const messageId =

@@ -14,6 +14,7 @@ import { ingestionHandlers } from "./handlers/ingestion";
 import { threadActionHandlers } from "./handlers/thread-actions";
 import { customToolHandlers } from "./handlers/custom-tools";
 import { apiKeyHandlers } from "./handlers/api-keys";
+import { billingHandlers } from "./handlers/billing";
 
 export function createRouter(): Hono {
     const api = new Hono();
@@ -38,6 +39,9 @@ export function createRouter(): Hono {
 
     // Templates (public — so the frontend can show them before auth)
     api.get("/templates", templateHandlers.list);
+
+    // Stripe webhook (public — Stripe signs it, no JWT)
+    api.post("/billing/webhook", billingHandlers.stripeWebhook);
 
     // Protected routes
     const protected_ = new Hono();
@@ -93,6 +97,11 @@ export function createRouter(): Hono {
     protected_.patch("/watchers/:watcherId/threads/:threadId", threadHandlers.update);
     protected_.post("/watchers/:watcherId/threads/:threadId/close", threadHandlers.close);
     protected_.delete("/watchers/:watcherId/threads/:threadId", threadHandlers.delete_);
+
+    // Billing
+    protected_.get("/billing", billingHandlers.getBilling);
+    protected_.post("/billing/setup", billingHandlers.setup);
+    protected_.post("/billing/portal", billingHandlers.portal);
 
     // Usage/billing endpoint
     protected_.get("/usage", async (c) => {
