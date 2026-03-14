@@ -268,6 +268,7 @@ export const ingestionHandlers = {
                 inReplyTo,
                 receivedAt: Date.now(),
                 originalFrom,
+                originalDate: headers["date"] ? new Date(headers["date"]).getTime() || undefined : undefined,
             });
 
             return c.json({
