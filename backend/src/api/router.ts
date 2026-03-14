@@ -12,6 +12,8 @@ import { watcherHandlers, templateHandlers } from "./handlers/watchers";
 import { threadHandlers } from "./handlers/threads";
 import { ingestionHandlers } from "./handlers/ingestion";
 import { threadActionHandlers } from "./handlers/thread-actions";
+import { customToolHandlers } from "./handlers/custom-tools";
+import { apiKeyHandlers } from "./handlers/api-keys";
 
 export function createRouter(): Hono {
     const api = new Hono();
@@ -70,6 +72,19 @@ export function createRouter(): Hono {
     protected_.put("/watchers/:id/memory/:memoryId", watcherHandlers.updateMemory);
     protected_.patch("/watchers/:id/memory/:memoryId", watcherHandlers.updateMemory);
     protected_.delete("/watchers/:id/memory/:memoryId", watcherHandlers.deleteMemory);
+
+    // Custom tools (per watcher)
+    protected_.get("/watchers/:id/tools", customToolHandlers.list);
+    protected_.post("/watchers/:id/tools", customToolHandlers.create);
+    protected_.put("/watchers/:id/tools/:toolId", customToolHandlers.update);
+    protected_.patch("/watchers/:id/tools/:toolId", customToolHandlers.update);
+    protected_.delete("/watchers/:id/tools/:toolId", customToolHandlers.delete_);
+    protected_.post("/watchers/:id/tools/:toolId/test", customToolHandlers.test);
+
+    // API keys (per account)
+    protected_.get("/keys", apiKeyHandlers.list);
+    protected_.post("/keys", apiKeyHandlers.create);
+    protected_.delete("/keys/:id", apiKeyHandlers.delete_);
 
     // Threads
     protected_.get("/watchers/:watcherId/threads", threadHandlers.list);
