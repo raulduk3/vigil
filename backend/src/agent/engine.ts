@@ -299,11 +299,13 @@ export async function invokeAgent(
         const result = await callLLM(systemPrompt, userPrompt, model);
         agentResponse = result.response;
         contextTokens = result.inputTokens + result.outputTokens;
-        // Pricing from MODEL_CATALOG
+        // Pricing: marked-up token cost + platform fee per invocation
         const rates = MODEL_CATALOG[model]?.pricing ?? { input: 0.0004, output: 0.0016 };
+        const PLATFORM_FEE_PER_INVOCATION = 0.001; // $0.001 per agent invocation
         costUsd =
             (result.inputTokens / 1000) * rates.input +
-            (result.outputTokens / 1000) * rates.output;
+            (result.outputTokens / 1000) * rates.output +
+            PLATFORM_FEE_PER_INVOCATION;
     } catch (err) {
         logger.error("LLM call failed", { watcherId, err, model });
         await logAction(watcherId, threadId, emailId, trigger.type, null, null, null, null, "failed", String(err), startMs);

@@ -16,10 +16,10 @@ const models = [
 ];
 
 const examples = [
-  { emails: 10, label: '10 emails/day', monthly: '~$0.18/mo', model: 'GPT-4.1 Mini' },
-  { emails: 50, label: '50 emails/day', monthly: '~$0.90/mo', model: 'GPT-4.1 Mini' },
-  { emails: 200, label: '200 emails/day', monthly: '~$3.60/mo', model: 'GPT-4.1 Mini' },
-  { emails: 50, label: '50 emails/day', monthly: '~$4.20/mo', model: 'GPT-4.1 (full)' },
+  { emails: 10, label: '10 emails/day', monthly: '~$0.50/mo', model: 'GPT-4.1 Mini' },
+  { emails: 50, label: '50 emails/day', monthly: '~$2.40/mo', model: 'GPT-4.1 Mini' },
+  { emails: 200, label: '200 emails/day', monthly: '~$9.60/mo', model: 'GPT-4.1 Mini' },
+  { emails: 50, label: '50 emails/day', monthly: '~$5.70/mo', model: 'GPT-4.1 (full)' },
 ];
 
 export default function PricingPage() {
@@ -37,8 +37,8 @@ export default function PricingPage() {
               Pay for what you use.
             </h1>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
-              No tiers. No subscriptions. You pay the AI cost of processing each email, 
-              plus $0.005 per alert sent. That's it.
+              No tiers. No subscriptions. Each invocation costs a $0.001 platform fee
+              plus the AI token cost for your chosen model. Alerts cost $0.005 each.
             </p>
           </div>
 
@@ -46,16 +46,16 @@ export default function PricingPage() {
           <div className="panel p-8 mb-8">
             <div className="grid md:grid-cols-3 gap-8 text-center">
               <div>
+                <div className="text-3xl font-display font-semibold text-gray-900 mb-1">$0.001</div>
+                <div className="text-sm text-gray-500">platform fee per invocation</div>
+              </div>
+              <div>
+                <div className="text-3xl font-display font-semibold text-gray-900 mb-1">+ tokens</div>
+                <div className="text-sm text-gray-500">AI cost varies by model</div>
+              </div>
+              <div>
                 <div className="text-3xl font-display font-semibold text-gray-900 mb-1">$0.005</div>
                 <div className="text-sm text-gray-500">per alert email sent</div>
-              </div>
-              <div>
-                <div className="text-3xl font-display font-semibold text-gray-900 mb-1">~$0.0006</div>
-                <div className="text-sm text-gray-500">per email processed (GPT-4.1 Mini)</div>
-              </div>
-              <div>
-                <div className="text-3xl font-display font-semibold text-gray-900 mb-1">$0</div>
-                <div className="text-sm text-gray-500">platform fee, watchers, storage</div>
               </div>
             </div>
           </div>
@@ -144,7 +144,7 @@ export default function PricingPage() {
               {[
                 { q: 'What counts as a processed email?', a: 'Each email forwarded to your watcher address. Follow-ups in the same thread count separately since each may contain new obligations or deadlines.' },
                 { q: 'What counts as an alert?', a: 'Each email sent by Vigil to notify you about something. Silence alerts, urgency alerts, and weekly digests each count as one alert ($0.005 each).' },
-                { q: 'Is there a minimum charge?', a: 'No. If you send 0 emails in a month, you pay $0. No platform fees, no minimum commitments.' },
+                { q: 'Is there a minimum charge?', a: 'No. If you send 0 emails in a month, you pay $0. The $0.001 platform fee only applies when the agent processes an email or runs a scheduled review.' },
                 { q: 'Can I set a spending cap?', a: 'Coming soon. For now, you control costs by choosing cheaper models and adjusting your reactivity level (fewer alerts = lower cost).' },
                 { q: 'How do I pay?', a: 'Usage is tracked per account. Billing is monthly via Stripe. You can see your current usage and estimated cost in the dashboard.' },
               ].map((faq) => (
