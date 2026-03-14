@@ -51,6 +51,7 @@ export function createRouter(): Hono {
     // Auth (protected)
     protected_.get("/auth/me", authHandlers.me);
     protected_.post("/auth/change-password", authHandlers.changePassword);
+    protected_.post("/auth/delete-account", authHandlers.deleteAccount);
     protected_.get("/auth/connections", authHandlers.getConnections);
 
     // Watchers

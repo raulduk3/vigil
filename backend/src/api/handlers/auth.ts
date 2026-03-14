@@ -19,6 +19,7 @@ import {
     type OAuthProvider,
 } from "../../auth/oauth";
 import { queryOne, run } from "../../db/client";
+import { logger } from "../../logger";
 import type { AccountRow } from "../../agent/schema";
 
 // ============================================================================
@@ -240,6 +241,41 @@ export const authHandlers = {
         run(`UPDATE accounts SET password_hash = ? WHERE id = ?`, [newHash, user.account_id]);
 
         return c.json({ success: true });
+    },
+
+    async deleteAccount(c: Context) {
+        const user = c.get("user");
+        const body = await c.req.json().catch(() => ({}));
+
+        // Require password confirmation OR explicit "confirm": true
+        if (body.confirm !== true) {
+            return c.json({ error: "Must confirm deletion with {\"confirm\": true}" }, 400);
+        }
+
+        // If account has a password, require it
+        const account = queryOne<{ password_hash: string | null }>(
+            `SELECT password_hash FROM accounts WHERE id = ?`,
+            [user.account_id]
+        );
+        if (account?.password_hash && body.password) {
+            const valid = await Bun.password.verify(body.password, account.password_hash);
+            if (!valid) return c.json({ error: "Incorrect password" }, 400);
+        }
+
+        // Delete everything in order (foreign key safe)
+        run(`DELETE FROM actions WHERE watcher_id IN (SELECT id FROM watchers WHERE account_id = ?)`, [user.account_id]);
+        run(`DELETE FROM memories WHERE watcher_id IN (SELECT id FROM watchers WHERE account_id = ?)`, [user.account_id]);
+        run(`DELETE FROM emails WHERE watcher_id IN (SELECT id FROM watchers WHERE account_id = ?)`, [user.account_id]);
+        run(`DELETE FROM threads WHERE watcher_id IN (SELECT id FROM watchers WHERE account_id = ?)`, [user.account_id]);
+        run(`DELETE FROM channels WHERE watcher_id IN (SELECT id FROM watchers WHERE account_id = ?)`, [user.account_id]);
+        run(`DELETE FROM custom_tools WHERE watcher_id IN (SELECT id FROM watchers WHERE account_id = ?)`, [user.account_id]);
+        run(`DELETE FROM watchers WHERE account_id = ?`, [user.account_id]);
+        run(`DELETE FROM api_keys WHERE account_id = ?`, [user.account_id]);
+        run(`DELETE FROM refresh_tokens WHERE account_id = ?`, [user.account_id]);
+        run(`DELETE FROM accounts WHERE id = ?`, [user.account_id]);
+
+        logger.info("Account deleted", { accountId: user.account_id, email: user.email });
+        return c.json({ deleted: true });
     },
 
     async oauthStart(c: Context) {
