@@ -343,29 +343,34 @@ async function loadInbox() {
             container.innerHTML = '<div class="empty-state">No threads yet. Forward an email to get started.</div>';
             return;
         }
-        container.innerHTML = threads.map(t => `
-            <div class="inbox-item ${(t.status === 'watching' || t.status === 'active') ? 'inbox-active' : ''}">
-                <div class="inbox-subject">${escapeHtml(t.subject || "No subject")}</div>
+
+        container.innerHTML = threads.map((thread) => `
+            <div class="inbox-item ${(thread.status === "watching" || thread.status === "active") ? "inbox-active" : ""}">
+                <div class="inbox-subject">${escapeHtml(thread.subject || "No subject")}</div>
                 <div class="inbox-meta">
-                    <span class="inbox-status inbox-status-${t.status}">${t.status}</span>
-                    <span>${t.email_count || 0} emails</span>
-                    ${t.last_activity ? `<span>${timeAgo(t.last_activity)}</span>` : ""}
+                    <span class="inbox-status inbox-status-${thread.status}">${thread.status}</span>
+                    <span>${thread.email_count || 0} emails</span>
+                    ${thread.last_activity ? `<span>${timeAgo(thread.last_activity)}</span>` : ""}
                 </div>
-                ${t.summary ? `<div class="inbox-summary">${escapeHtml(t.summary)}</div>` : ""}
+                ${thread.summary ? `<div class="inbox-summary">${escapeHtml(thread.summary)}</div>` : ""}
             </div>
         `).join("");
-    } catch (e) {
-        container.innerHTML = `<div class="error">${escapeHtml(e.message)}</div>`;
+    } catch (error) {
+        container.innerHTML = `<div class="error">${escapeHtml(error.message)}</div>`;
     }
 }
 
-// ============================================================================
-// Stats
-// ============================================================================
-
 async function loadStats() {
-    if (!currentWatcher) return;
     const container = document.getElementById("stats-content");
+
+    if (!currentWatcher) {
+        container.innerHTML = renderNoWatcherState(
+            "No watcher selected.",
+            "Create one in Config to see forwarding and usage stats."
+        );
+        return;
+    }
+
     container.innerHTML = '<div class="loading-state">Loading stats...</div>';
 
     try {
