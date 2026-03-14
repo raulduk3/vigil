@@ -40,82 +40,12 @@ const guarantees = [
   'No analytics, cookies, or tracking',
 ];
 
-const setupHighlights = [
-  {
-    label: 'Works with',
-    value: 'Gmail + Outlook',
-    detail: 'Provider detection routes you into the right forwarding flow automatically.',
-  },
-  {
-    label: 'Typical setup',
-    value: 'About 30 sec',
-    detail: 'Fastest path is: create a watcher first, then open the extension inside your mail provider.',
-  },
-  {
-    label: 'Permissions',
-    value: '0 inbox scopes',
-    detail: 'Forwarding is configured in your provider. Vigil never requests inbox OAuth access.',
-  },
-];
-
-const setupFacts = [
-  {
-    eyebrow: 'Works with',
-    title: 'Gmail and Outlook',
-    detail: 'The extension detects which provider is open and routes you to the correct forwarding settings.',
-  },
-  {
-    eyebrow: 'Bring first',
-    title: 'A watcher and forwarding address',
-    detail: 'Create the watcher in Vigil first so setup has a destination ready to paste into your provider.',
-  },
-  {
-    eyebrow: 'Handles for you',
-    title: 'Forwarding steps and Gmail confirmation',
-    detail: 'The awkward parts are automated so you do not have to hunt for Gmail verification messages manually.',
-  },
-  {
-    eyebrow: 'After setup',
-    title: 'Your provider forwards natively',
-    detail: 'Once the rule is saved, the extension is out of the path and your mail provider handles delivery to Vigil.',
-  },
-];
-
-const setupChecklist = [
-  'Create your Vigil account if you do not already have one.',
-  'Create the watcher first so the forwarding destination already exists.',
-  'Open Gmail or Outlook in Chrome before starting the guided flow.',
-  'Use developer-mode install for now while the Chrome Web Store listing is pending.',
-];
-
-const setupBoundaries = {
-  does: [
-    'Detects whether you are in Gmail or Outlook and opens the correct setup path.',
-    'Walks you through where the forwarding address belongs in your provider settings.',
-    'Retrieves Gmail forwarding confirmation codes so you do not need to hunt through email manually.',
-  ],
-  doesNot: guarantees,
-};
-
-const installChoices = [
-  {
-    title: 'Fastest path',
-    description: 'Create a watcher, open Gmail or Outlook, and let the extension guide the forwarding steps.',
-    href: '#setup-flow',
-    cta: 'See setup flow',
-  },
-  {
-    title: 'Need a watcher first',
-    description: 'If you have not created an account yet, start there so the extension has an address to wire in.',
-    href: '/auth/register',
-    cta: 'Create account',
-  },
-  {
-    title: 'Installing locally',
-    description: 'The Chrome Web Store listing is still pending, so local developer-mode install is the current path.',
-    href: '#local-install',
-    cta: 'Local install steps',
-  },
+const essentials = [
+  'Works with Gmail and Outlook today. Yahoo is not in the guided flow yet.',
+  'Create the watcher first so the forwarding address already exists before setup starts.',
+  'Open Gmail or Outlook in Chrome and the extension routes you to the correct forwarding settings.',
+  'Gmail confirmation retrieval is handled for you, so you do not need to hunt through messages manually.',
+  'Once forwarding is saved, your provider forwards natively and the extension is out of the path.',
 ];
 
 const manualInstallSteps = [
@@ -138,12 +68,6 @@ const manualInstallSteps = [
     Click Load unpacked and select the <code className="rounded bg-surface-sunken px-1.5 py-0.5 text-2xs font-mono">chrome-extension</code> folder.
   </>,
   'Pin the Vigil icon and start setup from the toolbar.',
-];
-
-const providers = [
-  { name: 'Gmail', status: 'Full support', tone: 'ok' as const },
-  { name: 'Outlook', status: 'Full support', tone: 'ok' as const },
-  { name: 'Yahoo', status: 'Coming soon', tone: 'warning' as const },
 ];
 
 export default function ExtensionPage() {
@@ -188,143 +112,40 @@ export default function ExtensionPage() {
               </div>
             </div>
 
-            <div className="flex flex-col gap-4 mb-6">
-              {installChoices.map((choice) => (
-                <Link key={choice.title} href={choice.href} className="landing-start-card panel p-5">
-                  <p className="landing-start-kicker">Extension</p>
-                  <h2 className="text-lg font-display font-semibold text-gray-900 mt-3">{choice.title}</h2>
-                  <p className="text-sm text-gray-600 leading-relaxed mt-3 max-w-none">{choice.description}</p>
-                  <span className="mt-5 inline-flex text-sm font-medium text-vigil-700">{choice.cta} →</span>
-                </Link>
-              ))}
-            </div>
+            <div className="panel p-6 md:p-7 text-left">
+              <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80">Essentials</p>
+              <h2 className="mt-3 text-2xl font-display font-semibold text-gray-900">Simple forwarding setup, no inbox integration.</h2>
+              <p className="mt-3 text-sm md:text-base text-gray-600 leading-relaxed max-w-none">
+                Vigil does not connect to your inbox. The extension only helps configure forwarding in Gmail or Outlook, then your provider sends mail to Vigil normally.
+              </p>
 
-            <div className="flex flex-col gap-6">
-              <div className="panel overflow-hidden p-0">
-                <div className="px-6 py-6 md:px-7 md:py-7 text-left">
-                  <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80">Setup facts</p>
-                  <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                    <h2 className="text-2xl font-display font-semibold text-gray-900">Everything the extension changes, and everything it does not.</h2>
-                    <p className="max-w-xl text-sm text-gray-600 leading-relaxed">
-                      This flow is intentionally narrow. The extension helps you wire forwarding into Gmail or Outlook, then your provider takes over delivery to Vigil.
-                    </p>
-                  </div>
-                </div>
+              <ul className="mt-6 space-y-4">
+                {essentials.map((item) => (
+                  <li key={item} className="border-l-2 border-vigil-200 pl-4 text-sm text-gray-700 leading-relaxed">
+                    {item}
+                  </li>
+                ))}
+              </ul>
 
-                <div className="border-t border-black/5 px-6 py-6 md:px-7 md:py-7">
-                  <div className="flex flex-col gap-6">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">Quick facts</p>
-                    </div>
-                    <div className="flex flex-col gap-4">
-                      {setupHighlights.map((highlight) => (
-                        <div key={highlight.label} className="border-l-2 border-vigil-200 pl-4">
-                          <p className="text-[11px] uppercase tracking-[0.18em] text-vigil-700/80">{highlight.label}</p>
-                          <p className="mt-2 text-xl font-display font-semibold text-gray-900">{highlight.value}</p>
-                          <p className="mt-2 text-sm text-gray-600 leading-relaxed max-w-none">{highlight.detail}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t border-black/5 px-6 py-6 md:px-7 md:py-7">
-                  <div className="flex flex-col gap-6">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">How setup works</p>
-                      <span className="badge mt-3">Forwarding only</span>
-                    </div>
-                    <div className="flex flex-col gap-4">
-                      {setupFacts.map((fact) => (
-                        <SetupFactCard
-                          key={fact.eyebrow}
-                          eyebrow={fact.eyebrow}
-                          title={fact.title}
-                          detail={fact.detail}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t border-black/5 px-6 py-6 md:px-7 md:py-7">
-                  <div className="flex flex-col gap-6">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">Before you start</p>
-                    </div>
-                    <div className="flex flex-col gap-6">
-                      <ul className="space-y-3">
-                        {setupChecklist.map((item, index) => (
-                          <li key={item} className="flex items-start gap-3">
-                            <StepBadge className="h-7 w-7 shrink-0 text-xs">{index + 1}</StepBadge>
-                            <span className="pt-1 text-sm text-gray-700 leading-relaxed">{item}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      <div className="border-l-2 border-vigil-200 pl-4">
-                        <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">Best order</p>
-                        <p className="mt-2 text-sm text-gray-700 leading-relaxed max-w-none">
-                          Create account, make a watcher, then open the extension and let it wire forwarding into Gmail or Outlook.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t border-black/5 px-6 py-6 md:px-7 md:py-7">
-                  <div className="flex flex-col gap-6">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">Boundaries</p>
-                    </div>
-                    <div className="flex flex-col gap-6">
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">What it does</p>
-                        <ul className="mt-4 space-y-3 text-sm text-gray-600">
-                          {setupBoundaries.does.map((item) => (
-                            <li key={item} className="flex items-start gap-2.5">
-                              <span className="mt-0.5 text-vigil-700">•</span>
-                              <span>{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        <p className="mt-5 text-sm leading-relaxed text-gray-600 max-w-none">
-                          It is a guided setup assistant for forwarding. Nothing more, and that is the point.
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-gray-900">What it does not do</p>
-                        <ul className="mt-4 space-y-3 text-sm text-gray-600">
-                          {setupBoundaries.doesNot.map((item) => (
-                            <li key={item} className="flex items-start gap-2.5">
-                              <span className="mt-0.5 text-vigil-700">•</span>
-                              <span>{item}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        <p className="mt-5 text-sm leading-relaxed text-gray-600 max-w-none">
-                          Vigil processes forwarded email server-side. The extension only helps you configure the forwarding rule.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+              <div className="mt-6 border-t border-black/5 pt-6">
+                <p className="text-sm font-semibold text-gray-900">What it does not do</p>
+                <ul className="mt-4 space-y-3 text-sm text-gray-600">
+                  {guarantees.map((item) => (
+                    <li key={item} className="flex items-start gap-2.5">
+                      <span className="mt-0.5 text-vigil-700">•</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
 
-              <div className="panel p-6 md:p-7 flex flex-col justify-between gap-6">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Before you install</p>
-                  <h2 className="text-2xl font-display font-semibold text-gray-900 mb-3">This is a setup helper, not an inbox integration.</h2>
-                  <p className="text-sm md:text-base text-gray-600 leading-relaxed max-w-none">
-                    Vigil does not connect to your inbox. Forwarding keeps the architecture simple: your provider sends mail to Vigil,
-                    Vigil reads it, remembers what matters, and alerts you only when something needs attention.
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  <MiniStat value="1" label="Create one watcher before opening the extension" />
-                  <MiniStat value="30 sec" label="Typical setup time once the watcher exists" />
-                  <MiniStat value="0" label="Inbox permissions requested" />
-                </div>
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <Link href="/auth/register" className="btn btn-secondary">
+                  Create account
+                </Link>
+                <Link href="/learn/email-ingestion" className="btn btn-ghost">
+                  Read setup docs
+                </Link>
               </div>
             </div>
           </div>
@@ -364,43 +185,11 @@ export default function ExtensionPage() {
                   </li>
                 ))}
               </ol>
-            </div>
-
-            <div className="flex flex-col gap-6">
-              <div className="panel p-6 md:p-7">
-                <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Supported Providers</p>
-                <div className="flex flex-col gap-3">
-                  {providers.map((provider) => (
-                    <ProviderCard key={provider.name} {...provider} />
-                  ))}
-                </div>
-              </div>
-
-              <div className="panel p-6 md:p-7">
-                <div className="flex flex-col gap-4">
-                  <div>
-                    <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Start Order</p>
-                    <h2 className="text-2xl font-display font-semibold text-gray-900 mb-3">Create the watcher first, then use the extension.</h2>
-                    <p className="text-sm md:text-base text-gray-600 leading-relaxed max-w-none">
-                      The setup flow is faster when your watcher already exists. Create one first, then use the extension to wire forwarding in.
-                    </p>
-                  </div>
-                  <div className="panel-inset rounded-md p-5 md:p-6 flex flex-col justify-center">
-                    <p className="text-sm uppercase tracking-[0.2em] text-vigil-700/80 mb-2">Start free</p>
-                    <p className="text-3xl font-display font-semibold text-gray-900 mb-2">50 emails free each month</p>
-                    <p className="text-sm text-gray-600 leading-relaxed mb-5 max-w-none">
-                      No credit card required. Set up a watcher, install the extension, and let the agent start learning from the first thread.
-                    </p>
-                    <div className="flex flex-col sm:flex-row gap-3">
-                      <Link href="/auth/register" className="btn btn-secondary">
-                        Create account
-                      </Link>
-                      <Link href="/learn/email-ingestion" className="btn btn-ghost">
-                        Read setup docs
-                      </Link>
-                    </div>
-                  </div>
-                </div>
+              <div className="mt-6 border-t border-black/5 pt-6">
+                <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">Start order</p>
+                <p className="mt-2 text-sm text-gray-700 leading-relaxed max-w-none">
+                  Create the watcher first, then use the extension. No credit card is required, and you get 50 emails free each month.
+                </p>
               </div>
             </div>
           </div>
@@ -408,33 +197,6 @@ export default function ExtensionPage() {
       </main>
 
       <Footer />
-    </div>
-  );
-}
-
-function SetupFactCard({
-  eyebrow,
-  title,
-  detail,
-}: {
-  eyebrow: string;
-  title: string;
-  detail: string;
-}) {
-  return (
-    <div className="border-l-2 border-vigil-200 pl-4">
-      <p className="text-[11px] uppercase tracking-[0.18em] text-vigil-700/80">{eyebrow}</p>
-      <p className="text-sm font-semibold text-gray-900 mt-2 max-w-none">{title}</p>
-      <p className="text-sm text-gray-600 mt-2 leading-relaxed max-w-none">{detail}</p>
-    </div>
-  );
-}
-
-function MiniStat({ value, label }: { value: string; label: string }) {
-  return (
-    <div className="panel-inset rounded-md px-4 py-4">
-      <div className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">{value}</div>
-      <div className="text-sm text-gray-700 mt-2 max-w-none">{label}</div>
     </div>
   );
 }
@@ -456,29 +218,6 @@ function StepBadge({ children, className = 'h-10 w-10' }: { children: React.Reac
     <span className={`inline-flex items-center justify-center rounded-full bg-surface-sunken text-sm font-semibold text-vigil-700 ${className}`.trim()}>
       {children}
     </span>
-  );
-}
-
-function ProviderCard({
-  name,
-  status,
-  tone,
-}: {
-  name: string;
-  status: string;
-  tone: 'ok' | 'warning';
-}) {
-  const badgeClass = tone === 'ok' ? 'badge badge-ok' : 'badge badge-warning';
-  const detail = tone === 'ok' ? 'Ready in the extension today' : 'Manual forwarding still works';
-
-  return (
-    <div className="panel-inset rounded-md p-5 text-center h-full">
-      <div className="text-base font-display font-semibold text-gray-900">{name}</div>
-      <div className="mt-3">
-        <span className={badgeClass}>{status}</span>
-      </div>
-      <p className="text-sm text-gray-500 mt-3 max-w-none">{detail}</p>
-    </div>
   );
 }
 
