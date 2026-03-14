@@ -9,19 +9,15 @@
         return window.location.href.includes("options/mail/forwarding");
     }
 
-    // Notify the extension
-    chrome.runtime.sendMessage({ type: "OUTLOOK_DETECTED" });
-
     function highlightForwardingSection() {
         setTimeout(() => {
-            // Outlook's forwarding toggle and input field
             const toggles = document.querySelectorAll('[role="switch"], [type="checkbox"]');
             const inputs = document.querySelectorAll('input[type="email"], input[type="text"]');
 
             toggles.forEach(toggle => {
                 const label = toggle.closest("div")?.textContent || "";
                 if (label.toLowerCase().includes("forwarding") || label.toLowerCase().includes("forward")) {
-                    toggle.style.outline = "3px solid #0d9488";
+                    toggle.style.outline = "3px solid #2d5261";
                     toggle.style.outlineOffset = "2px";
                 }
             });
@@ -30,20 +26,20 @@
                 const placeholder = (input.placeholder || "").toLowerCase();
                 const label = input.closest("div")?.textContent || "";
                 if (placeholder.includes("email") || label.toLowerCase().includes("forward")) {
-                    input.style.outline = "3px solid #0d9488";
+                    input.style.outline = "3px solid #2d5261";
                     input.style.outlineOffset = "2px";
 
                     const tip = document.createElement("div");
-                    tip.textContent = "👁️ Paste your Vigil forwarding address here";
+                    tip.textContent = "Paste your Vigil forwarding address here";
                     tip.style.cssText = `
-                        background: #0d9488;
-                        color: white;
+                        background: #0B1F2A;
+                        color: #f8f8f7;
                         padding: 6px 12px;
-                        border-radius: 6px;
+                        border-radius: 4px;
                         font-size: 12px;
                         font-weight: 600;
                         margin-top: 4px;
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
                     `;
                     input.parentElement.appendChild(tip);
                     setTimeout(() => tip.remove(), 10000);
@@ -56,7 +52,6 @@
         highlightForwardingSection();
     }
 
-    // Watch for SPA navigation
     const observer = new MutationObserver(() => {
         if (isForwardingPage()) {
             highlightForwardingSection();
