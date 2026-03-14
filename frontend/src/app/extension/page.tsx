@@ -200,58 +200,68 @@ export default function ExtensionPage() {
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr] items-stretch">
-              <div className="panel p-6 md:p-7">
-                <div className="rounded-[28px] border border-black/5 bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(246,242,236,0.88))] p-5 md:p-6 text-left shadow-[0_18px_50px_rgba(31,41,55,0.08)]">
-                  <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-                    <div>
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80">Setup facts</p>
-                      <h2 className="mt-3 text-2xl font-display font-semibold text-gray-900">Everything the extension changes, and everything it does not.</h2>
-                    </div>
+              <div className="panel overflow-hidden p-0">
+                <div className="px-6 py-6 md:px-7 md:py-7 text-left">
+                  <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80">Setup facts</p>
+                  <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                    <h2 className="text-2xl font-display font-semibold text-gray-900">Everything the extension changes, and everything it does not.</h2>
                     <p className="max-w-xl text-sm text-gray-600 leading-relaxed">
                       This flow is intentionally narrow. The extension helps you wire forwarding into Gmail or Outlook, then your provider takes over delivery to Vigil.
                     </p>
                   </div>
+                </div>
 
-                  <div className="mt-5 grid gap-3 lg:grid-cols-3">
-                    {setupHighlights.map((highlight) => (
-                      <SetupHighlightCard
-                        key={highlight.label}
-                        label={highlight.label}
-                        value={highlight.value}
-                        detail={highlight.detail}
-                      />
-                    ))}
-                  </div>
-
-                  <div className="mt-5 grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
-                    <div className="panel-inset rounded-2xl p-5 md:p-6">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">How setup works</p>
-                        <span className="badge">Forwarding only</span>
-                      </div>
-                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                        {setupFacts.map((fact) => (
-                          <SetupFactCard
-                            key={fact.eyebrow}
-                            eyebrow={fact.eyebrow}
-                            title={fact.title}
-                            detail={fact.detail}
-                          />
-                        ))}
-                      </div>
+                <div className="border-t border-black/5 px-6 py-6 md:px-7 md:py-7">
+                  <div className="grid gap-6 lg:grid-cols-[180px_1fr] lg:gap-8">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">Quick facts</p>
                     </div>
+                    <div className="grid gap-4 md:grid-cols-3">
+                      {setupHighlights.map((highlight) => (
+                        <div key={highlight.label} className="border-l-2 border-vigil-200 pl-4">
+                          <p className="text-[11px] uppercase tracking-[0.18em] text-vigil-700/80">{highlight.label}</p>
+                          <p className="mt-2 text-xl font-display font-semibold text-gray-900">{highlight.value}</p>
+                          <p className="mt-2 text-sm text-gray-600 leading-relaxed max-w-none">{highlight.detail}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
 
-                    <div className="panel-inset rounded-2xl p-5 md:p-6">
+                <div className="border-t border-black/5 px-6 py-6 md:px-7 md:py-7">
+                  <div className="grid gap-6 lg:grid-cols-[180px_1fr] lg:gap-8">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">How setup works</p>
+                      <span className="badge mt-3">Forwarding only</span>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {setupFacts.map((fact) => (
+                        <SetupFactCard
+                          key={fact.eyebrow}
+                          eyebrow={fact.eyebrow}
+                          title={fact.title}
+                          detail={fact.detail}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-black/5 px-6 py-6 md:px-7 md:py-7">
+                  <div className="grid gap-6 lg:grid-cols-[180px_1fr] lg:gap-8">
+                    <div>
                       <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">Before you start</p>
-                      <ul className="mt-4 space-y-3">
+                    </div>
+                    <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
+                      <ul className="space-y-3">
                         {setupChecklist.map((item, index) => (
                           <li key={item} className="flex items-start gap-3">
-                            <StepBadge className="h-7 w-7 text-xs shrink-0">{index + 1}</StepBadge>
+                            <StepBadge className="h-7 w-7 shrink-0 text-xs">{index + 1}</StepBadge>
                             <span className="pt-1 text-sm text-gray-700 leading-relaxed">{item}</span>
                           </li>
                         ))}
                       </ul>
-                      <div className="mt-5 rounded-2xl border border-black/5 bg-white/75 px-4 py-4">
+                      <div className="border-l-2 border-vigil-200 pl-4 lg:pl-5">
                         <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">Best order</p>
                         <p className="mt-2 text-sm text-gray-700 leading-relaxed max-w-none">
                           Create account, make a watcher, then open the extension and let it wire forwarding into Gmail or Outlook.
@@ -259,18 +269,43 @@ export default function ExtensionPage() {
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  <div className="mt-5 grid gap-4 md:grid-cols-2">
-                    <BoundaryCard
-                      title="What it does"
-                      items={setupBoundaries.does}
-                      summary="It is a guided setup assistant for forwarding. Nothing more, and that is the point."
-                    />
-                    <BoundaryCard
-                      title="What it does not do"
-                      items={setupBoundaries.doesNot}
-                      summary="Vigil processes forwarded email server-side. The extension only helps you configure the forwarding rule."
-                    />
+                <div className="border-t border-black/5 px-6 py-6 md:px-7 md:py-7">
+                  <div className="grid gap-6 lg:grid-cols-[180px_1fr] lg:gap-8">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">Boundaries</p>
+                    </div>
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">What it does</p>
+                        <ul className="mt-4 space-y-3 text-sm text-gray-600">
+                          {setupBoundaries.does.map((item) => (
+                            <li key={item} className="flex items-start gap-2.5">
+                              <span className="mt-0.5 text-vigil-700">•</span>
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="mt-5 text-sm leading-relaxed text-gray-600 max-w-none">
+                          It is a guided setup assistant for forwarding. Nothing more, and that is the point.
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">What it does not do</p>
+                        <ul className="mt-4 space-y-3 text-sm text-gray-600">
+                          {setupBoundaries.doesNot.map((item) => (
+                            <li key={item} className="flex items-start gap-2.5">
+                              <span className="mt-0.5 text-vigil-700">•</span>
+                              <span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <p className="mt-5 text-sm leading-relaxed text-gray-600 max-w-none">
+                          Vigil processes forwarded email server-side. The extension only helps you configure the forwarding rule.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
