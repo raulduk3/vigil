@@ -338,9 +338,23 @@ export async function invokeAgent(
             (result.outputTokens / 1000) * rates.output +
             PLATFORM_FEE_PER_INVOCATION;
     } catch (err) {
-        logger.error("LLM call failed", { watcherId, err, model });
-        await logAction(watcherId, threadId, emailId, trigger.type, null, null, null, null, "failed", String(err), startMs);
-        return null;
+        // Retry once on LLM failure
+        logger.warn("LLM call failed, retrying once", { watcherId, err: String(err), model });
+        try {
+            const retry = await callLLM(systemPrompt, userPrompt, model);
+            agentResponse = retry.response;
+            contextTokens = retry.inputTokens + retry.outputTokens;
+            const rates = MODEL_CATALOG[model]?.pricing ?? { input: 0.0024, output: 0.0096 };
+            costUsd =
+                (retry.inputTokens / 1000) * rates.input +
+                (retry.outputTokens / 1000) * rates.output +
+                PLATFORM_FEE_PER_INVOCATION;
+            logger.info("LLM retry succeeded", { watcherId, model });
+        } catch (retryErr) {
+            logger.error("LLM retry also failed", { watcherId, err: String(retryErr), model });
+            await logAction(watcherId, threadId, emailId, trigger.type, null, null, null, null, "failed", String(retryErr), startMs);
+            return null;
+        }
     }
 
     // 7. Execute tools

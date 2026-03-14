@@ -123,16 +123,18 @@ function DashboardContent() {
 
   return (
     <div className="h-screen flex overflow-hidden">
-      {/* Left: Watcher Sidebar (240px) */}
-      <WatcherSidebar
-        watchers={localWatchers}
-        threads={localThreads}
-        selectedId={selectedWatcherId}
-        onSelect={handleSelectWatcher}
-        onSettings={setSettingsWatcher}
-      />
+      {/* Left: Watcher Sidebar — hidden on mobile */}
+      <div className="hidden md:flex">
+        <WatcherSidebar
+          watchers={localWatchers}
+          threads={localThreads}
+          selectedId={selectedWatcherId}
+          onSelect={handleSelectWatcher}
+          onSettings={setSettingsWatcher}
+        />
+      </div>
 
-      {/* Center: Inbox Panel (flex-1) */}
+      {/* Center: Inbox Panel — full width on mobile */}
       <InboxPanel
         watcher={selectedWatcher}
         threads={selectedThreads}
@@ -144,13 +146,15 @@ function DashboardContent() {
         onMemoriesChange={setMemories}
       />
 
-      {/* Right: Control Panel (360px) */}
-      <ControlPanel
-        watcherId={selectedWatcherId}
-        threads={selectedThreads}
-        actions={actions}
-        memories={memories}
-      />
+      {/* Right: Control Panel — hidden on mobile and tablet */}
+      <div className="hidden lg:flex">
+        <ControlPanel
+          watcherId={selectedWatcherId}
+          threads={selectedThreads}
+          actions={actions}
+          memories={memories}
+        />
+      </div>
 
       {/* Settings Modal */}
       {settingsWatcher && (
