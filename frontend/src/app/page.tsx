@@ -44,7 +44,7 @@ function useScrollReveal() {
 
 function Section({ children, className = '', id }: { children: React.ReactNode; className?: string; id?: string }) {
   return (
-    <section id={id} className={`py-6 md:py-[4.5rem] ${className}`}>
+    <section id={id} className={className}>
       <div className="max-w-6xl mx-auto px-6 lg:px-8">{children}</div>
     </section>
   );
@@ -115,8 +115,13 @@ export default function HomePage() {
               whatever you told it to do. Send a text. Fire a webhook. Connect to another system.
               Prompt it like you'd prompt anything else. It works for you.
             </p>
-            {/* Onboarding prompt — full width */}
-            <div className="mt-10 w-full">
+            <div className="mt-10 w-full max-w-4xl mx-auto">
+              <div className="hero-prompt-suggestion mb-3 min-h-12 md:min-h-10">
+                <span className="text-[11px] md:text-xs uppercase tracking-[0.24em] text-vigil-700/70">Try this</span>
+                <p key={heroPromptIndex} className="hero-prompt-copy mt-2 text-sm md:text-base text-gray-500">
+                  {heroPromptSamples[heroPromptIndex]}
+                </p>
+              </div>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -125,25 +130,20 @@ export default function HomePage() {
                     window.location.href = `/auth/register?intent=${encodedIntent}`;
                   }
                 }}
-                className="panel p-2 flex flex-col gap-2 md:flex-row md:gap-0"
+                className="hero-prompt-shell panel p-2 flex flex-col gap-2 md:flex-row md:items-stretch md:gap-0"
               >
                 <div className="relative flex-1">
                   <input
                     type="text"
                     value={intent}
                     onChange={(event) => setIntent(event.target.value)}
-                    placeholder=" "
+                    placeholder="What do you want Vigil to watch?"
                     aria-label="Describe what you want Vigil to watch"
-                    className="w-full bg-transparent px-4 py-4 text-base md:text-lg text-gray-900 outline-none"
+                    className="hero-prompt-input w-full bg-transparent px-4 py-4 text-base md:text-lg text-gray-900 outline-none"
                     required
                   />
-                  {!intent && (
-                    <span key={heroPromptIndex} className="hero-prompt-placeholder absolute inset-y-0 left-0 flex items-center px-4 text-base md:text-lg text-gray-400 pointer-events-none">
-                      {heroPromptSamples[heroPromptIndex]}
-                    </span>
-                  )}
                 </div>
-                <button type="submit" className="btn btn-primary py-4 px-8 text-base md:rounded-l-none shrink-0">
+                <button type="submit" className="btn btn-primary py-4 px-8 text-base md:min-w-[12rem] md:rounded-l-none shrink-0">
                   Start watching →
                 </button>
               </form>
@@ -158,9 +158,9 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="relative z-10 mt-12 md:mt-16 mb-8 max-w-6xl mx-auto px-6 lg:px-8">
+        <div className="relative z-10 mt-12 md:mt-16 mb-8 mx-auto w-full max-w-[96rem] px-3 sm:px-5 lg:px-8">
           <div className="panel hero-demo-stage w-full overflow-hidden p-1.5">
-            <div className="hero-demo-surface relative aspect-[16/9] overflow-hidden rounded-md">
+            <div className="hero-demo-surface relative aspect-[16/10] md:aspect-[16/8.8] overflow-hidden rounded-md">
               <div className="hero-demo-grid absolute inset-0" />
               <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/55 via-white/20 to-transparent" />
               <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#d4dde0]/85 via-[#d4dde0]/25 to-transparent" />
@@ -176,7 +176,7 @@ export default function HomePage() {
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-[1.3fr_0.9fr] md:gap-6 lg:gap-8 items-end">
+                <div className="grid gap-4 md:grid-cols-[1.45fr_0.85fr] md:gap-6 lg:gap-8 items-end">
                   <div className="hero-demo-window rounded-[1.1rem] p-3 md:p-4 lg:p-5">
                     <div className="flex items-center gap-2 mb-3 md:mb-4">
                       <span className="h-2.5 w-2.5 rounded-full bg-[#c96e61]" />
@@ -222,7 +222,7 @@ export default function HomePage() {
 
       {/* How It Works */}
       <Section id="how-it-works" className="py-12 md:py-16">
-        <div className="mb-8 md:mb-12">
+        <div className="mb-8 md:mb-12" data-reveal id="hiw-header" style={{ opacity: 0, animation: isRevealed('hiw-header') ? 'slideUpIn 0.6s ease-out forwards' : 'none' }}>
           <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">How it works</p>
           <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.08em' }}>
             Analyze. Remember. Act.
@@ -234,7 +234,7 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-          <div className="panel p-7 flex flex-col animate-float-in delay-100">
+          <div data-reveal id="hiw-1" className="panel p-7 flex flex-col opacity-0" style={{ animation: isRevealed('hiw-1') ? 'slideUpIn 0.6s ease-out 0.1s forwards' : 'none' }}>
             <div className="flex items-center gap-4 mb-5">
               <span className="w-12 h-12 rounded-full bg-vigil-100 text-vigil-700 text-base font-semibold flex items-center justify-center flex-shrink-0">1</span>
               <h3 className="text-lg font-semibold text-gray-900">Forward emails</h3>
@@ -249,7 +249,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="panel p-7 flex flex-col animate-float-in delay-200">
+          <div data-reveal id="hiw-2" className="panel p-7 flex flex-col opacity-0" style={{ animation: isRevealed('hiw-2') ? 'slideUpIn 0.6s ease-out 0.2s forwards' : 'none' }}>
             <div className="flex items-center gap-4 mb-5">
               <span className="w-12 h-12 rounded-full bg-vigil-100 text-vigil-700 text-base font-semibold flex items-center justify-center flex-shrink-0">2</span>
               <h3 className="text-lg font-semibold text-gray-900">Agent analyzes</h3>
@@ -271,7 +271,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="panel p-7 flex flex-col animate-float-in delay-300">
+          <div data-reveal id="hiw-3" className="panel p-7 flex flex-col opacity-0" style={{ animation: isRevealed('hiw-3') ? 'slideUpIn 0.6s ease-out 0.3s forwards' : 'none' }}>
             <div className="flex items-center gap-4 mb-5">
               <span className="w-12 h-12 rounded-full bg-vigil-100 text-vigil-700 text-base font-semibold flex items-center justify-center flex-shrink-0">3</span>
               <h3 className="text-lg font-semibold text-gray-900">You get alerted</h3>
@@ -291,7 +291,7 @@ export default function HomePage() {
 
       {/* What makes it different */}
       <Section id="features" className="bg-surface-sunken border-y border-gray-200 py-12 md:py-16">
-        <div className="mb-8 md:mb-12">
+        <div className="mb-8 md:mb-12" data-reveal id="feat-header" style={{ opacity: 0, animation: isRevealed('feat-header') ? 'slideUpIn 0.6s ease-out forwards' : 'none' }}>
           <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Why Vigil</p>
           <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.08em' }}>
             Your agent. Your rules. Your data stays yours.
@@ -354,7 +354,7 @@ export default function HomePage() {
 
       {/* Agent capabilities */}
       <Section id="agent" className="py-12 md:py-16">
-        <div className="mb-8 md:mb-12">
+        <div className="mb-8 md:mb-12" data-reveal id="agent-header" style={{ opacity: 0, animation: isRevealed('agent-header') ? 'slideUpIn 0.6s ease-out forwards' : 'none' }}>
           <p className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">The agent</p>
           <h2 className="text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4" style={{ wordSpacing: '0.08em' }}>
             More than a filter. An actual agent.
