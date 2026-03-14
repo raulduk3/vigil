@@ -236,6 +236,10 @@ export async function invokeAgent(
                 cost: totalCost, actionsExecuted,
             });
 
+            // Report flat rate to Stripe
+            const CHAT_FLAT_RATE = 0.01;
+            reportInvocationCost(watcher.account_id, CHAT_FLAT_RATE).catch(() => {});
+
             return {
                 actions: [],
                 memory_append: null,
@@ -471,8 +475,9 @@ export async function invokeAgent(
         durationMs: Date.now() - startMs,
     });
 
-    // Report cost to Stripe meter (fire and forget — don't block agent response)
-    reportInvocationCost(watcher.account_id, costUsd).catch((err) =>
+    // Report flat $0.01 per invocation to Stripe (actual AI cost tracked internally in costUsd)
+    const FLAT_RATE_PER_INVOCATION = 0.01;
+    reportInvocationCost(watcher.account_id, FLAT_RATE_PER_INVOCATION).catch((err) =>
         logger.error("Failed to report invocation cost", { watcherId, err })
     );
 
