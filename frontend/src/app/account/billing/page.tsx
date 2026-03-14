@@ -95,7 +95,7 @@ export default function BillingPage() {
 
   if (loading) {
     return (
-      <main className="max-w-3xl mx-auto lg:mx-0">
+      <main>
         <h2 className="text-xl sm:text-2xl font-display font-semibold text-gray-900 mb-4">Billing</h2>
         <div className="panel p-8 text-center">
           <p className="text-sm text-gray-400">Loading...</p>
@@ -109,7 +109,7 @@ export default function BillingPage() {
     : 0;
 
   return (
-    <main className="max-w-3xl mx-auto lg:mx-0 space-y-6">
+    <main className="space-y-6">
       <h2 className="text-xl sm:text-2xl font-display font-semibold text-gray-900">Billing</h2>
 
       {successMsg && (
