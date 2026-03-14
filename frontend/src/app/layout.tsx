@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   description: 'Deterministic, event-sourced vigilance system for time-sensitive email oversight',
   keywords: ['email', 'vigilance', 'deadline', 'tracking', 'notifications'],
   icons: {
-    icon: [{ url: '/logo.svg', type: 'image/svg+xml' }],
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
   },
 };
 

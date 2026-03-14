@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { OAuthButtons } from '@/components/auth/oauth-buttons';
 import { PublicHeader } from '@/components/layout';
 
-export default function RegisterPage() {
+function RegisterContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const intent = searchParams.get('intent');
   const { register, isAuthenticated, isLoading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -51,7 +53,7 @@ export default function RegisterPage() {
     try {
       const result = await register(email, password);
       if (result.success) {
-        router.push('/dashboard');
+        router.push(intent ? `/watchers/new?intent=${encodeURIComponent(intent)}` : '/dashboard');
       } else {
         setError(result.error || 'Registration failed');
       }
@@ -198,5 +200,13 @@ export default function RegisterPage() {
         </p>
       </footer>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner" /></div>}>
+      <RegisterContent />
+    </Suspense>
   );
 }

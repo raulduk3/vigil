@@ -95,13 +95,48 @@ export default function HomePage() {
               whatever you told it to do. Send a text. Fire a webhook. Connect to another system.
               Prompt it like you'd prompt anything else. It works for you.
             </p>
-            <div className="flex items-center gap-4">
-              <Link href="/auth/register" className="btn btn-primary btn-lg">
-                Get started free
-              </Link>
-              <a href="#how-it-works" className="btn btn-secondary btn-lg">
-                How it works
+            {/* Onboarding prompt */}
+            <div className="mt-8 max-w-xl">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const input = (e.target as HTMLFormElement).querySelector('input') as HTMLInputElement;
+                  const intent = encodeURIComponent(input.value.trim());
+                  if (intent) {
+                    window.location.href = `/auth/register?intent=${intent}`;
+                  }
+                }}
+                className="flex gap-2"
+              >
+                <input
+                  type="text"
+                  placeholder="What do you want to start watching? (e.g. my work emails, client invoices, support requests...)"
+                  className="input py-3 text-base flex-1"
+                  required
+                />
+                <button type="submit" className="btn btn-primary btn-lg shrink-0">
+                  Start watching
+                </button>
+              </form>
+              <p className="text-sm text-gray-400 mt-2">Free to start. 50 emails on us. No credit card needed.</p>
+            </div>
+
+            <div className="flex items-center gap-4 mt-4">
+              <a href="#how-it-works" className="text-sm text-gray-500 hover:text-gray-700 transition-colors">
+                How it works ↓
               </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Video demo placeholder */}
+        <div className="max-w-6xl mx-auto px-6 lg:px-8 relative z-10 -mt-4 mb-8">
+          <div className="panel p-1 max-w-3xl mx-auto">
+            <div className="bg-surface-sunken rounded aspect-video flex items-center justify-center">
+              <div className="text-center">
+                <p className="text-sm font-medium text-gray-500 mb-1">Demo video coming soon</p>
+                <p className="text-xs text-gray-400">See Vigil analyze, remember, and act on real email</p>
+              </div>
             </div>
           </div>
         </div>

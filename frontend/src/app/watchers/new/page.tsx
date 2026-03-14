@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { RequireAuth } from '@/lib/auth';
 import { AppHeader } from '@/components/layout';
@@ -124,9 +124,23 @@ function SuccessView({ watcher }: { watcher: CreatedWatcher }) {
 
 function NewWatcherContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const intentParam = searchParams.get('intent');
+
   const [step, setStep] = useState<Step>(1);
   const [name, setName] = useState('');
   const [systemPrompt, setSystemPrompt] = useState('');
+
+  // Pre-fill from onboarding intent
+  useEffect(() => {
+    if (intentParam) {
+      const intent = decodeURIComponent(intentParam);
+      setSystemPrompt(`Monitor and track: ${intent}. Alert me when something needs my attention, when someone is waiting for a response, or when a deadline is approaching.`);
+      // Try to generate a name from the intent
+      const words = intent.split(/\s+/).slice(0, 2).map(w => w.charAt(0).toUpperCase() + w.slice(1));
+      if (words.length > 0) setName(words.join(' '));
+    }
+  }, [intentParam]);
   const [reactivity, setReactivity] = useState(3);
   const [model, setModel] = useState('gpt-4.1-mini');
   const [tools, setTools] = useState(['send_alert', 'update_thread', 'ignore_thread']);
