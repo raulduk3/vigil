@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { RequireAuth } from '@/lib/auth';
@@ -434,7 +434,9 @@ function NewWatcherContent() {
 export default function NewWatcherPage() {
   return (
     <RequireAuth>
-      <NewWatcherContent />
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="spinner" /></div>}>
+        <NewWatcherContent />
+      </Suspense>
     </RequireAuth>
   );
 }
