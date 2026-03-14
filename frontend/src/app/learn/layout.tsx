@@ -10,6 +10,7 @@ const PAGES = [
   { href: '/learn/agent', label: 'The Agent' },
   { href: '/learn/memory', label: 'Memory System' },
   { href: '/learn/architecture', label: 'Architecture' },
+  { href: '/learn/integrations', label: 'Agent Integration' },
   { href: '/learn/security', label: 'Security & Privacy' },
   { href: '/learn/api', label: 'API Reference' },
 ];
