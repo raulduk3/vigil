@@ -257,7 +257,8 @@ export const authHandlers = {
             `SELECT password_hash FROM accounts WHERE id = ?`,
             [user.account_id]
         );
-        if (account?.password_hash && body.password) {
+        if (account?.password_hash) {
+            if (!body.password) return c.json({ error: "Password required to delete account" }, 400);
             const valid = await Bun.password.verify(body.password, account.password_hash);
             if (!valid) return c.json({ error: "Incorrect password" }, 400);
         }

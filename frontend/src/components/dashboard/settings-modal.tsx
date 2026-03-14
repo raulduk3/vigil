@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { api, type Watcher, type Channel, type CustomTool } from '@/lib/api/client';
 import { ReactivitySlider } from './reactivity-slider';
 import { Term } from '@/components/ui/term';
+import { DEFAULT_MODEL_ID, MODEL_OPTIONS, normalizeModelId } from '@/lib/models';
 
 type Tab = 'general' | 'prompt' | 'channels' | 'tools';
 
@@ -87,7 +88,7 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
   const [name, setName] = useState(watcher.name);
   const [reactivity, setReactivity] = useState(watcher.reactivity ?? 3);
   const [memorySensitivity, setMemorySensitivity] = useState((watcher as any).memory_sensitivity ?? 3);
-  const [model, setModel] = useState((watcher as any).model ?? 'gpt-4.1-mini');
+  const [model, setModel] = useState(normalizeModelId((watcher as any).model ?? DEFAULT_MODEL_ID));
   const [silenceHours, setSilenceHours] = useState(watcher.silence_hours);
   const [tickInterval, setTickInterval] = useState(watcher.tick_interval);
   const [tools, setTools] = useState<string[]>(watcher.tools);
@@ -152,7 +153,7 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
         name,
         reactivity,
         memory_sensitivity: memorySensitivity,
-        model,
+        model: normalizeModelId(model),
         silence_hours: silenceHours,
         tick_interval: tickInterval,
         tools,
@@ -359,19 +360,14 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
                 <label className="form-label text-sm">Model</label>
                 <select
                   value={model}
-                  onChange={(e) => setModel(e.target.value)}
+                  onChange={(e) => setModel(normalizeModelId(e.target.value))}
                   className="input py-2"
                 >
-                  <optgroup label="OpenAI">
-                    <option value="gpt-4.1">GPT-4.1 — Recommended, strong reasoning</option>
-                    <option value="gpt-4o">GPT-4o — Multimodal, fast</option>
-                  </optgroup>
-                  <optgroup label="Anthropic">
-                    <option value="claude-sonnet-4">Claude Sonnet 4 — Best reasoning</option>
-                  </optgroup>
-                  <optgroup label="Google">
-                    <option value="gemini-2.5-pro">Gemini 2.5 Pro — Strong analysis</option>
-                  </optgroup>
+                  {MODEL_OPTIONS.map((option) => (
+                    <option key={option.id} value={option.id}>
+                      {option.label} — {option.quality}
+                    </option>
+                  ))}
                 </select>
                 <p className="text-xs text-gray-400 mt-1">Affects both email triage and chat. Cheaper models are faster but less nuanced.</p>
               </div>

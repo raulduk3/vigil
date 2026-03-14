@@ -6,15 +6,9 @@ import Link from 'next/link';
 import { RequireAuth } from '@/lib/auth';
 import { AppHeader } from '@/components/layout';
 import { api } from '@/lib/api';
+import { DEFAULT_MODEL_ID, MODEL_OPTIONS, normalizeModelId } from '@/lib/models';
 
 const NAME_SUGGESTIONS = ['Work', 'Personal', 'Freelance', 'Bills', 'Newsletters', 'Support'];
-
-const MODELS = [
-  { id: 'gpt-4.1', label: 'GPT-4.1', costPer1M: '$2.40', costPerEmail: '~$0.003', speed: 'Fast', quality: 'Recommended — strong reasoning', default: true },
-  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', costPer1M: '$1.50', costPerEmail: '~$0.002', speed: 'Fast', quality: 'High accuracy, good value' },
-  { id: 'gpt-4o', label: 'GPT-4o', costPer1M: '$3.00', costPerEmail: '~$0.003', speed: 'Fast', quality: 'Multimodal, strong analysis' },
-  { id: 'claude-sonnet-4', label: 'Claude Sonnet 4', costPer1M: '$3.60', costPerEmail: '~$0.004', speed: 'Moderate', quality: 'Best reasoning and judgment' },
-];
 
 const TOOLS = [
   { id: 'send_alert', label: 'Send Alert', description: 'Email you when something needs attention' },
@@ -137,7 +131,7 @@ function NewWatcherContent() {
     }
   }, [intentParam]);
   const [reactivity, setReactivity] = useState(3);
-  const [model, setModel] = useState('gpt-4.1');
+  const [model, setModel] = useState(DEFAULT_MODEL_ID);
   const [tools, setTools] = useState(['send_alert', 'update_thread', 'ignore_thread']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -170,7 +164,7 @@ function NewWatcherContent() {
         system_prompt: systemPrompt.trim(),
         tools,
         reactivity,
-        model,
+        model: normalizeModelId(model),
         silence_hours: 48,
         tick_interval: 120,
       } as Parameters<typeof api.createWatcher>[0]);
@@ -186,7 +180,7 @@ function NewWatcherContent() {
     }
   };
 
-  const selectedModel = MODELS.find((m) => m.id === model) ?? MODELS[0];
+  const selectedModel = MODEL_OPTIONS.find((m) => m.id === model) ?? MODEL_OPTIONS[0];
 
   if (created) {
     return (
@@ -348,10 +342,10 @@ function NewWatcherContent() {
 
             <select
               value={model}
-              onChange={(e) => setModel(e.target.value)}
+              onChange={(e) => setModel(normalizeModelId(e.target.value))}
               className="input w-full text-sm"
             >
-              {MODELS.map((m) => (
+              {MODEL_OPTIONS.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.label} — {m.costPer1M}/1M tokens ({m.costPerEmail}/email){m.default ? ' ★ default' : ''}
                 </option>

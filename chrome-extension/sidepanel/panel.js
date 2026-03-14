@@ -13,6 +13,16 @@ Your job:
 
 When you alert, be specific and actionable. When you store memories, be concrete.`;
 
+const ALLOWED_MODELS = [
+    "gpt-4.1",
+    "gpt-4.1-mini",
+    "gpt-4.1-nano",
+    "gpt-4o",
+    "gpt-4o-mini",
+];
+
+const DEFAULT_MODEL = "gpt-4.1-mini";
+
 let currentWatcher = null;
 let watchers = [];
 let chatHistory = [];
@@ -99,6 +109,14 @@ function renderNoWatcherState(title, description) {
             <p style="margin-top:4px;">${escapeHtml(description)}</p>
         </div>
     `;
+}
+
+function normalizeModel(model) {
+    if (ALLOWED_MODELS.includes(model)) {
+        return model;
+    }
+
+    return DEFAULT_MODEL;
 }
 
 function updateWatcherSelector() {
@@ -571,10 +589,10 @@ async function loadSetup() {
         currentWatcher = watcher;
         document.getElementById("setup-address").textContent = getSetupAddress();
         document.getElementById("setup-prompt").value = watcher.system_prompt || "";
-        document.getElementById("setup-model").value = watcher.model || "gpt-4.1";
+        document.getElementById("setup-model").value = normalizeModel(watcher.model);
     } catch {
         document.getElementById("setup-prompt").value = currentWatcher.system_prompt || "";
-        document.getElementById("setup-model").value = currentWatcher.model || "gpt-4.1";
+        document.getElementById("setup-model").value = normalizeModel(currentWatcher.model);
     }
 
     await refreshSetupContext();
@@ -809,7 +827,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("btn-save-config").addEventListener("click", async () => {
         if (!currentWatcher) return;
         const prompt = document.getElementById("setup-prompt").value.trim();
-        const model = document.getElementById("setup-model").value;
+        const model = normalizeModel(document.getElementById("setup-model").value);
         const status = document.getElementById("config-status");
 
         try {
