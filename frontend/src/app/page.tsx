@@ -113,10 +113,10 @@ export default function HomePage() {
               <div className="relative z-10 flex h-full flex-col justify-between p-5 md:p-8 lg:p-10">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-[11px] md:text-xs font-semibold uppercase tracking-[0.24em] text-vigil-700/80">How it works</p>
-                    <p className="text-sm md:text-base text-gray-600 mt-1">Email arrives. Agent reads. Decision made. You keep working.</p>
+                    <p className="text-[11px] md:text-xs font-bold uppercase tracking-[0.24em] text-vigil-900">How it works</p>
+                    <p className="text-sm md:text-base text-gray-700 mt-1 font-medium">Email arrives. Agent reads. Decision made. You keep working.</p>
                   </div>
-                  <div className="hero-demo-pill rounded-full px-3 py-1.5 text-[11px] md:text-xs font-medium text-vigil-800">No inbox access</div>
+                  <div className="hero-demo-pill rounded-full px-3 py-1.5 text-[11px] md:text-xs font-bold text-vigil-900">No inbox access</div>
                 </div>
                 <div className="grid gap-4 md:grid-cols-[1.45fr_0.85fr] md:gap-6 lg:gap-8 items-end">
                   <div className="hero-demo-window rounded-[1.1rem] p-3 md:p-4 lg:p-5">
@@ -126,10 +126,10 @@ export default function HomePage() {
                       <span className="h-2.5 w-2.5 rounded-full bg-[#7faa73]" />
                     </div>
                     <div className="grid gap-3 md:grid-cols-[0.95fr_1.3fr]">
-                      <div className="rounded-xl bg-white/72 p-3 md:p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.45)]">
-                        <p className="text-[11px] uppercase tracking-[0.22em] text-gray-500 mb-2">Your watcher</p>
-                        <p className="text-sm md:text-base font-semibold text-gray-900">Vendor follow-up</p>
-                        <p className="text-xs md:text-sm text-gray-600 mt-2">Your prompt, your tools, your rules. Each watcher learns independently.</p>
+                      <div className="rounded-xl bg-white/85 p-3 md:p-4 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.45)]">
+                        <p className="text-[11px] uppercase tracking-[0.22em] text-gray-600 font-bold mb-2">Your watcher</p>
+                        <p className="text-sm md:text-base font-bold text-gray-900">Vendor follow-up</p>
+                        <p className="text-xs md:text-sm text-gray-700 mt-2">Your prompt, your tools, your rules. Each watcher learns independently.</p>
                       </div>
                       <div className="rounded-xl bg-[#0d202c] p-4 md:p-5 text-left shadow-[0_12px_40px_rgba(11,31,42,0.18)]">
                         <p className="text-[11px] uppercase tracking-[0.2em] text-vigil-300 mb-2">Agent decision</p>
@@ -144,12 +144,12 @@ export default function HomePage() {
                   </div>
                   <div className="space-y-3 md:space-y-4">
                     <div className="hero-float-card hero-float-card-delay-1 rounded-2xl p-4 md:p-5">
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-gray-500 mb-2">Most emails</p>
-                      <p className="text-sm md:text-base text-gray-900 font-medium">Read, threaded, remembered. No interruption. Agent stays quiet.</p>
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-gray-600 font-bold mb-2">Most emails</p>
+                      <p className="text-sm md:text-base text-gray-900 font-semibold">Read, threaded, remembered. No interruption. Agent stays quiet.</p>
                     </div>
                     <div className="hero-float-card hero-float-card-delay-2 rounded-2xl p-4 md:p-5">
-                      <p className="text-[11px] uppercase tracking-[0.22em] text-gray-500 mb-2">The exceptions</p>
-                      <p className="text-sm md:text-base text-gray-900 font-medium">Deadline in 24h. Client waiting 3 days. Payment overdue. You hear about these.</p>
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-gray-600 font-bold mb-2">The exceptions</p>
+                      <p className="text-sm md:text-base text-gray-900 font-semibold">Deadline in 24h. Client waiting 3 days. Payment overdue. You hear about these.</p>
                     </div>
                   </div>
                 </div>
