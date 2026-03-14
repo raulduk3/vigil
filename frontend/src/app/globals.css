@@ -645,10 +645,22 @@ html {
     width: fit-content;
   }
 
+  /* Center kicker pill when parent is text-center */
+  .text-center .landing-section-kicker,
+  .landing-section-kicker.text-center {
+    margin-inline: auto;
+  }
+
   .landing-section-title {
     @apply text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight;
-    max-width: 18ch;
+    max-width: 22ch;
     line-height: 1.08;
+  }
+
+  /* Center title when parent or self is text-center */
+  .text-center .landing-section-title,
+  .landing-section-title.text-center {
+    margin-inline: auto;
   }
 
   .landing-section-copy {
@@ -656,6 +668,10 @@ html {
     width: 100%;
     max-width: none;
     text-wrap: pretty;
+  }
+
+  .text-center .landing-section-copy {
+    margin-inline: auto;
   }
 
   .landing-hero-copy {
