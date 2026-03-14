@@ -137,7 +137,7 @@ export default function PricingPage() {
           </div>
 
           {/* FAQ */}
-          <div className="max-w-3xl mx-auto mb-14">
+          <div className="mb-14">
             <h2 className="text-2xl font-display font-semibold text-gray-900 text-center mb-8">Questions</h2>
             <div className="space-y-4">
               {[
@@ -157,7 +157,7 @@ export default function PricingPage() {
 
           {/* CTA */}
           <div className="text-center">
-            <Link href="/auth/register" className="btn btn-primary btn-lg">Start today.</Link>
+            <Link href="/auth/register" className="btn btn-primary btn-lg">Start today</Link>
           </div>
           </div>
         </div>
