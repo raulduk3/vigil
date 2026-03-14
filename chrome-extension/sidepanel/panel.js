@@ -16,7 +16,6 @@ function showView(name) {
     document.querySelectorAll(".nav-tab").forEach(t => {
         t.classList.toggle("active", t.dataset.view === name);
     });
-
     if (name === "inbox") loadInbox();
     if (name === "stats") loadStats();
     if (name === "setup") loadSetup();
@@ -30,32 +29,20 @@ function showDashboard() {
 }
 
 // ============================================================================
-// Init
+// Init — wire ALL event listeners, then check auth
 // ============================================================================
 
 document.addEventListener("DOMContentLoaded", async () => {
     console.log("[vigil] panel loaded");
+
+    // --- Wire everything first, before any async ---
 
     // Nav tabs
     document.querySelectorAll(".nav-tab").forEach(tab => {
         tab.addEventListener("click", () => showView(tab.dataset.view));
     });
 
-    // Auth check
-    let authed = false;
-    try {
-        authed = await vigilAPI.isAuthenticated();
-        console.log("[vigil] authed:", authed);
-    } catch (e) {
-        console.error("[vigil] auth check failed:", e);
-    }
-    if (authed) {
-        await loadWatchers();
-        showDashboard();
-        return;
-    }
-
-    // API Key connect
+    // Auth buttons
     document.getElementById("panel-btn-connect").addEventListener("click", async () => {
         const key = document.getElementById("panel-api-key").value.trim();
         if (!key) return;
@@ -71,7 +58,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     });
 
-    // Email login
     document.getElementById("panel-btn-login").addEventListener("click", async () => {
         const email = document.getElementById("panel-email").value.trim();
         const password = document.getElementById("panel-password").value;
@@ -88,7 +74,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     });
 
-    // Enter keys
     document.getElementById("panel-api-key").addEventListener("keydown", e => {
         if (e.key === "Enter") document.getElementById("panel-btn-connect").click();
     });
@@ -96,7 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (e.key === "Enter") document.getElementById("panel-btn-login").click();
     });
 
-    // Chat input
+    // Chat
     const chatInput = document.getElementById("chat-input");
     const btnSend = document.getElementById("btn-send");
 
@@ -115,7 +100,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     btnSend.addEventListener("click", sendChat);
 
-    // Chat suggestions
     document.querySelectorAll(".chat-suggestion").forEach(btn => {
         btn.addEventListener("click", () => {
             chatInput.value = btn.dataset.msg;
@@ -139,7 +123,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     });
 
-    // Copy setup address
+    // Setup: copy address
     document.getElementById("btn-copy-setup-address").addEventListener("click", () => {
         const addr = document.getElementById("setup-address").textContent;
         navigator.clipboard.writeText(addr);
@@ -147,7 +131,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         setTimeout(() => document.getElementById("btn-copy-setup-address").textContent = "Copy", 2000);
     });
 
-    // Gmail buttons in setup
+    // Setup: gmail buttons
     document.getElementById("btn-open-gmail-settings")?.addEventListener("click", () => {
         chrome.tabs.query({ active: true, currentWindow: true }, ([tab]) => {
             if (tab?.id) chrome.tabs.update(tab.id, { url: "https://mail.google.com/mail/u/0/#settings/fwdandpop" });
@@ -159,13 +143,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         });
     });
 
-    // Save watcher config
+    // Setup: save config
     document.getElementById("btn-save-config")?.addEventListener("click", async () => {
         if (!currentWatcher) return;
         const prompt = document.getElementById("setup-prompt").value.trim();
         const model = document.getElementById("setup-model").value;
         const statusEl = document.getElementById("config-status");
-
         try {
             const updates = {};
             if (prompt) updates.system_prompt = prompt;
@@ -174,6 +157,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             currentWatcher.system_prompt = prompt || currentWatcher.system_prompt;
             currentWatcher.model = model || currentWatcher.model;
             statusEl.textContent = "Saved.";
+            statusEl.style.color = "#3d6b4f";
             statusEl.classList.remove("hidden");
             setTimeout(() => statusEl.classList.add("hidden"), 3000);
         } catch (e) {
@@ -191,6 +175,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
         document.getElementById("view-auth").classList.add("active");
     });
+
+    // --- Now check auth ---
+    let authed = false;
+    try {
+        authed = await vigilAPI.isAuthenticated();
+        console.log("[vigil] authed:", authed);
+    } catch (e) {
+        console.error("[vigil] auth check failed:", e);
+    }
+    if (authed) {
+        await loadWatchers();
+        showDashboard();
+    }
 });
 
 // ============================================================================
@@ -205,7 +202,7 @@ async function loadWatchers() {
         for (const w of watchers) {
             const opt = document.createElement("option");
             opt.value = w.id;
-            opt.textContent = `${w.name} (${w.total_emails || 0})`;
+            opt.textContent = `${w.name} (${(w.total_emails || 0).toLocaleString()})`;
             select.appendChild(opt);
         }
         if (watchers.length > 0) {
@@ -235,6 +232,7 @@ function renderChat() {
                 </div>
             </div>
         `;
+        // Re-wire dynamically created suggestions
         container.querySelectorAll(".chat-suggestion").forEach(btn => {
             btn.addEventListener("click", () => {
                 document.getElementById("chat-input").value = btn.dataset.msg;
@@ -247,7 +245,7 @@ function renderChat() {
 
     container.innerHTML = chatHistory.map(msg => `
         <div class="chat-msg chat-msg-${msg.role}">
-            <div class="chat-msg-label">${msg.role === "user" ? "You" : currentWatcher?.name || "Vigil"}</div>
+            <div class="chat-msg-label">${msg.role === "user" ? "You" : escapeHtml(currentWatcher?.name || "Vigil")}</div>
             <div class="chat-msg-body">${escapeHtml(msg.text)}</div>
         </div>
     `).join("");
@@ -287,12 +285,10 @@ async function loadInbox() {
 
     try {
         const threads = await vigilAPI.getThreads(currentWatcher.id);
-
         if (!threads.length) {
             container.innerHTML = '<div class="empty-state">No threads yet. Forward an email to get started.</div>';
             return;
         }
-
         container.innerHTML = threads.map(t => `
             <div class="inbox-item ${t.status === 'active' ? 'inbox-active' : ''}">
                 <div class="inbox-subject">${escapeHtml(t.subject || "No subject")}</div>
@@ -305,7 +301,7 @@ async function loadInbox() {
             </div>
         `).join("");
     } catch (e) {
-        container.innerHTML = `<div class="error">${e.message}</div>`;
+        container.innerHTML = `<div class="error">${escapeHtml(e.message)}</div>`;
     }
 }
 
@@ -337,58 +333,30 @@ async function loadStats() {
 
         container.innerHTML = `
             <div class="status-card">
-                <div class="status-row">
-                    <span>Status</span>
-                    <span class="status-value" style="color:${active ? '#3d6b4f' : '#8b7234'}">${active ? 'Active' : 'Waiting'}</span>
-                </div>
-                <div class="status-row">
-                    <span>Emails processed</span>
-                    <span class="status-value">${(watcherUsage?.emails ?? status?.total_emails ?? 0).toLocaleString()}</span>
-                </div>
-                <div class="status-row">
-                    <span>Emails (24h)</span>
-                    <span class="status-value">${(status?.emails_24h ?? 0).toLocaleString()}</span>
-                </div>
-                <div class="status-row">
-                    <span>Agent invocations</span>
-                    <span class="status-value">${(watcherUsage?.invocations ?? 0).toLocaleString()}</span>
-                </div>
-                <div class="status-row">
-                    <span>Alerts sent</span>
-                    <span class="status-value">${(watcherUsage?.alerts ?? 0).toLocaleString()}</span>
-                </div>
-                <div class="status-row">
-                    <span>Last email</span>
-                    <span class="status-value">${status?.last_email_at ? timeAgo(status.last_email_at) : 'None'}</span>
-                </div>
-                <div class="status-row">
-                    <span>Model</span>
-                    <span class="status-value">${watcher?.model ?? '—'}</span>
-                </div>
-                <div class="status-row">
-                    <span>Cost (this month)</span>
-                    <span class="status-value">${cost > 0 ? '$' + cost.toFixed(4) : '$0.00'}</span>
-                </div>
-                <div class="status-row">
-                    <span>Memories</span>
-                    <span class="status-value">${memories.length}</span>
-                </div>
+                <div class="status-row"><span>Status</span><span class="status-value" style="color:${active ? '#3d6b4f' : '#8b7234'}">${active ? 'Active' : 'Waiting'}</span></div>
+                <div class="status-row"><span>Emails processed</span><span class="status-value">${(watcherUsage?.emails ?? status?.total_emails ?? 0).toLocaleString()}</span></div>
+                <div class="status-row"><span>Emails (24h)</span><span class="status-value">${(status?.emails_24h ?? 0).toLocaleString()}</span></div>
+                <div class="status-row"><span>Agent invocations</span><span class="status-value">${(watcherUsage?.invocations ?? 0).toLocaleString()}</span></div>
+                <div class="status-row"><span>Alerts sent</span><span class="status-value">${(watcherUsage?.alerts ?? 0).toLocaleString()}</span></div>
+                <div class="status-row"><span>Last email</span><span class="status-value">${status?.last_email_at ? timeAgo(status.last_email_at) : 'None'}</span></div>
+                <div class="status-row"><span>Model</span><span class="status-value">${watcher?.model ?? '—'}</span></div>
+                <div class="status-row"><span>Cost (this month)</span><span class="status-value">${cost > 0 ? '$' + cost.toFixed(4) : '$0.00'}</span></div>
+                <div class="status-row"><span>Memories</span><span class="status-value">${memories.length}</span></div>
             </div>
-
             ${memories.length > 0 ? `
                 <div class="memories-section">
                     <h3>Recent Memories</h3>
                     ${memories.slice(0, 8).map(m => `
                         <div class="memory-item">
                             <div class="memory-content">${escapeHtml(m.content)}</div>
-                            <div class="memory-meta">importance: ${m.importance || '—'} · ${m.created_at ? timeAgo(m.created_at) : ''}</div>
+                            <div class="memory-meta">importance: ${m.importance || '—'} ${m.created_at ? '· ' + timeAgo(m.created_at) : ''}</div>
                         </div>
                     `).join("")}
                 </div>
             ` : ''}
         `;
     } catch (e) {
-        container.innerHTML = `<div class="error">${e.message}</div>`;
+        container.innerHTML = `<div class="error">${escapeHtml(e.message)}</div>`;
     }
 }
 
@@ -399,12 +367,10 @@ async function loadStats() {
 async function loadSetup() {
     if (!currentWatcher) return;
 
-    // Forwarding address
     const addr = currentWatcher.ingestion_address ||
         `${currentWatcher.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${currentWatcher.ingest_token}@vigil.run`;
     document.getElementById("setup-address").textContent = addr;
 
-    // Load current config
     try {
         const w = await vigilAPI.getWatcher(currentWatcher.id);
         document.getElementById("setup-prompt").value = w.system_prompt || "";
@@ -421,7 +387,7 @@ async function loadSetup() {
 
 function escapeHtml(str) {
     const div = document.createElement("div");
-    div.textContent = str;
+    div.textContent = str || "";
     return div.innerHTML;
 }
 
