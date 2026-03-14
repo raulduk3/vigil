@@ -3,44 +3,24 @@ export default function ArchitecturePage() {
     <div className="prose">
       <p className="text-sm font-medium text-vigil-700 uppercase tracking-wider mb-3">Documentation</p>
       <h1>Architecture</h1>
-      <p>Vigil is designed around a simple principle: process email without storing it.</p>
+      <p>Understanding how Vigil is built helps clarify what it can and cannot do with your data. The system is designed around a single constraint: it must be able to process email intelligently without ever storing the email itself. Every architectural decision flows from that requirement. The result is a system where privacy is structural, not promised.</p>
 
-      <h2>Data flow</h2>
-      <ol>
-        <li><strong>Gmail/Outlook</strong> → forwarding rule sends email to <code>*@vigil.run</code></li>
-        <li><strong>Cloudflare Email Routing</strong> → MX records route to Cloudflare Worker</li>
-        <li><strong>CF Worker</strong> → forwards raw MIME to <code>POST /ingest/:token</code></li>
-        <li><strong>API Server</strong> → parses MIME, extracts headers, identifies watcher</li>
-        <li><strong>Agent Engine</strong> → loads context, calls LLM, executes actions</li>
-        <li><strong>SQLite</strong> → stores metadata, analysis, memories, actions (never email bodies)</li>
-        <li><strong>Resend</strong> → delivers alert emails when the agent decides to act</li>
-      </ol>
+      <h2>The data flow</h2>
+      <p>An email arrives in your inbox and your forwarding rule sends a copy to your watcher address at vigil.run. Vigil's email routing infrastructure receives the raw message and passes it to the backend processing server, which parses the email, identifies which watcher it belongs to based on the address token, and hands it off to the agent engine.</p>
+      <p>The agent engine is where the intelligence lives. It loads context from the database — memories, thread state, watcher configuration — combines that with the incoming email, and calls an AI language model to produce analysis and decisions. Based on those decisions, it may update a thread, store a new memory, fire a webhook, or trigger an alert email. After all of that, the email body is discarded. The rest of the processing record is written to storage and the body is gone.</p>
 
       <h2>What is stored</h2>
-      <ul>
-        <li>Email metadata: from, to, subject, timestamps, message-id</li>
-        <li>SHA-256 body hash (proof of receipt, not the content)</li>
-        <li>Agent analysis: summary, intent, urgency, entities</li>
-        <li>Thread state: status, summary, participants, email count</li>
-        <li>Memories: atomic facts with importance scores</li>
-        <li>Actions: tool called, parameters, reasoning, cost, duration</li>
-      </ul>
+      <p>Vigil stores the <strong>metadata</strong> of each email: who sent it, who it was addressed to, the subject line, and the three timestamps tracking when it was sent, delivered, and processed by Vigil. It stores a one-way fingerprint of the email body — cryptographic proof that the email was received, but not the content itself and not anything that could be reversed to recover it.</p>
+      <p>The agent's <strong>analysis</strong> is stored: a machine-generated summary, intent classification, urgency assessment, and a list of key entities mentioned — produced by the AI model, never copied from the raw email. <strong>Thread state</strong> is updated to reflect the new message. Any <strong>memories</strong> the agent decided to retain are written. And a complete <strong>action log</strong> entry is created for every invocation, recording what the agent decided, what tools it used, its reasoning, and what the operation cost in compute time and AI usage.</p>
 
-      <h2>What is NOT stored</h2>
-      <ul>
-        <li>Email bodies — processed in memory, never written to disk</li>
-        <li>Attachments — not processed at all</li>
-        <li>OAuth tokens — Vigil never connects to your inbox</li>
-      </ul>
+      <h2>What is not stored</h2>
+      <p>Email bodies are never written to disk, at any point in the pipeline. Attachments are not processed or stored. Vigil never requests OAuth access to your email account and never holds credentials for any external service on your behalf. The only way data enters the system is through emails you explicitly forward — there is no background sync, no crawling, no polling of any account.</p>
+
+      <h2>How the pieces connect</h2>
+      <p>The frontend — what you see in your browser — is a read-only view into the data the backend has accumulated. It displays threads, memories, action logs, and alerts, but contains no business logic and cannot communicate directly with the database. All changes go through the backend API. AI model calls are made entirely server-side; your watcher's prompt, your memories, and your email metadata never touch the browser beyond what the UI needs to display them.</p>
 
       <h2>Infrastructure</h2>
-      <ul>
-        <li><strong>Backend:</strong> Bun + Hono, SQLite, single DigitalOcean droplet</li>
-        <li><strong>Frontend:</strong> Next.js on Vercel</li>
-        <li><strong>Email:</strong> Cloudflare Email Routing (free)</li>
-        <li><strong>Alerts:</strong> Resend API</li>
-        <li><strong>DNS:</strong> Cloudflare</li>
-      </ul>
+      <p>The service runs on a small set of components: an email routing layer that receives incoming mail and passes it to the processing backend, a secure backend server that runs the agent logic and owns the database, a frontend application served over HTTPS, and a transactional email service that delivers alert notifications. Each watcher address is just an alias — email arrives, gets processed, and the routing infrastructure does not retain a copy. The backend stores only what the agent produced from it.</p>
     </div>
   );
 }

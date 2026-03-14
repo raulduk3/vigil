@@ -3,42 +3,22 @@ export default function WatchersPage() {
     <div className="prose">
       <p className="text-sm font-medium text-vigil-700 uppercase tracking-wider mb-3">Documentation</p>
       <h1>Watchers</h1>
-      <p>A watcher is an AI agent that monitors a stream of forwarded emails. Each watcher has its own prompt, memory, tools, and configuration.</p>
+      <p>A watcher is the core concept in Vigil. Think of it as a dedicated AI agent assigned to monitor a specific category of email. You might have one watcher for work, another for finances, another for package deliveries — each running independently with its own memory, instructions, and alert preferences. They don't share knowledge, and they don't interfere with each other.</p>
 
       <h2>Creating a watcher</h2>
-      <p>Give it a name, write a prompt describing what to watch for, set the reactivity level, and choose a model. You get a unique forwarding address like <code>work-a7f3k9@vigil.run</code>.</p>
+      <p>Creating a watcher takes about a minute. You give it a name, write a prompt describing what it should pay attention to, and choose a reactivity level. Once created, Vigil assigns it a unique forwarding address — something like <code>work-a7f3k9@vigil.run</code>. Anything forwarded to that address goes directly to that watcher's agent.</p>
+      <p>The prompt is the most important configuration. It tells the agent what context to bring, what signals matter, and how to interpret the emails it receives. A watcher for job applications might be told to track application status and flag interview requests. A watcher for finances might be told to watch for unexpected charges and flag missed receipts. The more specific your prompt, the more useful the agent becomes over time.</p>
 
-      <h2>How it works</h2>
-      <p>When an email arrives at your watcher address, the agent:</p>
-      <ol>
-        <li>Loads its memory and active threads</li>
-        <li>Groups the email into an existing thread or creates a new one</li>
-        <li>Analyzes the content: summary, intent, urgency, key entities</li>
-        <li>Decides what to do: alert, track silently, ignore, or fire a webhook</li>
-        <li>Stores relevant facts in memory for future reference</li>
-        <li>Logs every decision with full reasoning</li>
-      </ol>
+      <h2>What happens when an email arrives</h2>
+      <p>The moment an email arrives at your watcher address, the agent wakes up. It doesn't read the email in isolation — it first loads everything it already knows: its accumulated memories, the current state of all active threads, and any rules you've set. It then groups the new email into an existing conversation or starts a new thread, and analyzes the content to understand what's happening: who sent it, what they want, how urgent it seems, and whether it connects to anything the agent already knows.</p>
+      <p>After analysis, the agent decides what to do. Most of the time it chooses to track quietly — it files away what it learned and moves on without alerting you. Occasionally something crosses the alert threshold and it sends you a notification. Every decision, including the ones where it chose not to alert, is recorded with the agent's full reasoning. You can open the activity log at any time and read exactly what the agent thought about each email it processed.</p>
 
       <h2>Configuration</h2>
-      <ul>
-        <li><strong>System prompt</strong> — tell the agent what to care about</li>
-        <li><strong>Reactivity (1-5)</strong> — how aggressively it alerts you</li>
-        <li><strong>Memory sensitivity (1-5)</strong> — how much it remembers</li>
-        <li><strong>Silence threshold</strong> — how long before flagging quiet threads</li>
-        <li><strong>Tick interval</strong> — how often it proactively reviews threads</li>
-        <li><strong>Model</strong> — choose from 9 models across OpenAI, Anthropic, and Google</li>
-        <li><strong>Tools</strong> — enable send_alert, update_thread, ignore_thread, webhook</li>
-      </ul>
+      <p>Each watcher has a handful of settings worth understanding. The <strong>system prompt</strong> is your primary lever — this is where you describe what matters, what to ignore, and how to handle ambiguous situations. <strong>Reactivity</strong> controls how aggressively the agent alerts you, on a scale from very conservative (only active security threats) to permissive (anything notable). <strong>Memory sensitivity</strong> controls how much the agent retains between emails — a higher setting means it builds a richer picture of people, patterns, and ongoing situations over time.</p>
+      <p>The <strong>silence threshold</strong> tells the agent how long a thread can go quiet before flagging the inactivity. This is useful when you're waiting on someone who has stopped responding. The <strong>tick interval</strong> controls how often the agent proactively reviews your threads for stalled situations, even when no new email has arrived. You can also choose which <strong>model</strong> powers the watcher — different models have different cost and capability tradeoffs, and you can switch at any time.</p>
 
-      <h2>Reactivity levels</h2>
-      <p>Reactivity controls the alert threshold:</p>
-      <ul>
-        <li><strong>1 Minimum</strong> — only active security breaches and fraud</li>
-        <li><strong>2 Low</strong> — security + money at risk + deadlines within 24h</li>
-        <li><strong>3 Balanced</strong> — financial events, 48h deadlines, direct requests from people</li>
-        <li><strong>4 High</strong> — all transactions, weekly deadlines, any personal email</li>
-        <li><strong>5 Maximum</strong> — surfaces almost everything including subscribed content</li>
-      </ul>
+      <h2>Multiple watchers</h2>
+      <p>You can run as many watchers as you need, and each is completely self-contained. This separation lets you give very different instructions to different contexts. Your work watcher can be aggressive about deadlines while your personal watcher sits at low reactivity. The agents don't share memory, so a conversation in one watcher has no influence on decisions made in another. Each watcher is billed independently at $0.005 per email processed.</p>
     </div>
   );
 }
