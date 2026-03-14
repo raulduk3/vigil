@@ -7,6 +7,12 @@
 
 import type { WatcherRow, ThreadRow, EmailRow } from "./schema";
 
+export interface CustomToolDescriptor {
+    name: string;
+    description: string;
+    parameter_schema: Record<string, { type?: string; description?: string }>;
+}
+
 // ============================================================================
 // System Prompt
 // ============================================================================
@@ -14,7 +20,8 @@ import type { WatcherRow, ThreadRow, EmailRow } from "./schema";
 export function buildSystemPrompt(
     watcher: WatcherRow,
     memoryContext: string,
-    activeThreads: ThreadRow[]
+    activeThreads: ThreadRow[],
+    customTools: CustomToolDescriptor[] = []
 ): string {
     const tools = safeParseJson<string[]>(watcher.tools, []);
     const threadContext = buildThreadContext(activeThreads);
@@ -27,12 +34,24 @@ export function buildSystemPrompt(
     });
 
     // Build tool descriptions for the prompt
-    const toolDescriptions = tools.length > 0
+    const builtinDescs = tools.length > 0
         ? tools.map(t => {
             const desc = TOOL_PROMPT_DESCRIPTIONS[t];
             return desc ? `- **${t}**: ${desc}` : `- **${t}**`;
         }).join("\n")
-        : "No tools configured.";
+        : "No built-in tools configured.";
+
+    const customToolDescs = customTools.length > 0
+        ? "\n\n**Custom Tools (call these by name like built-in tools):**\n" +
+          customTools.map(ct => {
+              const params = Object.entries(ct.parameter_schema)
+                  .map(([k, v]) => `${k}${v.description ? ` (${v.description})` : ""}`)
+                  .join(", ");
+              return `- **${ct.name}**: ${ct.description}${params ? `. Params: ${params}` : ""}`;
+          }).join("\n")
+        : "";
+
+    const toolDescriptions = builtinDescs + customToolDescs;
 
     // Reactivity level (1-5, default 3)
     const reactivity = watcher.reactivity ?? 3;

@@ -5,7 +5,7 @@
  * Each tool has a handler that executes when the agent calls it.
  */
 
-import { run, queryOne } from "../db/client";
+import { run, queryOne, queryMany } from "../db/client";
 import { logger } from "../logger";
 import type { ToolResult, WatcherContext } from "./schema";
 import { generateThreadActionToken } from "../api/handlers/thread-actions";
@@ -371,18 +371,99 @@ export function getAvailableTools(enabledNames: string[]): Tool[] {
 export async function executeTool(
     toolName: string,
     params: Record<string, any>,
-    ctx: WatcherContext
+    ctx: WatcherContext,
+    threadCtx?: { threadId?: string; emailFrom?: string; emailSubject?: string; emailReceivedAt?: string }
 ): Promise<ToolResult> {
     const tool = TOOL_MAP.get(toolName);
-    if (!tool) {
-        logger.warn("Unknown tool called", { toolName });
+    if (tool) {
+        try {
+            return await tool.handler(params, ctx);
+        } catch (err) {
+            logger.error("Tool execution error", { toolName, err });
+            return { success: false, error: String(err) };
+        }
+    }
+
+    // Fall back to custom tools for this watcher
+    return executeCustomTool(toolName, params, ctx, threadCtx);
+}
+
+async function executeCustomTool(
+    toolName: string,
+    params: Record<string, any>,
+    ctx: WatcherContext,
+    threadCtx?: { threadId?: string; emailFrom?: string; emailSubject?: string; emailReceivedAt?: string }
+): Promise<ToolResult> {
+    const customTool = queryOne<{
+        id: string; webhook_url: string; headers: string;
+    }>(
+        `SELECT id, webhook_url, headers FROM custom_tools WHERE watcher_id = ? AND name = ? AND enabled = TRUE`,
+        [ctx.watcher.id, toolName]
+    );
+
+    if (!customTool) {
+        logger.warn("Unknown tool called", { toolName, watcherId: ctx.watcher.id });
         return { success: false, error: `Unknown tool: ${toolName}` };
     }
 
+    let threadInfo: Record<string, any> = {};
+    if (threadCtx?.threadId) {
+        const thread = queryOne<{ subject: string; status: string }>(
+            `SELECT subject, status FROM threads WHERE id = ?`,
+            [threadCtx.threadId]
+        );
+        if (thread) {
+            threadInfo = {
+                id: threadCtx.threadId,
+                subject: thread.subject ?? null,
+                status: thread.status,
+            };
+        }
+    }
+
+    const payload = {
+        event: "tool_execution",
+        tool: toolName,
+        watcher: { id: ctx.watcher.id, name: ctx.watcher.name },
+        thread: Object.keys(threadInfo).length > 0 ? threadInfo : undefined,
+        email: threadCtx ? {
+            from: threadCtx.emailFrom ?? null,
+            subject: threadCtx.emailSubject ?? null,
+            received_at: threadCtx.emailReceivedAt ?? null,
+        } : undefined,
+        params,
+        timestamp: new Date().toISOString(),
+    };
+
+    let customHeaders: Record<string, string> = { "Content-Type": "application/json" };
     try {
-        return await tool.handler(params, ctx);
+        const parsed = JSON.parse(customTool.headers);
+        customHeaders = { ...customHeaders, ...parsed };
+    } catch {}
+
+    try {
+        const resp = await fetch(customTool.webhook_url, {
+            method: "POST",
+            headers: customHeaders,
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(15000),
+        });
+
+        // Update stats
+        run(
+            `UPDATE custom_tools SET execution_count = execution_count + 1, last_executed_at = CURRENT_TIMESTAMP WHERE id = ?`,
+            [customTool.id]
+        );
+
+        if (!resp.ok) {
+            logger.error("Custom tool webhook failed", { toolName, status: resp.status });
+            return { success: false, error: `Webhook returned ${resp.status}` };
+        }
+
+        logger.info("Custom tool executed", { toolName, watcherId: ctx.watcher.id });
+        return { success: true, message: `Custom tool ${toolName} executed` };
     } catch (err) {
-        logger.error("Tool execution error", { toolName, err });
+        logger.error("Custom tool execution error", { toolName, err });
         return { success: false, error: String(err) };
     }
 }

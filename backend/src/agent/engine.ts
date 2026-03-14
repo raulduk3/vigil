@@ -257,7 +257,18 @@ export async function invokeAgent(
     }
 
     // 6. Build structured prompt (non-chat triggers)
-    const systemPrompt = buildSystemPrompt(watcher, memoryContext, activeThreads);
+    // Load custom tools for this watcher
+    const customToolRows = queryMany<{ name: string; description: string; parameter_schema: string }>(
+        `SELECT name, description, parameter_schema FROM custom_tools WHERE watcher_id = ? AND enabled = TRUE`,
+        [watcherId]
+    );
+    const customTools = customToolRows.map(row => ({
+        name: row.name,
+        description: row.description,
+        parameter_schema: (() => { try { return JSON.parse(row.parameter_schema); } catch { return {}; } })(),
+    }));
+
+    const systemPrompt = buildSystemPrompt(watcher, memoryContext, activeThreads, customTools);
     let userPrompt: string;
 
     if (trigger.type === "email_received") {
@@ -325,13 +336,20 @@ export async function invokeAgent(
     }
 
     // 7. Execute tools
+    const emailThreadCtx = trigger.type === "email_received" ? {
+        threadId: threadId ?? undefined,
+        emailFrom: trigger.email.originalFrom ?? trigger.email.from,
+        emailSubject: trigger.email.subject,
+        emailReceivedAt: new Date(trigger.email.receivedAt).toISOString(),
+    } : { threadId: threadId ?? undefined };
+
     const toolResults: Array<{ tool: string; result: any }> = [];
     for (const action of agentResponse.actions ?? []) {
         // Inject thread context into send_alert if the agent didn't provide it
         if (action.tool === "send_alert" && !action.params.thread_id && threadId) {
             action.params.thread_id = threadId;
         }
-        const result = await executeTool(action.tool, action.params, ctx);
+        const result = await executeTool(action.tool, action.params, ctx, emailThreadCtx);
         toolResults.push({ tool: action.tool, result });
         logger.info("Tool executed", {
             tool: action.tool,
