@@ -73,25 +73,25 @@
                             <div class="step-row"><span class="step-n">1</span><div><p>Open Gmail forwarding settings</p><button id="btn-setup-gmail-fwd" class="btn secondary btn-xs">Open Settings</button></div></div>
                             <div class="step-row"><span class="step-n">2</span><p>Click "Add a forwarding address" and paste the address above</p></div>
                             <div class="step-row"><span class="step-n">3</span><p>Gmail sends a confirmation email. Click the link in that email.</p></div>
-                            <div class="step-row"><span class="step-n">4</span><p>Back in settings, select "Forward a copy" and save. Or create a filter below.</p></div>
+                            <div class="step-row"><span class="step-n">4</span><p>Back in settings, select "Forward a copy" and save. Or use a suggested filter below.</p></div>
                         </div>
 
                         <!-- Outlook -->
                         <div id="setup-outlook" class="provider-steps hidden">
                             <div class="step-row"><span class="step-n">1</span><div><p>Open Outlook forwarding settings</p><button id="btn-setup-outlook-fwd" class="btn secondary btn-xs">Open Settings</button></div></div>
                             <div class="step-row"><span class="step-n">2</span><p>Enable forwarding and paste the address above</p></div>
-                            <div class="step-row"><span class="step-n">3</span><p>Check "Keep a copy" and save</p></div>
+                            <div class="step-row"><span class="step-n">3</span><p>Check "Keep a copy" and save. Or use a suggested rule below.</p></div>
                         </div>
 
-                        <div class="divider" style="margin:12px 0;"><span>or use a filter</span></div>
+                        <div class="divider" style="margin:12px 0;"><span>recommended filters</span></div>
 
-                        <!-- Filter setup -->
-                        <div class="filter-section">
-                            <p class="muted small">Forward only specific emails with a filter. Useful if you don't want to forward everything.</p>
-                            <div class="btn-row" style="margin-top:8px;">
-                                <button id="btn-setup-gmail-filter" class="btn secondary flex-1 btn-xs">Gmail: Create Filter</button>
-                                <button id="btn-setup-outlook-rule" class="btn secondary flex-1 btn-xs">Outlook: Create Rule</button>
-                            </div>
+                        <!-- AI-generated filter suggestions -->
+                        <div id="setup-filters-loading" class="loading small">Generating filter suggestions...</div>
+                        <div id="setup-filters" class="filter-suggestions hidden"></div>
+
+                        <div class="btn-row" style="margin-top:10px;">
+                            <button id="btn-setup-gmail-filter" class="btn secondary flex-1 btn-xs">Open Gmail Filters</button>
+                            <button id="btn-setup-outlook-rule" class="btn secondary flex-1 btn-xs">Open Outlook Rules</button>
                         </div>
 
                         <div style="margin-top:16px;">

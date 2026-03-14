@@ -172,6 +172,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             $("setup-step-create").classList.add("hidden");
             $("setup-step-connect").classList.remove("hidden");
             $("setup-fwd-address").textContent = watcher.ingestion_address || `${name.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${watcher.ingest_token}@vigil.run`;
+
+            // Generate filter suggestions from the intent
+            generateFilters(watcher.id, intent);
         } catch (e) {
             $("setup-create-error").textContent = e.message;
             $("setup-create-error").classList.remove("hidden");
@@ -240,12 +243,65 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 function openTab(url) { chrome.tabs.query({ active: true, currentWindow: true }, ([t]) => { if (t?.id) chrome.tabs.update(t.id, { url }); }); }
 
+async function generateFilters(watcherId, intent) {
+    const loadEl = $("setup-filters-loading");
+    const filtersEl = $("setup-filters");
+    loadEl.classList.remove("hidden");
+    filtersEl.classList.add("hidden");
+
+    if (!intent) {
+        loadEl.classList.add("hidden");
+        filtersEl.classList.remove("hidden");
+        filtersEl.innerHTML = `<div class="filter-card">
+            <p class="muted small">No specific intent provided. You can forward all email, or create your own filter in Gmail/Outlook.</p>
+        </div>`;
+        return;
+    }
+
+    try {
+        const response = await vigilAPI.chat(watcherId,
+            `Based on my instructions to you, suggest 2-3 specific email filters I should create in Gmail or Outlook to forward the right emails to you. For each filter, give me the exact values to enter in Gmail's filter creation form (From, To, Subject, Has the words) or Outlook's rule conditions. Format each filter as:\n\nFILTER: [name]\nGmail From: [value or empty]\nGmail Subject: [value or empty]\nGmail Has words: [value or empty]\nOutlook Condition: [description]\n\nBe specific. Use real filter syntax. If my instructions are general (like "watch all email"), say so and suggest forwarding everything instead of filters.`
+        );
+
+        loadEl.classList.add("hidden");
+        filtersEl.classList.remove("hidden");
+
+        // Parse the response into filter cards
+        const filters = response.split(/FILTER:\s*/i).filter(f => f.trim());
+        if (filters.length === 0 || response.toLowerCase().includes("forward everything") || response.toLowerCase().includes("forwarding everything")) {
+            filtersEl.innerHTML = `<div class="filter-card">
+                <p class="filter-title">Forward all email</p>
+                <p class="muted small">Based on your instructions, forwarding all email is recommended. Use the steps above to enable forwarding for your entire inbox.</p>
+            </div>`;
+            return;
+        }
+
+        filtersEl.innerHTML = filters.map(f => {
+            const lines = f.trim().split("\n").filter(l => l.trim());
+            const name = lines[0]?.trim() || "Filter";
+            const details = lines.slice(1).map(l => {
+                const [key, ...val] = l.split(":");
+                return val.join(":").trim() ? `<div class="filter-line"><span class="filter-key">${esc(key.trim())}:</span> <span class="filter-val">${esc(val.join(":").trim())}</span></div>` : "";
+            }).filter(Boolean).join("");
+            return `<div class="filter-card"><p class="filter-title">${esc(name)}</p>${details}</div>`;
+        }).join("");
+
+    } catch (e) {
+        loadEl.classList.add("hidden");
+        filtersEl.classList.remove("hidden");
+        filtersEl.innerHTML = `<div class="filter-card"><p class="muted small">Could not generate filter suggestions. Create filters manually in Gmail or Outlook.</p></div>`;
+    }
+}
+
 function resetSetup() {
     $("setup-step-create").classList.remove("hidden");
     $("setup-step-connect").classList.add("hidden");
     $("setup-name").value = "";
     $("setup-intent").value = "";
     $("setup-create-error").classList.add("hidden");
+    $("setup-filters-loading").classList.add("hidden");
+    $("setup-filters").classList.add("hidden");
+    $("setup-verify-status").classList.add("hidden");
 }
 
 // ============================================================================
