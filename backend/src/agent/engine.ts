@@ -529,6 +529,7 @@ export const MODEL_CATALOG: Record<string, {
     "claude-sonnet-4": {
         provider: "anthropic", label: "Claude Sonnet 4", tier: "standard",
         pricing: { input: 0.0036, output: 0.018 }, maxTokens: 2048,
+        apiModel: "claude-sonnet-4-20250514",
     },
     // Google
     "gemini-2.5-flash": {
@@ -549,13 +550,16 @@ async function callLLM(
     const catalog = MODEL_CATALOG[model];
     const provider = catalog?.provider ?? "openai";
 
+    // Use apiModel override if the catalog specifies one (e.g. versioned Anthropic names)
+    const apiModel = (catalog as any)?.apiModel ?? model;
+
     switch (provider) {
         case "anthropic":
-            return callAnthropic(systemPrompt, userPrompt, model, catalog?.maxTokens ?? 1024);
+            return callAnthropic(systemPrompt, userPrompt, apiModel, catalog?.maxTokens ?? 1024);
         case "google":
-            return callGoogle(systemPrompt, userPrompt, model, catalog?.maxTokens ?? 1024);
+            return callGoogle(systemPrompt, userPrompt, apiModel, catalog?.maxTokens ?? 1024);
         default:
-            return callOpenAI(systemPrompt, userPrompt, model, catalog?.maxTokens ?? 1024);
+            return callOpenAI(systemPrompt, userPrompt, apiModel, catalog?.maxTokens ?? 1024);
     }
 }
 
@@ -788,6 +792,7 @@ async function callLLMRaw(
 ): Promise<{ text: string; inputTokens: number; outputTokens: number }> {
     const catalog = MODEL_CATALOG[model];
     const provider = catalog?.provider ?? "openai";
+    const apiModel = (catalog as any)?.apiModel ?? model;
 
     if (provider === "anthropic") {
         const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -796,7 +801,7 @@ async function callLLMRaw(
             method: "POST",
             headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
             body: JSON.stringify({
-                model, max_tokens: catalog?.maxTokens ?? 1024,
+                model: apiModel, max_tokens: catalog?.maxTokens ?? 1024,
                 system: systemPrompt,
                 messages: [{ role: "user", content: userPrompt }],
             }),
