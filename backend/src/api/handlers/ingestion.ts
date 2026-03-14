@@ -41,6 +41,9 @@ const CONFIRMATION_PATTERNS = [
     { from: /.*/i, subject: /confirm.*forwarding|forwarding.*confirm|verify.*forwarding|forwarding.*verif/i },
 ];
 
+// Rate limit map: token → last relay timestamp
+const confirmationRelayTimes = new Map<string, number>();
+
 function isForwardingConfirmation(from: string, subject: string): boolean {
     return CONFIRMATION_PATTERNS.some(
         (p) => p.from.test(from) && p.subject.test(subject)
@@ -210,6 +213,14 @@ export const ingestionHandlers = {
             // These need to be relayed to the account owner so they can complete
             // the email provider's verification flow.
             if (isForwardingConfirmation(from, subject)) {
+                // Rate limit: only relay one confirmation per token per hour
+                const now = Date.now();
+                const lastRelay = confirmationRelayTimes.get(token) ?? 0;
+                if (now - lastRelay < 3600000) {
+                    logger.debug("Forwarding confirmation suppressed (rate limited)", { token });
+                    return c.json({ success: true, confirmation_relayed: false, message: "Already relayed recently" });
+                }
+                confirmationRelayTimes.set(token, now);
                 logger.info("Forwarding confirmation detected", { from, subject, token });
 
                 // Look up watcher just for account email
