@@ -162,6 +162,29 @@ class VigilAPI {
         return data.watcher || data;
     }
 
+    async chat(watcherId, message) {
+        const data = await this.request(`/watchers/${watcherId}/invoke`, {
+            method: "POST",
+            body: JSON.stringify({ message }),
+        });
+        return data.message || data.chat_response || "No response.";
+    }
+
+    async getThreads(watcherId) {
+        const data = await this.request(`/watchers/${watcherId}/threads`);
+        return data.threads || data || [];
+    }
+
+    async getMemories(watcherId) {
+        const data = await this.request(`/watchers/${watcherId}/memory`);
+        return data.memories || data || [];
+    }
+
+    async getActions(watcherId) {
+        const data = await this.request(`/watchers/${watcherId}/actions`);
+        return data.actions || data || [];
+    }
+
     async updateWatcher(watcherId, updates) {
         const data = await this.request(`/watchers/${watcherId}`, {
             method: "PATCH",
