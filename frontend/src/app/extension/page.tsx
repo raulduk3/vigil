@@ -3,6 +3,8 @@
 import Link from 'next/link';
 import { PublicHeader, Footer } from '@/components/layout';
 
+const extensionSourceUrl = 'https://github.com/raulduk3/vigil/tree/main/chrome-extension';
+
 const setupSteps = [
   {
     num: 1,
@@ -42,7 +44,7 @@ const manualInstallSteps = [
   <>
     Download the extension from{' '}
     <a
-      href="https://github.com/raulduk3/vigil.run/tree/main/chrome-extension"
+      href={extensionSourceUrl}
       target="_blank"
       rel="noopener noreferrer"
       className="text-vigil-700 hover:text-vigil-800 hover:underline"
@@ -90,19 +92,18 @@ export default function ExtensionPage() {
               </div>
 
               <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-                <a
-                  href="https://chrome.google.com/webstore/detail/vigil-email-intelligence/EXTENSION_ID_HERE"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn btn-primary btn-lg w-full sm:w-auto gap-2.5"
-                >
+                <Link href="#manual-install" className="btn btn-primary btn-lg w-full sm:w-auto gap-2.5">
                   <ChromeIcon />
-                  Add to Chrome
-                </a>
+                  Install in Chrome
+                </Link>
                 <Link href="/auth/register" className="btn btn-secondary btn-lg w-full sm:w-auto">
                   Create free account
                 </Link>
               </div>
+
+              <p className="mt-3 text-sm text-gray-500">
+                Chrome Web Store listing pending. Use the developer-mode install steps below for now.
+              </p>
 
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5 text-xs sm:text-sm text-gray-500">
                 <span className="badge badge-ok">Gmail</span>
@@ -162,7 +163,7 @@ export default function ExtensionPage() {
           </div>
         </section>
 
-        <section className="landing-section px-6 lg:px-8 mt-18">
+        <section id="manual-install" className="landing-section px-6 lg:px-8 mt-18 scroll-mt-28">
           <div className="max-w-6xl mx-auto">
             <div className="landing-section-header text-center items-center mx-auto mb-10">
               <div className="landing-section-kicker">How It Works</div>

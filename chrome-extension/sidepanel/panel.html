@@ -97,7 +97,7 @@
                 <div class="step-item">
                     <span class="step-num">1</span>
                     <div>
-                        <p>Open Gmail Settings, then Forwarding</p>
+                        <p>Open Gmail Settings, then Forwarding and POP/IMAP</p>
                         <button id="btn-gmail-settings" class="btn secondary small">Open Settings</button>
                     </div>
                 </div>
@@ -110,22 +110,13 @@
                 <div class="step-item">
                     <span class="step-num">3</span>
                     <div>
-                        <p>Gmail will send a confirmation code. Vigil catches it automatically.</p>
-                        <div id="confirm-code-status" class="confirm-status">
-                            <div class="spinner"></div>
-                            <span>Waiting for confirmation code...</span>
-                        </div>
-                        <div id="confirm-code-found" class="confirm-found hidden">
-                            <span class="code-label">Code:</span>
-                            <code id="confirm-code"></code>
-                            <button id="btn-copy-code" class="btn-icon" title="Copy">Copy</button>
-                        </div>
+                        <p>Gmail will send a confirmation email to that address. Open your inbox and click the confirmation link in the email from Google.</p>
                     </div>
                 </div>
                 <div class="step-item">
                     <span class="step-num">4</span>
                     <div>
-                        <p>Enter the code in Gmail, then select "Forward a copy" and save.</p>
+                        <p>Back in Gmail Settings, select "Forward a copy of incoming mail to..." and choose your Vigil address, then click Save Changes.</p>
                     </div>
                 </div>
             </div>
@@ -159,7 +150,8 @@
                 </div>
             </div>
 
-            <button id="btn-verify-forwarding" class="btn primary">Verify Forwarding</button>
+            <button id="btn-verify-forwarding" class="btn primary">Check Forwarding Status</button>
+            <button id="btn-skip-verify" class="btn secondary">I've confirmed it, continue</button>
         </div>
 
         <!-- Step 5: Done -->

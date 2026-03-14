@@ -5,7 +5,7 @@
 let currentStep = 1;
 let selectedWatcher = null;
 let detectedProvider = null;
-let confirmCodePollInterval = null;
+
 
 // ============================================================================
 // Step Navigation
@@ -212,7 +212,6 @@ async function initStep4() {
     if (detectedProvider === "gmail") {
         document.getElementById("forwarding-instructions").textContent =
             "Follow these steps to forward your Gmail to Vigil.";
-        startPollingConfirmCode();
     } else {
         document.getElementById("forwarding-instructions").textContent =
             "Follow these steps to forward your Outlook email to Vigil.";
@@ -239,74 +238,36 @@ async function initStep4() {
         });
     });
 
-    // Verify button
+    // Verify button — checks if emails are flowing
     document.getElementById("btn-verify-forwarding").addEventListener("click", async () => {
+        const btn = document.getElementById("btn-verify-forwarding");
+        btn.textContent = "Checking...";
+        btn.disabled = true;
         try {
             const status = await vigilAPI.getForwardingStatus(selectedWatcher.id);
             if (status.forwarding_active) {
-                stopPollingConfirmCode();
                 goToStep(5);
             } else {
-                // Not active yet, show message
-                const btn = document.getElementById("btn-verify-forwarding");
-                btn.textContent = "No emails received yet. Try sending a test email.";
-                btn.disabled = true;
+                btn.textContent = "No emails received yet. Forwarding may take a moment.";
                 setTimeout(() => {
-                    btn.textContent = "Verify Forwarding";
+                    btn.textContent = "Check Forwarding Status";
                     btn.disabled = false;
                 }, 3000);
             }
         } catch (e) {
             console.error("Verify failed:", e);
+            btn.textContent = "Check Forwarding Status";
+            btn.disabled = false;
         }
+    });
+
+    // Skip button — user confirms they've set it up
+    document.getElementById("btn-skip-verify").addEventListener("click", () => {
+        goToStep(5);
     });
 }
 
-function startPollingConfirmCode() {
-    if (confirmCodePollInterval) return;
 
-    const statusEl = document.getElementById("confirm-code-status");
-    const foundEl = document.getElementById("confirm-code-found");
-    const codeEl = document.getElementById("confirm-code");
-
-    let attempts = 0;
-    const maxAttempts = 150; // 5 minutes at 2s intervals
-
-    confirmCodePollInterval = setInterval(async () => {
-        attempts++;
-        if (attempts > maxAttempts) {
-            stopPollingConfirmCode();
-            statusEl.innerHTML = '<span style="color: #f87171;">Timed out. Check your Vigil email for the code.</span>';
-            return;
-        }
-
-        try {
-            const result = await vigilAPI.getConfirmCode(selectedWatcher.id);
-            if (result.code) {
-                stopPollingConfirmCode();
-                statusEl.classList.add("hidden");
-                foundEl.classList.remove("hidden");
-                codeEl.textContent = result.code;
-
-                // Copy code button
-                document.getElementById("btn-copy-code").addEventListener("click", () => {
-                    navigator.clipboard.writeText(result.code);
-                    document.getElementById("btn-copy-code").textContent = "Copied";
-                    setTimeout(() => document.getElementById("btn-copy-code").textContent = "Copy", 2000);
-                });
-            }
-        } catch (e) {
-            // Silently continue polling
-        }
-    }, 2000);
-}
-
-function stopPollingConfirmCode() {
-    if (confirmCodePollInterval) {
-        clearInterval(confirmCodePollInterval);
-        confirmCodePollInterval = null;
-    }
-}
 
 // ============================================================================
 // Step 5: Confirmation
