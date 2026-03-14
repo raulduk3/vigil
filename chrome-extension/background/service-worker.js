@@ -12,8 +12,12 @@ chrome.action.onClicked.addListener(async (tab) => {
 // Listen for messages from content scripts and popup
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === "OPEN_SIDE_PANEL") {
-        chrome.sidePanel.open({ tabId: sender.tab?.id });
-        sendResponse({ ok: true });
+        chrome.sidePanel.open({ tabId: sender.tab?.id }).then(() => {
+            sendResponse({ ok: true });
+        }).catch((err) => {
+            sendResponse({ ok: false, error: err.message });
+        });
+        return true; // async
     }
 
     if (message.type === "DETECT_PROVIDER") {
@@ -25,14 +29,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         } else {
             sendResponse({ provider: null });
         }
+        return false; // sync
     }
 
     if (message.type === "NAVIGATE_TAB") {
-        chrome.tabs.update(sender.tab?.id, { url: message.url });
-        sendResponse({ ok: true });
+        chrome.tabs.update(sender.tab?.id, { url: message.url }).then(() => {
+            sendResponse({ ok: true });
+        }).catch((err) => {
+            sendResponse({ ok: false, error: err.message });
+        });
+        return true; // async
     }
 
-    return true; // keep channel open for async responses
+    // Unknown message — respond immediately to avoid channel leak
+    sendResponse({ error: "unknown message type" });
+    return false;
 });
 
 // Set side panel behavior

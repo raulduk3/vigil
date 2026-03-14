@@ -242,8 +242,8 @@ export default function HomePage() {
       </header>
 
       {/* How It Works */}
-      <Section id="how-it-works" className="landing-section py-14 md:py-20">
-        <div className="mb-8 md:mb-12" data-reveal id="hiw-header" style={{ opacity: 0, animation: isRevealed('hiw-header') ? 'slideUpIn 0.6s ease-out forwards' : 'none' }}>
+      <Section id="how-it-works" className="landing-section py-16 md:py-24">
+        <div className="mb-10 md:mb-16" data-reveal id="hiw-header" style={{ opacity: 0, animation: isRevealed('hiw-header') ? 'slideUpIn 0.6s ease-out forwards' : 'none' }}>
           <SectionHeader
             eyebrow="How it works"
             title="Analyze. Remember. Act."
@@ -251,13 +251,13 @@ export default function HomePage() {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
-          <div data-reveal id="hiw-1" className="landing-step-card panel p-7 flex flex-col opacity-0" style={{ animation: isRevealed('hiw-1') ? 'slideUpIn 0.6s ease-out 0.1s forwards' : 'none' }}>
-            <div className="flex items-center gap-4 mb-5">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-8 lg:gap-10">
+          <div data-reveal id="hiw-1" className="landing-step-card panel p-7 md:p-8 flex flex-col gap-6 opacity-0" style={{ animation: isRevealed('hiw-1') ? 'slideUpIn 0.6s ease-out 0.1s forwards' : 'none' }}>
+            <div className="flex items-center gap-4">
               <span className="landing-step-index">1</span>
               <h3 className="text-lg font-semibold text-gray-900">Connect your email</h3>
             </div>
-            <p className="text-base text-gray-600 leading-relaxed mb-5 flex-grow">
+            <p className="text-base text-gray-600 leading-relaxed flex-grow">
               Install the <Link href="/extension" className="text-vigil-700 font-medium hover:underline">Chrome extension</Link> and
               it walks you through forwarding setup in under 30 seconds. Or set up a
               forwarding rule manually in Gmail or Outlook.
@@ -275,12 +275,12 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div data-reveal id="hiw-2" className="landing-step-card panel p-7 flex flex-col opacity-0" style={{ animation: isRevealed('hiw-2') ? 'slideUpIn 0.6s ease-out 0.2s forwards' : 'none' }}>
-            <div className="flex items-center gap-4 mb-5">
+          <div data-reveal id="hiw-2" className="landing-step-card panel p-7 md:p-8 flex flex-col gap-6 opacity-0" style={{ animation: isRevealed('hiw-2') ? 'slideUpIn 0.6s ease-out 0.2s forwards' : 'none' }}>
+            <div className="flex items-center gap-4">
               <span className="landing-step-index">2</span>
               <h3 className="text-lg font-semibold text-gray-900">Agent analyzes</h3>
             </div>
-            <p className="text-base text-gray-600 leading-relaxed mb-5 flex-grow">
+            <p className="text-base text-gray-600 leading-relaxed flex-grow">
               The AI agent reads the email, groups it into a conversation thread,
               extracts what matters, and stores relevant context in its memory.
               The email body is then discarded.
@@ -297,12 +297,12 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div data-reveal id="hiw-3" className="landing-step-card panel p-7 flex flex-col opacity-0" style={{ animation: isRevealed('hiw-3') ? 'slideUpIn 0.6s ease-out 0.3s forwards' : 'none' }}>
-            <div className="flex items-center gap-4 mb-5">
+          <div data-reveal id="hiw-3" className="landing-step-card panel p-7 md:p-8 flex flex-col gap-6 opacity-0" style={{ animation: isRevealed('hiw-3') ? 'slideUpIn 0.6s ease-out 0.3s forwards' : 'none' }}>
+            <div className="flex items-center gap-4">
               <span className="landing-step-index">3</span>
               <h3 className="text-lg font-semibold text-gray-900">You get alerted</h3>
             </div>
-            <p className="text-base text-gray-600 leading-relaxed mb-5 flex-grow">
+            <p className="text-base text-gray-600 leading-relaxed flex-grow">
               When something needs your attention, the agent sends an alert to your inbox.
               Urgent requests, stale threads, payment deadlines. No noise. Only signal.
             </p>

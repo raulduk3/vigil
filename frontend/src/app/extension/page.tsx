@@ -71,19 +71,19 @@ export default function ExtensionPage() {
     <div className="min-h-screen bg-surface-page text-gray-700">
       <PublicHeader />
 
-      <main className="pt-28 pb-20">
+      <main className="pt-24 md:pt-28 pb-20">
         <section className="relative overflow-hidden px-6 lg:px-8">
           <div className="absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-[#dbe4e8]/70 via-white/35 to-transparent pointer-events-none" />
           <div className="absolute left-1/2 top-8 h-56 w-[48rem] max-w-full -translate-x-1/2 rounded-full bg-[radial-gradient(circle,_rgba(45,82,97,0.12),_transparent_65%)] pointer-events-none" />
 
           <div className="max-w-6xl mx-auto relative z-10">
-            <div className="max-w-4xl mx-auto text-center mb-10">
-              <div className="landing-section-header text-center items-center mx-auto">
+            <div className="max-w-4xl mx-auto text-center mb-8 md:mb-10">
+              <div className="landing-section-header text-center items-center mx-auto gap-3 md:gap-4">
                 <div className="landing-section-kicker">Chrome Extension</div>
                 <h1 className="text-4xl md:text-6xl font-display font-semibold text-gray-900 tracking-tight leading-[1.05] text-balance">
                   Set up forwarding without touching email OAuth.
                 </h1>
-                <p className="landing-hero-copy text-lg md:text-xl text-gray-600 leading-relaxed">
+                <p className="landing-hero-copy max-w-3xl text-lg md:text-xl text-gray-600 leading-relaxed">
                   The extension is a setup wizard for Gmail and Outlook. It gets forwarding configured in under 30 seconds,
                   retrieves Gmail confirmation codes, and then gets out of the way.
                 </p>

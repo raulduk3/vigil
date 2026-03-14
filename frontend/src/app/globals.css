@@ -626,7 +626,7 @@ html {
   }
 
   .landing-section-header {
-    @apply flex flex-col gap-3;
+    @apply flex flex-col gap-4;
     max-width: 52rem;
   }
 
@@ -653,12 +653,14 @@ html {
 
   .landing-section-copy {
     @apply text-lg text-gray-600 leading-relaxed;
-    max-width: 62rem;
+    width: 100%;
+    max-width: none;
     text-wrap: pretty;
   }
 
   .landing-hero-copy {
-    max-width: 50rem;
+    width: 100%;
+    max-width: none;
     text-wrap: pretty;
   }
 
