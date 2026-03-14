@@ -196,14 +196,19 @@ Everything else: triage, track, remember. No alerts. Let the scheduled tick and 
 Scheduling changes, FYI updates, routine confirmations: track silently.`;
 
         case 3:
-            return `**Balanced.** Default. You alert when the user should probably know something today.
-- Security events and suspicious activity
-- Financial events: payments posting, low balances, unusual charges
-- Deadlines within 48 hours
-- Direct requests from people (not automated systems)
-- Schedule changes that affect today or tomorrow
+            return `**Balanced.** Default. You alert when the user needs to ACT today.
+- Security events: unauthorized access, new devices, suspicious activity
+- Money at risk: failed payments, overdrafts, unexpected charges, low balances below $50
+- Deadlines within 48 hours that require preparation
+- Direct requests from real people (not automated systems) who are waiting
 
-Promos, newsletters, routine confirmations, informational notices: track or ignore silently.`;
+Do NOT alert on:
+- Receipts, payment confirmations, scheduled payments posting (these are expected, track silently)
+- Account setup confirmations, billing preference changes
+- Routine notifications from services
+- Newsletters, promos, social notifications
+
+If the email confirms something the user already initiated, it's not an alert. Track it silently.`;
 
         case 4:
             return `**High.** You keep the user well-informed. Alert on:
