@@ -418,7 +418,7 @@ async function loadConfig() {
         conn.innerHTML = s.forwarding_active
             ? `<div class="conn-ok"><span class="conn-dot ok"></span> Connected — ${s.emails_24h} emails (24h), last ${ago(s.last_email_at)}</div>`
             : `<div class="conn-waiting"><span class="conn-dot waiting"></span> Not connected — set up forwarding below</div>`;
-    } catch { conn.innerHTML = `<div class="conn-waiting"><span class="conn-dot waiting"></span> Not connected</div>`; }
+    } catch { conn.innerHTML = `<div class="conn-waiting"><span class="conn-dot waiting"></span> Could not check — API may be restarting. Try again in a moment.</div>`; }
     try {
         const w = await vigilAPI.getWatcher(current.id);
         $("cfg-prompt").value = w?.system_prompt || "";
