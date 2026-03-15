@@ -29,6 +29,7 @@ function DashboardContent() {
   const [localThreads, setLocalThreads] = useState<Record<string, Thread[]>>({});
   const [actions, setActions] = useState<Action[]>([]);
   const [memories, setMemories] = useState<Memory[]>([]);
+  const [mobileTab, setMobileTab] = useState<'inbox' | 'chat' | 'activity'>('inbox');
 
   // Sync from realtime hook
   useEffect(() => {
@@ -120,8 +121,6 @@ function DashboardContent() {
       </div>
     );
   }
-
-  const [mobileTab, setMobileTab] = useState<'inbox' | 'chat' | 'activity'>('inbox');
 
   return (
     <div className="h-screen flex flex-col md:flex-row overflow-hidden">
