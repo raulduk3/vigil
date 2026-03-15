@@ -162,23 +162,59 @@ export default function ExtensionPage() {
         <section id="local-install" className="landing-section px-6 lg:px-8 mt-18 scroll-mt-28">
           <div className="max-w-6xl mx-auto flex flex-col gap-6 items-stretch">
             <div className="panel p-6 md:p-7">
-              <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Local Install</p>
-              <h2 className="text-2xl font-display font-semibold text-gray-900 mb-3">Load it in Chrome while the Web Store listing is pending.</h2>
-              <p className="text-sm md:text-base text-gray-600 leading-relaxed mb-5 max-w-none">
-                If the Chrome Web Store listing is not live yet, you can load the extension locally in a few steps.
+              <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Install in Chrome</p>
+              <h2 className="text-2xl font-display font-semibold text-gray-900 mb-3">Three steps. Under a minute.</h2>
+              <p className="text-sm md:text-base text-gray-600 leading-relaxed mb-6 max-w-none">
+                Chrome extensions can be installed locally in developer mode. No Web Store required.
               </p>
-              <ol className="space-y-3 text-sm text-gray-600">
-                {manualInstallSteps.map((step, index) => (
-                  <li key={index} className="flex items-start gap-3">
-                    <StepBadge className="h-8 w-8 text-sm">{index + 1}</StepBadge>
-                    <span className="pt-1">{step}</span>
-                  </li>
-                ))}
-              </ol>
-              <div className="mt-6 border-t border-black/5 pt-6">
-                <p className="text-xs uppercase tracking-[0.18em] text-vigil-700/80">Start order</p>
-                <p className="mt-2 text-sm text-gray-700 leading-relaxed max-w-none">
-                  Create the watcher first, then use the extension. No credit card is required, and you get 50 emails free each month.
+
+              <div className="panel-inset rounded-lg p-5 mb-6">
+                <div className="flex items-start gap-4">
+                  <StepBadge className="h-8 w-8 text-sm shrink-0">1</StepBadge>
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">Download and unzip</p>
+                    <p className="text-sm text-gray-600 mt-1">Download the extension and unzip it to a folder on your computer.</p>
+                    <a href="/vigil-chrome-extension.zip" download className="btn btn-primary btn-sm mt-3 inline-flex gap-2">
+                      <ChromeIcon /> Download ZIP
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              <div className="panel-inset rounded-lg p-5 mb-6">
+                <div className="flex items-start gap-4">
+                  <StepBadge className="h-8 w-8 text-sm shrink-0">2</StepBadge>
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">Open Chrome Extensions</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Open the extensions page and enable <strong>Developer mode</strong> using the toggle in the top-right corner.
+                    </p>
+                    <a href="chrome://extensions" onClick={(e) => { e.preventDefault(); navigator.clipboard.writeText('chrome://extensions'); }} className="btn btn-secondary btn-sm mt-3 inline-flex gap-2">
+                      Copy chrome://extensions
+                    </a>
+                    <p className="text-xs text-gray-400 mt-2">Paste this into your Chrome address bar. Links to chrome:// pages cannot be opened directly.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="panel-inset rounded-lg p-5 mb-6">
+                <div className="flex items-start gap-4">
+                  <StepBadge className="h-8 w-8 text-sm shrink-0">3</StepBadge>
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">Load the extension</p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Click <strong>&ldquo;Load unpacked&rdquo;</strong> in the top-left of the extensions page. Select the unzipped folder. The Vigil icon appears in your toolbar.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="panel p-5">
+                <p className="font-semibold text-gray-900 text-sm mb-2">You&apos;re installed.</p>
+                <p className="text-sm text-gray-600 leading-relaxed max-w-none">
+                  Click the Vigil icon in your toolbar to open the side panel. Sign in with your Vigil account or API key. 
+                  If you don&apos;t have an account yet, <Link href="/auth/register" className="text-vigil-700 hover:underline">create one free</Link> first.
+                  The extension walks you through creating a watcher and connecting your email automatically.
                 </p>
               </div>
             </div>
