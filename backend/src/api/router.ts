@@ -14,6 +14,7 @@ import { ingestionHandlers } from "./handlers/ingestion";
 import { threadActionHandlers } from "./handlers/thread-actions";
 import { customToolHandlers } from "./handlers/custom-tools";
 import { apiKeyHandlers } from "./handlers/api-keys";
+import { accountKeyHandlers } from "./handlers/account-keys";
 import { billingHandlers } from "./handlers/billing";
 import { forwardingHandlers } from "./handlers/forwarding";
 
@@ -93,6 +94,10 @@ export function createRouter(): Hono {
     protected_.get("/keys", apiKeyHandlers.list);
     protected_.post("/keys", apiKeyHandlers.create);
     protected_.delete("/keys/:id", apiKeyHandlers.delete_);
+
+    // BYOK (Bring Your Own Key) — per-account provider API keys
+    protected_.get("/account/keys", accountKeyHandlers.get);
+    protected_.put("/account/keys", accountKeyHandlers.put);
 
     // Threads
     protected_.get("/watchers/:watcherId/threads", threadHandlers.list);

@@ -121,6 +121,8 @@ function DashboardContent() {
     );
   }
 
+  const [mobileTab, setMobileTab] = useState<'inbox' | 'chat' | 'activity'>('inbox');
+
   return (
     <div className="h-screen flex flex-col md:flex-row overflow-hidden">
       {/* Mobile header */}
@@ -155,26 +157,50 @@ function DashboardContent() {
         />
       </div>
 
-      {/* Center: Inbox Panel — full width on mobile */}
-      <InboxPanel
-        watcher={selectedWatcher}
-        threads={selectedThreads}
-        isLoading={false}
-        onRefresh={handleRefresh}
-        onWatcherUpdate={handleWatcherUpdate}
-        onThreadStatusChange={handleThreadStatusChange}
-        memories={memories}
-        onMemoriesChange={setMemories}
-      />
+      {/* Center: Inbox Panel — show on desktop always, on mobile only when inbox tab */}
+      <div className={`flex-1 flex flex-col overflow-hidden ${mobileTab !== 'inbox' ? 'hidden md:flex' : ''}`}>
+        <InboxPanel
+          watcher={selectedWatcher}
+          threads={selectedThreads}
+          isLoading={false}
+          onRefresh={handleRefresh}
+          onWatcherUpdate={handleWatcherUpdate}
+          onThreadStatusChange={handleThreadStatusChange}
+          memories={memories}
+          onMemoriesChange={setMemories}
+        />
+      </div>
 
-      {/* Right: Control Panel — hidden on mobile and tablet */}
-      <div className="hidden lg:flex">
+      {/* Right: Control Panel — show on desktop always, on mobile only when chat/activity tab */}
+      <div className={`${mobileTab === 'inbox' ? 'hidden lg:flex' : mobileTab === 'chat' || mobileTab === 'activity' ? 'flex flex-1 lg:w-90 lg:flex-none' : 'hidden lg:flex'}`}>
         <ControlPanel
           watcherId={selectedWatcherId}
           threads={selectedThreads}
           actions={actions}
           memories={memories}
         />
+      </div>
+
+      {/* Mobile bottom tabs */}
+      <div className="md:hidden flex border-t border-gray-200 bg-surface-raised shrink-0">
+        <button
+          onClick={() => setMobileTab('inbox')}
+          className={`flex-1 py-3 text-xs font-semibold text-center transition-colors ${mobileTab === 'inbox' ? 'text-gray-900 border-t-2 border-gray-900' : 'text-gray-400'}`}
+        >
+          Inbox
+        </button>
+        <button
+          onClick={() => setMobileTab('chat')}
+          className={`flex-1 py-3 text-xs font-semibold text-center transition-colors ${mobileTab === 'chat' ? 'text-gray-900 border-t-2 border-gray-900' : 'text-gray-400'}`}
+        >
+          Chat
+        </button>
+        <button
+          onClick={() => setMobileTab('activity')}
+          className={`flex-1 py-3 text-xs font-semibold text-center transition-colors ${mobileTab === 'activity' ? 'text-gray-900 border-t-2 border-gray-900' : 'text-gray-400'}`}
+        >
+          Activity
+        </button>
       </div>
 
       {/* Settings Modal */}

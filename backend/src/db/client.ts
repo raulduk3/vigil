@@ -52,6 +52,16 @@ export async function initializeDatabase(): Promise<void> {
         try { database.exec(sql); } catch { /* column already exists */ }
     }
 
+    // Migrate: add BYOK encrypted API key columns to accounts table
+    const byokMigrations = [
+        `ALTER TABLE accounts ADD COLUMN openai_api_key_enc TEXT`,
+        `ALTER TABLE accounts ADD COLUMN anthropic_api_key_enc TEXT`,
+        `ALTER TABLE accounts ADD COLUMN google_api_key_enc TEXT`,
+    ];
+    for (const sql of byokMigrations) {
+        try { database.exec(sql); } catch { /* column already exists */ }
+    }
+
     // Rebuild FTS5 index to keep it in sync (handles schema changes, manual data wipes)
     try {
         database.exec(`INSERT INTO memories_fts(memories_fts) VALUES('rebuild')`);

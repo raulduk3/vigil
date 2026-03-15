@@ -14,6 +14,7 @@
 
 import { queryOne, queryMany, run } from "../db/client";
 import { logger } from "../logger";
+import { decrypt } from "../auth/encryption";
 import { reportInvocationCost } from "../billing/usage";
 import {
     buildSystemPrompt,
@@ -44,6 +45,59 @@ import type {
     WatcherContext,
     ChannelRow,
 } from "./schema";
+
+// ============================================================================
+// BYOK Key Cache
+// In-memory cache of decrypted keys, keyed by account_id + provider.
+// Keys are evicted after 5 minutes to limit exposure.
+// ============================================================================
+
+interface CachedKey {
+    key: string;
+    expiresAt: number;
+}
+
+const byokCache = new Map<string, CachedKey>();
+const BYOK_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function getByokCacheKey(account_id: string, provider: string): string {
+    return `${account_id}:${provider}`;
+}
+
+/**
+ * Returns the decrypted BYOK key for the given account + provider, or null if not set.
+ * Caches the result in memory for BYOK_CACHE_TTL_MS.
+ */
+function getByokKey(account_id: string, provider: "openai" | "anthropic" | "google"): string | null {
+    const cacheKey = getByokCacheKey(account_id, provider);
+    const cached = byokCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+        return cached.key;
+    }
+    byokCache.delete(cacheKey);
+
+    const columnMap = {
+        openai: "openai_api_key_enc",
+        anthropic: "anthropic_api_key_enc",
+        google: "google_api_key_enc",
+    } as const;
+
+    const row = queryOne<{ enc: string | null }>(
+        `SELECT ${columnMap[provider]} AS enc FROM accounts WHERE id = ?`,
+        [account_id]
+    );
+
+    if (!row?.enc) return null;
+
+    try {
+        const key = decrypt(row.enc);
+        byokCache.set(cacheKey, { key, expiresAt: Date.now() + BYOK_CACHE_TTL_MS });
+        return key;
+    } catch (err) {
+        logger.warn("Failed to decrypt BYOK key", { account_id, provider, err: String(err) });
+        return null;
+    }
+}
 
 // ============================================================================
 // Main Entry Point
@@ -213,7 +267,7 @@ export async function invokeAgent(
         const model = watcher.model || process.env.VIGIL_MODEL || "gpt-4.1";
 
         try {
-            const result = await callLLMRaw(chatSystem, chatUser, model);
+            const result = await callLLMRaw(chatSystem, chatUser, model, watcher.account_id);
             const rates = MODEL_CATALOG[model]?.pricing ?? { input: 0.0004, output: 0.0016 };
             const PLATFORM_FEE = 0.005;
             const tokenCost = (result.inputTokens / 1000) * rates.input + (result.outputTokens / 1000) * rates.output;
@@ -327,7 +381,7 @@ export async function invokeAgent(
         : (watcher.model || process.env.VIGIL_MODEL || "gpt-4.1");
 
     try {
-        const result = await callLLM(systemPrompt, userPrompt, model);
+        const result = await callLLM(systemPrompt, userPrompt, model, watcher.account_id);
         agentResponse = result.response;
         contextTokens = result.inputTokens + result.outputTokens;
         // Pricing: marked-up token cost + platform fee per invocation
@@ -341,7 +395,7 @@ export async function invokeAgent(
         // Retry once on LLM failure
         logger.warn("LLM call failed, retrying once", { watcherId, err: String(err), model });
         try {
-            const retry = await callLLM(systemPrompt, userPrompt, model);
+            const retry = await callLLM(systemPrompt, userPrompt, model, watcher.account_id);
             agentResponse = retry.response;
             contextTokens = retry.inputTokens + retry.outputTokens;
             const rates = MODEL_CATALOG[model]?.pricing ?? { input: 0.0024, output: 0.0096 };
@@ -564,7 +618,8 @@ export const MODEL_CATALOG: Record<string, {
 async function callLLM(
     systemPrompt: string,
     userPrompt: string,
-    model: string = "gpt-4.1"
+    model: string = "gpt-4.1",
+    account_id?: string
 ): Promise<{ response: AgentResponse; inputTokens: number; outputTokens: number }> {
     const catalog = MODEL_CATALOG[model];
     const provider = catalog?.provider ?? "openai";
@@ -572,13 +627,16 @@ async function callLLM(
     // Use apiModel override if the catalog specifies one (e.g. versioned Anthropic names)
     const apiModel = (catalog as any)?.apiModel ?? model;
 
+    // Resolve BYOK key for this account (if provided)
+    const byokKey = account_id ? getByokKey(account_id, provider) : null;
+
     switch (provider) {
         case "anthropic":
-            return callAnthropic(systemPrompt, userPrompt, apiModel, catalog?.maxTokens ?? 1024);
+            return callAnthropic(systemPrompt, userPrompt, apiModel, catalog?.maxTokens ?? 1024, byokKey, account_id);
         case "google":
-            return callGoogle(systemPrompt, userPrompt, apiModel, catalog?.maxTokens ?? 1024);
+            return callGoogle(systemPrompt, userPrompt, apiModel, catalog?.maxTokens ?? 1024, byokKey, account_id);
         default:
-            return callOpenAI(systemPrompt, userPrompt, apiModel, catalog?.maxTokens ?? 1024);
+            return callOpenAI(systemPrompt, userPrompt, apiModel, catalog?.maxTokens ?? 1024, byokKey, account_id);
     }
 }
 
@@ -586,27 +644,42 @@ async function callOpenAI(
     systemPrompt: string,
     userPrompt: string,
     model: string,
-    maxTokens: number
+    maxTokens: number,
+    byokKey?: string | null,
+    account_id?: string
 ): Promise<{ response: AgentResponse; inputTokens: number; outputTokens: number }> {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const platformKey = process.env.OPENAI_API_KEY;
+    const apiKey = byokKey ?? platformKey;
     if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
 
-    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-            "Authorization": `Bearer ${apiKey}`,
-            "content-type": "application/json",
-        },
-        body: JSON.stringify({
-            model,
-            max_tokens: maxTokens,
-            messages: [
-                { role: "system", content: systemPrompt },
-                { role: "user", content: userPrompt },
-            ],
-            response_format: { type: "json_object" },
-        }),
-    });
+    const doCall = async (key: string) => {
+        const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${key}`,
+                "content-type": "application/json",
+            },
+            body: JSON.stringify({
+                model,
+                max_tokens: maxTokens,
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    { role: "user", content: userPrompt },
+                ],
+                response_format: { type: "json_object" },
+            }),
+        });
+        return resp;
+    };
+
+    let resp = await doCall(apiKey);
+
+    // If BYOK key failed with auth error, fall back to platform key
+    if (!resp.ok && byokKey && (resp.status === 401 || resp.status === 403)) {
+        logger.warn("BYOK OpenAI key failed, falling back to platform key", { account_id, status: resp.status });
+        if (!platformKey) throw new Error("OPENAI_API_KEY not configured (BYOK fallback)");
+        resp = await doCall(platformKey);
+    }
 
     if (!resp.ok) {
         const err = await resp.text();
@@ -629,25 +702,38 @@ async function callAnthropic(
     systemPrompt: string,
     userPrompt: string,
     model: string,
-    maxTokens: number
+    maxTokens: number,
+    byokKey?: string | null,
+    account_id?: string
 ): Promise<{ response: AgentResponse; inputTokens: number; outputTokens: number }> {
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const platformKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = byokKey ?? platformKey;
     if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
 
-    const resp = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers: {
-            "x-api-key": apiKey,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        },
-        body: JSON.stringify({
-            model,
-            max_tokens: maxTokens,
-            system: systemPrompt,
-            messages: [{ role: "user", content: userPrompt + "\n\nRespond with a single JSON object. No markdown fences." }],
-        }),
-    });
+    const doCall = async (key: string) => {
+        return fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+                "x-api-key": key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            body: JSON.stringify({
+                model,
+                max_tokens: maxTokens,
+                system: systemPrompt,
+                messages: [{ role: "user", content: userPrompt + "\n\nRespond with a single JSON object. No markdown fences." }],
+            }),
+        });
+    };
+
+    let resp = await doCall(apiKey);
+
+    if (!resp.ok && byokKey && (resp.status === 401 || resp.status === 403)) {
+        logger.warn("BYOK Anthropic key failed, falling back to platform key", { account_id, status: resp.status });
+        if (!platformKey) throw new Error("ANTHROPIC_API_KEY not configured (BYOK fallback)");
+        resp = await doCall(platformKey);
+    }
 
     if (!resp.ok) {
         const err = await resp.text();
@@ -671,26 +757,39 @@ async function callGoogle(
     systemPrompt: string,
     userPrompt: string,
     model: string,
-    maxTokens: number
+    maxTokens: number,
+    byokKey?: string | null,
+    account_id?: string
 ): Promise<{ response: AgentResponse; inputTokens: number; outputTokens: number }> {
-    const apiKey = process.env.GOOGLE_AI_API_KEY;
+    const platformKey = process.env.GOOGLE_AI_API_KEY;
+    const apiKey = byokKey ?? platformKey;
     if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured");
 
-    const resp = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-        {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-                contents: [{ role: "user", parts: [{ text: userPrompt + "\n\nRespond with a single JSON object. No markdown fences." }] }],
-                generationConfig: {
-                    maxOutputTokens: maxTokens,
-                    responseMimeType: "application/json",
-                },
-            }),
-        }
-    );
+    const doCall = async (key: string) => {
+        return fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
+            {
+                method: "POST",
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    contents: [{ role: "user", parts: [{ text: userPrompt + "\n\nRespond with a single JSON object. No markdown fences." }] }],
+                    generationConfig: {
+                        maxOutputTokens: maxTokens,
+                        responseMimeType: "application/json",
+                    },
+                }),
+            }
+        );
+    };
+
+    let resp = await doCall(apiKey);
+
+    if (!resp.ok && byokKey && (resp.status === 401 || resp.status === 403)) {
+        logger.warn("BYOK Google key failed, falling back to platform key", { account_id, status: resp.status });
+        if (!platformKey) throw new Error("GOOGLE_AI_API_KEY not configured (BYOK fallback)");
+        resp = await doCall(platformKey);
+    }
 
     if (!resp.ok) {
         const err = await resp.text();
@@ -812,24 +911,34 @@ async function executeChatActions(
 async function callLLMRaw(
     systemPrompt: string,
     userPrompt: string,
-    model: string = "gpt-4.1"
+    model: string = "gpt-4.1",
+    account_id?: string
 ): Promise<{ text: string; inputTokens: number; outputTokens: number }> {
     const catalog = MODEL_CATALOG[model];
     const provider = catalog?.provider ?? "openai";
     const apiModel = (catalog as any)?.apiModel ?? model;
 
+    const byokKey = account_id ? getByokKey(account_id, provider as "openai" | "anthropic" | "google") : null;
+
     if (provider === "anthropic") {
-        const apiKey = process.env.ANTHROPIC_API_KEY;
+        const platformKey = process.env.ANTHROPIC_API_KEY;
+        const apiKey = byokKey ?? platformKey;
         if (!apiKey) throw new Error("ANTHROPIC_API_KEY not configured");
-        const resp = await fetch("https://api.anthropic.com/v1/messages", {
+        const doCall = (key: string) => fetch("https://api.anthropic.com/v1/messages", {
             method: "POST",
-            headers: { "x-api-key": apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+            headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
             body: JSON.stringify({
                 model: apiModel, max_tokens: catalog?.maxTokens ?? 1024,
                 system: systemPrompt,
                 messages: [{ role: "user", content: userPrompt }],
             }),
         });
+        let resp = await doCall(apiKey);
+        if (!resp.ok && byokKey && (resp.status === 401 || resp.status === 403)) {
+            logger.warn("BYOK Anthropic key failed in chat, falling back to platform key", { account_id, status: resp.status });
+            if (!platformKey) throw new Error("ANTHROPIC_API_KEY not configured (BYOK fallback)");
+            resp = await doCall(platformKey);
+        }
         if (!resp.ok) throw new Error(`Anthropic error ${resp.status}: ${await resp.text()}`);
         const data = (await resp.json()) as any;
         return {
@@ -838,10 +947,11 @@ async function callLLMRaw(
             outputTokens: data.usage?.output_tokens ?? 0,
         };
     } else if (provider === "google") {
-        const apiKey = process.env.GOOGLE_AI_API_KEY;
+        const platformKey = process.env.GOOGLE_AI_API_KEY;
+        const apiKey = byokKey ?? platformKey;
         if (!apiKey) throw new Error("GOOGLE_AI_API_KEY not configured");
-        const resp = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        const doCall = (key: string) => fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,
             {
                 method: "POST",
                 headers: { "content-type": "application/json" },
@@ -852,6 +962,12 @@ async function callLLMRaw(
                 }),
             }
         );
+        let resp = await doCall(apiKey);
+        if (!resp.ok && byokKey && (resp.status === 401 || resp.status === 403)) {
+            logger.warn("BYOK Google key failed in chat, falling back to platform key", { account_id, status: resp.status });
+            if (!platformKey) throw new Error("GOOGLE_AI_API_KEY not configured (BYOK fallback)");
+            resp = await doCall(platformKey);
+        }
         if (!resp.ok) throw new Error(`Google AI error ${resp.status}: ${await resp.text()}`);
         const data = (await resp.json()) as any;
         return {
@@ -860,11 +976,12 @@ async function callLLMRaw(
             outputTokens: data.usageMetadata?.candidatesTokenCount ?? 0,
         };
     } else {
-        const apiKey = process.env.OPENAI_API_KEY;
+        const platformKey = process.env.OPENAI_API_KEY;
+        const apiKey = byokKey ?? platformKey;
         if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
-        const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+        const doCall = (key: string) => fetch("https://api.openai.com/v1/chat/completions", {
             method: "POST",
-            headers: { "Authorization": `Bearer ${apiKey}`, "content-type": "application/json" },
+            headers: { "Authorization": `Bearer ${key}`, "content-type": "application/json" },
             body: JSON.stringify({
                 model, max_tokens: catalog?.maxTokens ?? 1024,
                 messages: [
@@ -873,6 +990,12 @@ async function callLLMRaw(
                 ],
             }),
         });
+        let resp = await doCall(apiKey);
+        if (!resp.ok && byokKey && (resp.status === 401 || resp.status === 403)) {
+            logger.warn("BYOK OpenAI key failed in chat, falling back to platform key", { account_id, status: resp.status });
+            if (!platformKey) throw new Error("OPENAI_API_KEY not configured (BYOK fallback)");
+            resp = await doCall(platformKey);
+        }
         if (!resp.ok) throw new Error(`OpenAI error ${resp.status}: ${await resp.text()}`);
         const data = (await resp.json()) as any;
         return {
