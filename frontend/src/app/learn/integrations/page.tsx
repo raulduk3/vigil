@@ -88,6 +88,19 @@ const { response } = await fetch(\`\${BASE}/watchers/\${WATCHER}/invoke\`, {
         <li><strong>Make API calls</strong> from your agent, script, or application</li>
       </ol>
 
+      <h2>One-Line Install</h2>
+      <pre><code>{`curl -s https://vigil.run/vigil.sh -o vigil.sh && chmod +x vigil.sh
+# Edit vigil.sh: set VK and WATCHER, then:
+./vigil.sh status`}</code></pre>
+
+      <h2>Public Files</h2>
+      <p>These files are available for agents, scripts, and integrations:</p>
+      <ul>
+        <li><a href="https://vigil.run/SKILL.md"><code>vigil.run/SKILL.md</code></a> — agent skill definition with API reference</li>
+        <li><a href="https://vigil.run/vigil.sh"><code>vigil.run/vigil.sh</code></a> — CLI wrapper script (bash, requires curl + python3)</li>
+        <li><a href="https://vigil.run/llms.txt"><code>vigil.run/llms.txt</code></a> — machine-readable product summary for AI agents</li>
+      </ul>
+
       <h2>Try It</h2>
       <p>Enter your credentials to generate ready-to-use code.</p>
 

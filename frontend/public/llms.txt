@@ -1,0 +1,41 @@
+# Vigil — Autonomous Email Agent
+# https://vigil.run
+
+> Forward emails to an AI agent. It reads them, tracks conversations, remembers context, and acts when something needs attention. No inbox access. No stored email bodies.
+
+## Quick Start
+
+curl -s https://vigil.run/vigil.sh -o vigil.sh && chmod +x vigil.sh
+# Edit: set VK=<api-key> and WATCHER=<watcher-id>
+./vigil.sh status
+
+## API
+
+Base: https://api.vigil.run/api
+Auth: Authorization: Bearer vk_<key>
+
+GET  /watchers                    — list watchers
+POST /watchers                    — create { name, system_prompt }
+GET  /watchers/:id/threads        — email threads
+POST /watchers/:id/invoke         — chat { message: "..." }
+GET  /watchers/:id/memory         — agent memories
+GET  /watchers/:id/actions        — action log
+GET  /usage                       — cost + usage
+
+## Files
+
+- https://vigil.run/SKILL.md      — agent skill definition
+- https://vigil.run/vigil.sh      — CLI wrapper script
+- https://vigil.run/llms.txt      — this file
+
+## Docs
+
+- https://vigil.run/learn/integrations  — API + framework examples
+- https://vigil.run/learn/watchers      — watcher configuration
+- https://vigil.run/learn/agent         — how the agent works
+- https://vigil.run/learn/memory        — memory system
+- https://vigil.run/learn/architecture  — data flow + privacy
+
+## Source
+
+https://github.com/raulduk3/vigil (BSL 1.1)
