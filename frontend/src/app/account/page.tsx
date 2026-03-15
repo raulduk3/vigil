@@ -60,10 +60,11 @@ function AccountContent() {
         </div>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex gap-3 flex-wrap">
         <Link href="/account/security" className="btn btn-secondary">Security</Link>
         <Link href="/account/billing" className="btn btn-secondary">Billing</Link>
         <Link href="/account/developer" className="btn btn-secondary">Developer</Link>
+        <Link href="/account/keys" className="btn btn-secondary">API Keys (BYOK)</Link>
       </div>
 
       {/* Danger zone */}
