@@ -50,24 +50,14 @@ const essentials = [
 
 const manualInstallSteps = [
   <>
-    Download the extension from{' '}
-    <a
-      href={extensionSourceUrl}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-vigil-700 hover:text-vigil-800 hover:underline"
-    >
-      GitHub
-    </a>
+    <a href="/vigil-chrome-extension.zip" download className="text-vigil-700 hover:text-vigil-800 hover:underline font-medium">Download the extension ZIP</a> and unzip it to a folder on your computer.
   </>,
   <>
-    Open <code className="rounded bg-surface-sunken px-1.5 py-0.5 text-2xs font-mono">chrome://extensions</code>
+    Open <code className="rounded bg-surface-sunken px-1.5 py-0.5 text-2xs font-mono">chrome://extensions</code> in Chrome.
   </>,
-  'Enable Developer mode in the top-right corner.',
-  <>
-    Click Load unpacked and select the <code className="rounded bg-surface-sunken px-1.5 py-0.5 text-2xs font-mono">chrome-extension</code> folder.
-  </>,
-  'Pin the Vigil icon and start setup from the toolbar.',
+  'Enable "Developer mode" (toggle in the top-right corner).',
+  'Click "Load unpacked" and select the unzipped folder.',
+  'The Vigil icon appears in your toolbar. Click it to sign in and start setup.',
 ];
 
 export default function ExtensionPage() {
@@ -91,17 +81,17 @@ export default function ExtensionPage() {
               </div>
 
               <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <Link href="#setup-flow" className="btn btn-primary btn-lg w-full sm:w-auto gap-2.5">
+                <a href="/vigil-chrome-extension.zip" download className="btn btn-primary btn-lg w-full sm:w-auto gap-2.5">
                   <ChromeIcon />
-                    View setup flow
-                </Link>
+                  Download extension (.zip)
+                </a>
                 <Link href="/auth/register" className="btn btn-secondary btn-lg w-full sm:w-auto">
                   Create free account
                 </Link>
               </div>
 
               <p className="mt-3 text-sm text-gray-500">
-                Chrome Web Store listing pending. Use the developer-mode install steps below for now.
+                Download the ZIP, unpack it, and load it in Chrome. <a href="#local-install" className="text-vigil-700 hover:underline">See install steps below.</a>
               </p>
 
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5 text-xs sm:text-sm text-gray-500">
