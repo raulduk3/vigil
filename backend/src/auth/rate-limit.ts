@@ -70,18 +70,31 @@ export function rateLimit(maxRequests: number, windowMs: number, keyPrefix: stri
 
 /**
  * Strict rate limit for auth endpoints (login/register).
- * 10 requests per 15 minutes per IP.
+ * 5 requests per 15 minutes per IP.
  */
-export const authRateLimit = rateLimit(10, 15 * 60 * 1000, "auth");
+export const authRateLimit = rateLimit(5, 15 * 60 * 1000, "auth");
 
 /**
  * Rate limit for ingestion endpoints.
- * 100 emails per minute per IP (generous, but prevents abuse).
+ * 200 emails per minute per IP (Cloudflare Workers share IPs, needs to be generous).
+ * Per-account billing gate is the real limit.
  */
-export const ingestRateLimit = rateLimit(100, 60 * 1000, "ingest");
+export const ingestRateLimit = rateLimit(200, 60 * 1000, "ingest");
 
 /**
  * General API rate limit.
- * 120 requests per minute per IP.
+ * 60 requests per minute per IP.
  */
-export const apiRateLimit = rateLimit(120, 60 * 1000, "api");
+export const apiRateLimit = rateLimit(60, 60 * 1000, "api");
+
+/**
+ * Rate limit for chat/invoke (expensive LLM calls).
+ * 10 per minute per IP.
+ */
+export const invokeRateLimit = rateLimit(10, 60 * 1000, "invoke");
+
+/**
+ * Rate limit for watcher creation.
+ * 5 per hour per IP.
+ */
+export const createRateLimit = rateLimit(5, 60 * 60 * 1000, "create");

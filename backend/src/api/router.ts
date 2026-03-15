@@ -4,7 +4,7 @@
 
 import { Hono } from "hono";
 import { requireAuth } from "../auth/middleware";
-import { authRateLimit, ingestRateLimit, apiRateLimit } from "../auth/rate-limit";
+import { authRateLimit, ingestRateLimit, apiRateLimit, invokeRateLimit, createRateLimit } from "../auth/rate-limit";
 
 import { healthHandler } from "./handlers/health";
 import { authHandlers } from "./handlers/auth";
@@ -57,14 +57,14 @@ export function createRouter(): Hono {
 
     // Watchers
     protected_.get("/watchers", watcherHandlers.list);
-    protected_.post("/watchers", watcherHandlers.create);
+    protected_.post("/watchers", createRateLimit, watcherHandlers.create);
     protected_.get("/watchers/:id", watcherHandlers.get);
     protected_.put("/watchers/:id", watcherHandlers.update);
     protected_.patch("/watchers/:id", watcherHandlers.update);
     protected_.delete("/watchers/:id", watcherHandlers.delete_);
 
     // Watcher agent controls
-    protected_.post("/watchers/:id/invoke", watcherHandlers.invoke);
+    protected_.post("/watchers/:id/invoke", invokeRateLimit, watcherHandlers.invoke);
     protected_.post("/watchers/:id/digest", watcherHandlers.digest);
     protected_.get("/watchers/:id/memory", watcherHandlers.getMemory);
     protected_.get("/watchers/:id/actions", watcherHandlers.getActions);
