@@ -49,20 +49,33 @@ export function retrieveMemories(
         );
     }
 
+    // Always load rules (importance 5 + starts with RULE:) — these are behavioral directives
+    const rules = queryMany<MemoryRow>(
+        `SELECT * FROM memories
+         WHERE watcher_id = ? AND obsolete = FALSE
+         AND (content LIKE 'RULE:%' OR importance >= 5)
+         ORDER BY created_at DESC`,
+        [watcherId]
+    );
+
     // 20+ memories with context: use FTS5 with weighted ranking
     const ftsQuery = buildFtsQuery(context);
     if (!ftsQuery) {
-        return queryMany<MemoryRow>(
+        const general = queryMany<MemoryRow>(
             `SELECT * FROM memories
              WHERE watcher_id = ? AND obsolete = FALSE
+             AND content NOT LIKE 'RULE:%'
              ORDER BY importance DESC, created_at DESC
              LIMIT 8`,
             [watcherId]
         );
+        // Merge rules + general, deduplicate by id
+        const seen = new Set(rules.map(r => r.id));
+        return [...rules, ...general.filter(m => !seen.has(m.id))];
     }
 
     try {
-        return queryMany<MemoryRow>(
+        const ftsResults = queryMany<MemoryRow>(
             `SELECT m.*,
                (-bm25(memories_fts)) * m.importance *
                  CASE
@@ -80,15 +93,21 @@ export function retrieveMemories(
              LIMIT 8`,
             [ftsQuery, watcherId]
         );
+        // Merge rules + FTS results, deduplicate
+        const seen = new Set(rules.map(r => r.id));
+        return [...rules, ...ftsResults.filter(m => !seen.has(m.id))];
     } catch (err) {
         logger.warn("FTS5 query failed, falling back to simple retrieval", { watcherId, err });
-        return queryMany<MemoryRow>(
+        const fallback = queryMany<MemoryRow>(
             `SELECT * FROM memories
              WHERE watcher_id = ? AND obsolete = FALSE
+             AND content NOT LIKE 'RULE:%'
              ORDER BY importance DESC, created_at DESC
              LIMIT 8`,
             [watcherId]
         );
+        const seen = new Set(rules.map(r => r.id));
+        return [...rules, ...fallback.filter(m => !seen.has(m.id))];
     }
 }
 
@@ -178,14 +197,32 @@ export function formatMemoriesForContext(memories: MemoryRow[]): string {
         return "No prior memory. This is the first time processing for this watcher.";
     }
 
-    const lines = memories.map((m: any) => {
+    // Separate rules from regular memories
+    const rules = memories.filter((m: any) => m.content?.startsWith("RULE:") || m.importance >= 5);
+    const regular = memories.filter((m: any) => !m.content?.startsWith("RULE:") && m.importance < 5);
+
+    const parts: string[] = [];
+
+    if (rules.length > 0) {
+        parts.push("RULES (always follow these):");
+        rules.forEach((m: any) => {
+            parts.push(`  - ${m.content}`);
+        });
+        parts.push("");
+    }
+
+    if (regular.length > 0) {
+        parts.push("MEMORIES:");
+    }
+
+    const lines = regular.map((m: any) => {
         const age = m.created_at ? `(${daysSince(m.created_at)}d ago)` : "";
         const conf = m.confidence && m.confidence < 5 ? ` [confidence:${m.confidence}/5]` : "";
         const thread = m.thread_id ? ` [thread:${m.thread_id.substring(0, 8)}]` : "";
         return `- [id:${m.id}] [importance:${m.importance}]${conf}${thread} ${m.content} ${age}`;
     });
 
-    return lines.join("\n");
+    return [...parts, ...lines].join("\n");
 }
 
 // ============================================================================
