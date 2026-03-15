@@ -5,6 +5,13 @@ import { PublicHeader, Footer } from '@/components/layout';
 
 const posts = [
   {
+    slug: 'the-650-billion-email-problem',
+    title: 'The $650 Billion Email Problem Nobody Is Actually Solving',
+    date: 'March 15, 2026',
+    excerpt: 'Email costs the US economy $650 billion a year in lost productivity. AI tools help you read faster, but nobody tracks what you owe people and what they owe you.',
+    tag: 'industry',
+  },
+  {
     slug: 'why-vigil-exists',
     title: 'Why Vigil Exists',
     date: 'March 14, 2026',
@@ -54,6 +61,7 @@ const tagColors: Record<string, string> = {
   product: 'badge-warning',
   developers: 'badge-created',
   pricing: 'badge-neutral',
+  industry: 'badge-neutral',
 };
 
 export default function BlogIndex() {
