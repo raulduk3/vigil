@@ -37,13 +37,13 @@ export function Footer() {
               <li><Link href="/blog" className="hover:text-gray-700">Blog</Link></li>
               <li><Link href="/privacy" className="hover:text-gray-700">Privacy & Data</Link></li>
               <li><Link href="/learn/security" className="hover:text-gray-700">Security</Link></li>
-              <li><Link href="https://github.com/raulduk3/vigil.run" className="hover:text-gray-700">Source (GitHub)</Link></li>
+              <li><Link href="https://github.com/raulduk3/vigil" className="hover:text-gray-700">Source (GitHub)</Link></li>
               <li><Link href="/auth/login" className="hover:text-gray-700">Sign in</Link></li>
             </ul>
           </div>
         </div>
         <div className="border-t border-gray-200 mt-8 pt-8 text-center text-sm text-gray-500">
-          © {new Date().getFullYear()} Vigil by Richard Álvarez. <Link href="https://github.com/raulduk3/vigil.run" className="hover:text-gray-700">Source available</Link> under <Link href="https://github.com/raulduk3/vigil.run/blob/main/LICENSE" className="hover:text-gray-700">BSL 1.1</Link>.
+          © {new Date().getFullYear()} Vigil by Richard Álvarez. <Link href="https://github.com/raulduk3/vigil" className="hover:text-gray-700">Source available</Link> under <Link href="https://github.com/raulduk3/vigil/blob/main/LICENSE" className="hover:text-gray-700">BSL 1.1</Link>.
         </div>
       </div>
     </footer>
