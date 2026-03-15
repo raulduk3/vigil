@@ -79,13 +79,86 @@ document.addEventListener("DOMContentLoaded", async () => {
             current = watchers.find(x => x.id === w.id) || watchers[0];
             goOnboardStep(2);
             $("ob-address").textContent = w.ingestion_address || current?.ingestion_address || "";
+
+            // Auto-detect provider from current tab
+            try {
+                const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+                const url = tab?.url || "";
+                if (url.includes("mail.google.com")) {
+                    document.querySelectorAll(".ptab").forEach(p => p.classList.remove("active"));
+                    document.querySelector('.ptab[data-p="gmail"]')?.classList.add("active");
+                    $("ob-gmail").classList.remove("hidden"); $("ob-outlook").classList.add("hidden");
+                } else if (url.includes("outlook.live.com") || url.includes("outlook.office.com")) {
+                    document.querySelectorAll(".ptab").forEach(p => p.classList.remove("active"));
+                    document.querySelector('.ptab[data-p="outlook"]')?.classList.add("active");
+                    $("ob-outlook").classList.remove("hidden"); $("ob-gmail").classList.add("hidden");
+                }
+            } catch {}
             // Generate AI filter suggestions in background
             if (intent) generateFilters(w.id, intent);
         } catch (e) { $("ob-error").textContent = e.message; $("ob-error").classList.remove("hidden"); }
         $("btn-ob-create").disabled = false; $("btn-ob-create").textContent = "Create watcher";
     });
 
-    // Onboarding step 2: connect email
+    // Onboarding step 2: auto-setup
+    $("btn-ob-auto").addEventListener("click", async () => {
+        const btn = $("btn-ob-auto"), st = $("ob-auto-status");
+        const address = $("ob-address").textContent;
+        if (!address) return;
+
+        btn.disabled = true; btn.textContent = "Setting up...";
+        st.classList.remove("hidden"); st.style.color = "#787874";
+
+        // Detect what tab the user is on
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        const url = tab?.url || "";
+        const isGmail = url.includes("mail.google.com");
+        const isOutlook = url.includes("outlook.live.com") || url.includes("outlook.office.com");
+
+        if (!isGmail && !isOutlook) {
+            // Navigate to Gmail settings first
+            st.textContent = "Opening Gmail settings...";
+            chrome.tabs.update(tab.id, { url: "https://mail.google.com/mail/u/0/#settings/fwdandpop" });
+            // Wait for page load then retry
+            st.textContent = "Open Gmail or Outlook first, then click again.";
+            btn.disabled = false; btn.textContent = "Set up forwarding automatically";
+            return;
+        }
+
+        st.textContent = isGmail ? "Setting up Gmail forwarding..." : "Setting up Outlook forwarding...";
+
+        try {
+            // Send message to content script to auto-fill
+            const result = await chrome.tabs.sendMessage(tab.id, {
+                type: "APPLY_SETUP",
+                address: address,
+                save: isOutlook,
+            });
+
+            if (result?.ok) {
+                st.style.color = "#3d6b4f";
+                st.textContent = result.message + " Check the page and confirm.";
+                // If Gmail opened the dialog, wait a moment then try again to fill the input
+                if (result.message.includes("dialog")) {
+                    setTimeout(async () => {
+                        try {
+                            const r2 = await chrome.tabs.sendMessage(tab.id, { type: "APPLY_SETUP", address });
+                            if (r2?.ok) st.textContent = r2.message;
+                        } catch {}
+                    }, 1500);
+                }
+            } else {
+                st.style.color = "#8b7234";
+                st.textContent = result?.message || "Could not auto-fill. Use the manual steps below.";
+            }
+        } catch (e) {
+            st.style.color = "#8b7234";
+            st.textContent = "Could not connect to the page. Make sure you're on Gmail or Outlook, then try again.";
+        }
+
+        btn.disabled = false; btn.textContent = "Set up forwarding automatically";
+    });
+
     $("btn-ob-copy").addEventListener("click", () => {
         navigator.clipboard.writeText($("ob-address").textContent);
         $("btn-ob-copy").textContent = "Copied!"; setTimeout(() => $("btn-ob-copy").textContent = "Copy", 2000);

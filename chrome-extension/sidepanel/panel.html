@@ -65,7 +65,7 @@
                 <!-- Step 2: Connect email -->
                 <div id="onboard-2" class="onboard-step hidden">
                     <h2>Connect your email</h2>
-                    <p class="muted">Copy this address and add it as a forwarding destination in Gmail or Outlook.</p>
+                    <p class="muted">Vigil can set up forwarding for you, or you can do it manually.</p>
 
                     <label class="field-label">Your forwarding address</label>
                     <div class="addr-box">
@@ -73,34 +73,43 @@
                         <button id="btn-ob-copy" class="btn-sm">Copy</button>
                     </div>
 
+                    <!-- Auto setup -->
+                    <div class="auto-setup">
+                        <button id="btn-ob-auto" class="btn primary w-full">Set up forwarding automatically</button>
+                        <div id="ob-auto-status" class="hidden" style="margin-top:8px;font-size:12px;text-align:center;"></div>
+                        <p class="muted small center" style="margin-top:6px;">Opens Gmail or Outlook settings and fills in the address for you. You just confirm.</p>
+                    </div>
+
+                    <div class="divider" style="margin:14px 0;"><span>or do it manually</span></div>
+
                     <div class="provider-tabs">
                         <button class="ptab active" data-p="gmail">Gmail</button>
                         <button class="ptab" data-p="outlook">Outlook</button>
                     </div>
 
                     <div id="ob-gmail" class="steps">
-                        <p class="step"><span class="sn">1</span> Open Gmail Settings, then Forwarding and POP/IMAP <button id="btn-ob-gmail" class="btn secondary btn-xs inline-btn">Open</button></p>
+                        <p class="step"><span class="sn">1</span> Open Gmail Settings, Forwarding and POP/IMAP <button id="btn-ob-gmail" class="btn secondary btn-xs inline-btn">Open</button></p>
                         <p class="step"><span class="sn">2</span> Click "Add a forwarding address" and paste the address above</p>
-                        <p class="step"><span class="sn">3</span> Gmail sends a confirmation email. Open it and click the confirmation link.</p>
-                        <p class="step"><span class="sn">4</span> Back in Settings, select "Forward a copy" and click Save Changes</p>
+                        <p class="step"><span class="sn">3</span> Gmail sends a confirmation email. Click the link in it.</p>
+                        <p class="step"><span class="sn">4</span> Select "Forward a copy" and Save Changes</p>
                     </div>
 
                     <div id="ob-outlook" class="steps hidden">
-                        <p class="step"><span class="sn">1</span> Open Outlook Settings, then Mail, then Forwarding <button id="btn-ob-outlook" class="btn secondary btn-xs inline-btn">Open</button></p>
-                        <p class="step"><span class="sn">2</span> Enable forwarding and paste the address above</p>
-                        <p class="step"><span class="sn">3</span> Check "Keep a copy of forwarded messages" and save</p>
+                        <p class="step"><span class="sn">1</span> Open Outlook Forwarding settings <button id="btn-ob-outlook" class="btn secondary btn-xs inline-btn">Open</button></p>
+                        <p class="step"><span class="sn">2</span> Enable forwarding and paste the address</p>
+                        <p class="step"><span class="sn">3</span> Check "Keep a copy" and save</p>
                     </div>
 
-                    <p class="muted small" style="margin-top:12px;">Want to forward only specific emails? <button id="btn-ob-show-filters" class="link-btn">Set up a filter instead</button></p>
+                    <p class="muted small" style="margin-top:12px;">Want filters? <button id="btn-ob-show-filters" class="link-btn">Forward only specific emails</button></p>
                     <div id="ob-filter-section" class="hidden">
                         <div class="btn-row">
-                            <button id="btn-ob-gmail-filter" class="btn secondary flex-1 btn-xs">Gmail: Create Filter</button>
-                            <button id="btn-ob-outlook-rule" class="btn secondary flex-1 btn-xs">Outlook: Create Rule</button>
+                            <button id="btn-ob-gmail-filter" class="btn secondary flex-1 btn-xs">Gmail Filters</button>
+                            <button id="btn-ob-outlook-rule" class="btn secondary flex-1 btn-xs">Outlook Rules</button>
                         </div>
                         <div id="ob-ai-filters" class="hidden"></div>
                     </div>
 
-                    <button id="btn-ob-next" class="btn primary w-full" style="margin-top:16px;">I've set up forwarding</button>
+                    <button id="btn-ob-next" class="btn secondary w-full" style="margin-top:16px;">I've set up forwarding manually</button>
                 </div>
 
                 <!-- Step 3: Verify -->
