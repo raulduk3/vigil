@@ -10,7 +10,7 @@
         <div class="panel-header">
             <div class="header-row">
                 <div class="logo">Vigil</div>
-                <div id="header-controls" class="header-controls hidden">
+                <div id="header-right" class="header-right hidden">
                     <select id="watcher-select" class="watcher-dropdown"></select>
                 </div>
             </div>
@@ -18,7 +18,6 @@
                 <button class="nav-tab active" data-view="overview">Overview</button>
                 <button class="nav-tab" data-view="threads">Threads</button>
                 <button class="nav-tab" data-view="chat">Chat</button>
-                <button class="nav-tab" data-view="setup">+ New</button>
                 <button class="nav-tab" data-view="config">Config</button>
             </div>
         </div>
@@ -34,73 +33,88 @@
                 <input type="email" id="auth-email" placeholder="Email">
                 <input type="password" id="auth-password" placeholder="Password">
                 <button id="btn-auth-login" class="btn primary w-full">Sign in</button>
-                <p class="muted small">No account? <a href="https://vigil.run/auth/register" target="_blank">Sign up at vigil.run</a></p>
+                <p class="muted small center">No account? <a href="https://vigil.run/auth/register" target="_blank">Sign up at vigil.run</a></p>
                 <div id="auth-error" class="error hidden"></div>
             </div>
         </div>
 
-        <!-- Setup (create watcher + connect email) -->
-        <div class="view" id="view-setup">
-            <div class="scroll-content" id="setup-content">
-                <div class="setup-flow">
-                    <!-- Step 1: Create watcher -->
-                    <div id="setup-step-create" class="setup-step">
-                        <h2>Create a watcher</h2>
-                        <p class="muted">Give it a name and tell it what to focus on.</p>
-                        <input type="text" id="setup-name" placeholder="e.g. Work Email, Client Invoices, Support">
-                        <textarea id="setup-intent" rows="3" placeholder="What should this watcher focus on? e.g. Track invoices, alert me when clients haven't responded in 48 hours, ignore newsletters."></textarea>
-                        <button id="btn-setup-create" class="btn primary w-full">Create watcher</button>
-                        <div id="setup-create-error" class="error hidden"></div>
+        <!-- Onboarding (no watchers yet) -->
+        <div class="view" id="view-onboard">
+            <div class="scroll-content onboard-flow">
+                <!-- Step indicator -->
+                <div class="onboard-steps-indicator">
+                    <div class="onboard-dot active" id="dot-1">1</div>
+                    <div class="onboard-line"></div>
+                    <div class="onboard-dot" id="dot-2">2</div>
+                    <div class="onboard-line"></div>
+                    <div class="onboard-dot" id="dot-3">3</div>
+                </div>
+
+                <!-- Step 1: Name + Instructions -->
+                <div id="onboard-1" class="onboard-step">
+                    <h2>Create your watcher</h2>
+                    <p class="muted">A watcher monitors one email stream. Give it a name and tell it what to focus on.</p>
+                    <label class="field-label">Watcher name</label>
+                    <input type="text" id="ob-name" placeholder="e.g. Work, Client Invoices, Support">
+                    <label class="field-label">What should it watch for?</label>
+                    <textarea id="ob-intent" rows="3" placeholder="e.g. Track invoices and deadlines. Alert me when a client hasn't responded in 48 hours. Ignore newsletters and marketing."></textarea>
+                    <button id="btn-ob-create" class="btn primary w-full">Create watcher</button>
+                    <div id="ob-error" class="error hidden"></div>
+                </div>
+
+                <!-- Step 2: Connect email -->
+                <div id="onboard-2" class="onboard-step hidden">
+                    <h2>Connect your email</h2>
+                    <p class="muted">Copy this address and add it as a forwarding destination in Gmail or Outlook.</p>
+
+                    <label class="field-label">Your forwarding address</label>
+                    <div class="addr-box">
+                        <code id="ob-address">loading...</code>
+                        <button id="btn-ob-copy" class="btn-sm">Copy</button>
                     </div>
 
-                    <!-- Step 2: Connect email -->
-                    <div id="setup-step-connect" class="setup-step hidden">
-                        <h2>Connect your email</h2>
-                        <p class="muted">Add this forwarding address in your email settings.</p>
-
-                        <div class="copy-row" style="margin:12px 0;">
-                            <code id="setup-fwd-address" style="font-size:12px;">loading...</code>
-                            <button id="btn-setup-copy" class="btn-sm">Copy</button>
-                        </div>
-
-                        <div class="setup-provider-tabs">
-                            <button class="provider-tab active" data-provider="gmail">Gmail</button>
-                            <button class="provider-tab" data-provider="outlook">Outlook</button>
-                        </div>
-
-                        <!-- Gmail -->
-                        <div id="setup-gmail" class="provider-steps">
-                            <div class="step-row"><span class="step-n">1</span><div><p>Open Gmail forwarding settings</p><button id="btn-setup-gmail-fwd" class="btn secondary btn-xs">Open Settings</button></div></div>
-                            <div class="step-row"><span class="step-n">2</span><p>Click "Add a forwarding address" and paste the address above</p></div>
-                            <div class="step-row"><span class="step-n">3</span><p>Gmail sends a confirmation email. Click the link in that email.</p></div>
-                            <div class="step-row"><span class="step-n">4</span><p>Back in settings, select "Forward a copy" and save. Or use a suggested filter below.</p></div>
-                        </div>
-
-                        <!-- Outlook -->
-                        <div id="setup-outlook" class="provider-steps hidden">
-                            <div class="step-row"><span class="step-n">1</span><div><p>Open Outlook forwarding settings</p><button id="btn-setup-outlook-fwd" class="btn secondary btn-xs">Open Settings</button></div></div>
-                            <div class="step-row"><span class="step-n">2</span><p>Enable forwarding and paste the address above</p></div>
-                            <div class="step-row"><span class="step-n">3</span><p>Check "Keep a copy" and save. Or use a suggested rule below.</p></div>
-                        </div>
-
-                        <div class="divider" style="margin:12px 0;"><span>recommended filters</span></div>
-
-                        <!-- AI-generated filter suggestions -->
-                        <div id="setup-filters-loading" class="loading small">Generating filter suggestions...</div>
-                        <div id="setup-filters" class="filter-suggestions hidden"></div>
-
-                        <div class="btn-row" style="margin-top:10px;">
-                            <button id="btn-setup-gmail-filter" class="btn secondary flex-1 btn-xs">Open Gmail Filters</button>
-                            <button id="btn-setup-outlook-rule" class="btn secondary flex-1 btn-xs">Open Outlook Rules</button>
-                        </div>
-
-                        <div style="margin-top:16px;">
-                            <button id="btn-setup-verify" class="btn secondary w-full">Verify: check for emails</button>
-                            <div id="setup-verify-status" class="hidden" style="margin-top:8px;font-size:12px;text-align:center;"></div>
-                        </div>
-                        <button id="btn-setup-done" class="btn primary w-full" style="margin-top:10px;">Done, go to dashboard</button>
-                        <button id="btn-setup-another" class="btn secondary w-full" style="margin-top:6px;">Create another watcher</button>
+                    <div class="provider-tabs">
+                        <button class="ptab active" data-p="gmail">Gmail</button>
+                        <button class="ptab" data-p="outlook">Outlook</button>
                     </div>
+
+                    <div id="ob-gmail" class="steps">
+                        <p class="step"><span class="sn">1</span> Open Gmail Settings, then Forwarding and POP/IMAP <button id="btn-ob-gmail" class="btn secondary btn-xs inline-btn">Open</button></p>
+                        <p class="step"><span class="sn">2</span> Click "Add a forwarding address" and paste the address above</p>
+                        <p class="step"><span class="sn">3</span> Gmail sends a confirmation email. Open it and click the confirmation link.</p>
+                        <p class="step"><span class="sn">4</span> Back in Settings, select "Forward a copy" and click Save Changes</p>
+                    </div>
+
+                    <div id="ob-outlook" class="steps hidden">
+                        <p class="step"><span class="sn">1</span> Open Outlook Settings, then Mail, then Forwarding <button id="btn-ob-outlook" class="btn secondary btn-xs inline-btn">Open</button></p>
+                        <p class="step"><span class="sn">2</span> Enable forwarding and paste the address above</p>
+                        <p class="step"><span class="sn">3</span> Check "Keep a copy of forwarded messages" and save</p>
+                    </div>
+
+                    <p class="muted small" style="margin-top:12px;">Want to forward only specific emails? <button id="btn-ob-show-filters" class="link-btn">Set up a filter instead</button></p>
+                    <div id="ob-filter-section" class="hidden">
+                        <div class="btn-row">
+                            <button id="btn-ob-gmail-filter" class="btn secondary flex-1 btn-xs">Gmail: Create Filter</button>
+                            <button id="btn-ob-outlook-rule" class="btn secondary flex-1 btn-xs">Outlook: Create Rule</button>
+                        </div>
+                        <div id="ob-ai-filters" class="hidden"></div>
+                    </div>
+
+                    <button id="btn-ob-next" class="btn primary w-full" style="margin-top:16px;">I've set up forwarding</button>
+                </div>
+
+                <!-- Step 3: Verify -->
+                <div id="onboard-3" class="onboard-step hidden">
+                    <h2>Verifying connection</h2>
+                    <p class="muted">Vigil is checking for incoming emails. This usually takes a few seconds after you forward your first email.</p>
+
+                    <div id="ob-verify-box" class="verify-box">
+                        <div class="spinner"></div>
+                        <span>Waiting for first email...</span>
+                    </div>
+
+                    <p class="muted small center" style="margin-top:12px;">You can forward a test email to speed this up, or skip if you've already confirmed.</p>
+                    <button id="btn-ob-skip" class="btn secondary w-full" style="margin-top:8px;">Skip verification, go to dashboard</button>
                 </div>
             </div>
         </div>
@@ -123,78 +137,39 @@
         <!-- Config -->
         <div class="view" id="view-config">
             <div class="scroll-content" id="config-content">
-                <!-- Connection status -->
                 <div class="config-section">
                     <h3>Connection</h3>
-                    <div id="config-connection-status" class="connection-status"></div>
+                    <div id="cfg-conn"></div>
                 </div>
-
-                <!-- Guided setup (always available) -->
                 <div class="config-section">
                     <h3>Forwarding Address</h3>
-                    <div class="copy-row">
-                        <code id="config-address">loading...</code>
-                        <button id="btn-copy-addr" class="btn-sm">Copy</button>
+                    <div class="addr-box">
+                        <code id="cfg-address">loading...</code>
+                        <button id="btn-cfg-copy" class="btn-sm">Copy</button>
                     </div>
-                </div>
-
-                <div class="config-section">
-                    <h3>Connect Email</h3>
-                    <div class="setup-provider-tabs">
-                        <button class="config-provider-tab active" data-provider="gmail">Gmail</button>
-                        <button class="config-provider-tab" data-provider="outlook">Outlook</button>
-                    </div>
-
-                    <div id="config-gmail" class="provider-steps">
-                        <div class="step-row"><span class="step-n">1</span><div><p>Open forwarding settings</p><button id="btn-cfg-gmail-fwd" class="btn secondary btn-xs">Open Gmail Settings</button></div></div>
-                        <div class="step-row"><span class="step-n">2</span><p>Click "Add a forwarding address" and paste the address above</p></div>
-                        <div class="step-row"><span class="step-n">3</span><p>Gmail sends a confirmation email. Click the link in that email to verify.</p></div>
-                        <div class="step-row"><span class="step-n">4</span><p>Select "Forward a copy of incoming mail" and save. Or create a filter below for specific senders.</p></div>
-                    </div>
-
-                    <div id="config-outlook" class="provider-steps hidden">
-                        <div class="step-row"><span class="step-n">1</span><div><p>Open forwarding settings</p><button id="btn-cfg-outlook-fwd" class="btn secondary btn-xs">Open Outlook Settings</button></div></div>
-                        <div class="step-row"><span class="step-n">2</span><p>Enable forwarding, paste the address, check "Keep a copy", save.</p></div>
-                    </div>
-
                     <div class="btn-row" style="margin-top:8px;">
-                        <button id="btn-cfg-gmail-filter" class="btn secondary flex-1 btn-xs">Gmail: Create Filter</button>
-                        <button id="btn-cfg-outlook-rule" class="btn secondary flex-1 btn-xs">Outlook: Create Rule</button>
+                        <button id="btn-cfg-gmail" class="btn secondary flex-1 btn-xs">Gmail Settings</button>
+                        <button id="btn-cfg-gmail-filter" class="btn secondary flex-1 btn-xs">Gmail Filters</button>
                     </div>
                 </div>
-
-                <!-- Verify -->
-                <div class="config-section">
-                    <h3>Verify</h3>
-                    <p class="muted small">Send a test email to the forwarding address, or forward one manually. Vigil will detect it.</p>
-                    <button id="btn-verify" class="btn primary w-full">Check for emails</button>
-                    <div id="verify-status" class="hidden" style="margin-top:8px;font-size:12px;text-align:center;"></div>
-                </div>
-
-                <div class="divider"><span>agent config</span></div>
-
                 <div class="config-section">
                     <h3>Agent Instructions</h3>
-                    <textarea id="config-prompt" rows="5" placeholder="What should this watcher focus on?"></textarea>
+                    <textarea id="cfg-prompt" rows="5" placeholder="What should this watcher focus on?"></textarea>
                 </div>
-
                 <div class="config-section">
                     <h3>Model</h3>
-                    <select id="config-model" class="w-full">
-                        <option value="gpt-4.1-mini">GPT-4.1 Mini — $0.40/$1.60 per M tokens</option>
-                        <option value="gpt-4.1-nano">GPT-4.1 Nano — $0.10/$0.40 per M tokens</option>
-                        <option value="gpt-4.1">GPT-4.1 — $3.00/$12.00 per M tokens</option>
-                        <option value="gpt-4o">GPT-4o — $2.50/$10.00 per M tokens</option>
-                        <option value="gpt-4o-mini">GPT-4o Mini — $0.15/$0.60 per M tokens</option>
+                    <select id="cfg-model" class="w-full">
+                        <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+                        <option value="gpt-4.1-nano">GPT-4.1 Nano</option>
+                        <option value="gpt-4.1">GPT-4.1</option>
+                        <option value="gpt-4o">GPT-4o</option>
+                        <option value="gpt-4o-mini">GPT-4o Mini</option>
                     </select>
                 </div>
-
-                <button id="btn-save-config" class="btn primary w-full">Save changes</button>
-                <div id="config-status" class="hidden"></div>
-
-                <div class="config-section" style="margin-top:24px;padding-top:16px;border-top:1px solid #e4e4e1;">
-                    <button id="btn-logout" class="btn secondary w-full" style="color:#8b4242;">Disconnect</button>
-                </div>
+                <button id="btn-cfg-save" class="btn primary w-full">Save</button>
+                <div id="cfg-status" class="hidden" style="margin-top:6px;font-size:12px;text-align:center;"></div>
+                <button id="btn-cfg-new" class="btn secondary w-full" style="margin-top:16px;">Create new watcher</button>
+                <button id="btn-cfg-logout" class="btn secondary w-full" style="margin-top:6px;color:#8b4242;">Disconnect</button>
             </div>
         </div>
     </div>

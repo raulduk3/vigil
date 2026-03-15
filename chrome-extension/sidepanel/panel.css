@@ -123,19 +123,32 @@ textarea { resize: vertical; }
 #config-content { padding: 16px; }
 #config-status { font-size: 12px; margin-top: 8px; text-align: center; }
 
-/* Setup flow */
-.setup-flow { padding: 20px 16px; }
-.setup-step { display: flex; flex-direction: column; gap: 10px; }
-.setup-step h2 { margin-bottom: 0; }
+/* Onboarding */
+.onboard-flow { padding: 20px 16px; }
+.onboard-step { display: flex; flex-direction: column; gap: 10px; }
+.onboard-step h2 { margin-bottom: 0; }
+.onboard-steps-indicator { display: flex; align-items: center; justify-content: center; gap: 0; margin-bottom: 20px; }
+.onboard-dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: #f0f0ee; color: #a6a6a1; border: 2px solid #d4d4d0; transition: all 0.2s; }
+.onboard-dot.active { background: #0B1F2A; color: #f8f8f7; border-color: #0B1F2A; }
+.onboard-line { width: 32px; height: 2px; background: #d4d4d0; }
+.field-label { font-size: 11px; font-weight: 700; color: #787874; text-transform: uppercase; letter-spacing: 0.04em; }
+.addr-box { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: #fff; border-radius: 4px; box-shadow: 0 0 0 1px rgba(0,0,0,0.06); }
+.addr-box code { flex: 1; font-family: 'SF Mono', Monaco, monospace; font-size: 11px; color: #2d5261; word-break: break-all; }
 .provider-tabs, .setup-provider-tabs { display: flex; gap: 0; background: #f0f0ee; border-radius: 4px; padding: 3px; margin: 8px 0; }
-.provider-tab { flex: 1; padding: 7px; border: none; background: transparent; color: #787874; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 3px; text-align: center; transition: all 0.15s; }
-.provider-tab.active { background: #fff; color: #0B1F2A; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
-.provider-steps { display: flex; flex-direction: column; gap: 6px; }
-.step-row { display: flex; gap: 8px; padding: 8px; background: #fff; border-radius: 4px; box-shadow: 0 0 0 1px rgba(0,0,0,0.04); font-size: 12px; color: #5a5a56; line-height: 1.5; align-items: flex-start; }
-.step-n { width: 20px; height: 20px; border-radius: 50%; background: #0B1F2A; color: #f8f8f7; font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.step-row p { margin: 0; }
-.btn-xs { padding: 4px 10px; font-size: 11px; margin-top: 4px; }
-.filter-section { padding: 8px 0; }
+.ptab { flex: 1; padding: 7px; border: none; background: transparent; color: #787874; font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 3px; text-align: center; transition: all 0.15s; }
+.ptab.active { background: #fff; color: #0B1F2A; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+.steps { display: flex; flex-direction: column; gap: 4px; }
+.step { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; background: #fff; border-radius: 4px; box-shadow: 0 0 0 1px rgba(0,0,0,0.04); font-size: 12px; color: #5a5a56; line-height: 1.5; margin: 0; }
+.sn { width: 20px; height: 20px; border-radius: 50%; background: #0B1F2A; color: #f8f8f7; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.btn-xs { padding: 4px 10px; font-size: 11px; }
+.inline-btn { margin-left: 4px; }
+.link-btn { background: none; border: none; color: #2d5261; font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; font-family: inherit; }
+.verify-box { display: flex; align-items: center; gap: 10px; padding: 16px; background: #fff; border-radius: 6px; box-shadow: 0 0 0 1px rgba(0,0,0,0.06); font-size: 13px; color: #787874; justify-content: center; }
+.verify-ok { color: #3d6b4f; font-weight: 600; }
+.verify-waiting { color: #8b7234; }
+.spinner { width: 18px; height: 18px; border: 2px solid #e4e4e1; border-top-color: #0B1F2A; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.filter-pre { font-size: 11px; background: #f0f0ee; padding: 10px; border-radius: 4px; white-space: pre-wrap; word-break: break-word; margin-top: 6px; color: #3d3d3a; }
 
 /* Connection status */
 .connection-status { margin-top: 4px; }
