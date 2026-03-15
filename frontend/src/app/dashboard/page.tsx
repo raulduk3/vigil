@@ -122,7 +122,28 @@ function DashboardContent() {
   }
 
   return (
-    <div className="h-screen flex overflow-hidden">
+    <div className="h-screen flex flex-col md:flex-row overflow-hidden">
+      {/* Mobile header */}
+      <div className="md:hidden flex items-center gap-2 px-4 py-3 border-b border-gray-200 bg-surface-raised shrink-0">
+        <select
+          className="flex-1 text-sm font-semibold bg-transparent border border-gray-200 rounded px-2 py-1.5"
+          value={selectedWatcherId || ''}
+          onChange={(e) => handleSelectWatcher(e.target.value)}
+        >
+          {localWatchers.map((w) => (
+            <option key={w.id} value={w.id}>{w.name}</option>
+          ))}
+        </select>
+        {selectedWatcher && (
+          <button
+            onClick={() => setSettingsWatcher(selectedWatcher)}
+            className="text-xs text-gray-500 px-2 py-1.5 border border-gray-200 rounded"
+          >
+            Settings
+          </button>
+        )}
+      </div>
+
       {/* Left: Watcher Sidebar — hidden on mobile */}
       <div className="hidden md:flex">
         <WatcherSidebar

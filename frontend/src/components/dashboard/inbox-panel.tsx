@@ -162,8 +162,8 @@ export function InboxPanel({
   if (tab === 'inbox' && selectedThread) {
     return (
       <div className="flex-1 flex overflow-hidden">
-        {/* Thread list - narrower */}
-        <div className="w-64 shrink-0 flex flex-col border-r border-gray-200 overflow-hidden">
+        {/* Thread list - narrower, hidden on mobile when detail open */}
+        <div className="hidden md:flex w-64 shrink-0 flex-col border-r border-gray-200 overflow-hidden">
           {header}
           <div className="flex-1 overflow-y-auto">
             {filtered.map((thread) => (
