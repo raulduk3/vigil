@@ -214,7 +214,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
     $("btn-cfg-new").addEventListener("click", () => enterOnboarding());
     $("btn-cfg-logout").addEventListener("click", async () => {
-        await vigilAPI.logout(); location.reload();
+        try { await vigilAPI.logout(); } catch {} location.reload();
     });
 
     // Watcher switcher
@@ -225,7 +225,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     // Boot
-    if (await vigilAPI.isAuthenticated()) await boot();
+    try { if (await vigilAPI.isAuthenticated()) await boot(); } catch (e) { console.error("[vigil] boot error:", e); }
 });
 
 async function boot() {

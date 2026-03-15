@@ -10,8 +10,6 @@
   ],
   "host_permissions": [
     "https://api.vigil.run/*",
-    "http://localhost:3001/*",
-    "http://127.0.0.1:3001/*",
     "https://mail.google.com/*",
     "https://outlook.live.com/*",
     "https://outlook.office.com/*"
