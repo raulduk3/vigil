@@ -9,6 +9,7 @@ interface WatcherSidebarProps {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onSettings: (watcher: Watcher) => void;
+  onSkills?: () => void;
 }
 
 function statusDot(status: Watcher['status']) {
@@ -23,6 +24,7 @@ export function WatcherSidebar({
   selectedId,
   onSelect,
   onSettings,
+  onSkills,
 }: WatcherSidebarProps) {
   return (
     <div className="flex flex-col h-full bg-vigil-900 w-60 shrink-0">
@@ -102,6 +104,17 @@ export function WatcherSidebar({
           </svg>
           New Watcher
         </Link>
+        {onSkills && (
+          <button
+            onClick={onSkills}
+            className="flex items-center gap-2 w-full px-2 py-1.5 rounded text-sm text-vigil-300 hover:text-white hover:bg-vigil-800/60 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            Skills
+          </button>
+        )}
         <Link
           href="/account"
           className="flex items-center gap-2 w-full px-2 py-1.5 rounded text-sm text-vigil-400 hover:text-white hover:bg-vigil-800/60 transition-colors"

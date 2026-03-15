@@ -17,6 +17,7 @@ import { apiKeyHandlers } from "./handlers/api-keys";
 import { accountKeyHandlers } from "./handlers/account-keys";
 import { billingHandlers } from "./handlers/billing";
 import { forwardingHandlers } from "./handlers/forwarding";
+import { skillHandlers } from "./handlers/skills";
 
 export function createRouter(): Hono {
     const api = new Hono();
@@ -44,6 +45,9 @@ export function createRouter(): Hono {
 
     // Stripe webhook (public — Stripe signs it, no JWT)
     api.post("/billing/webhook", billingHandlers.stripeWebhook);
+
+    // Skills catalog (public — no auth needed for browsing available providers)
+    api.get("/skills/catalog", skillHandlers.catalog);
 
     // Protected routes
     const protected_ = new Hono();
@@ -81,6 +85,14 @@ export function createRouter(): Hono {
     protected_.put("/watchers/:id/memory/:memoryId", watcherHandlers.updateMemory);
     protected_.patch("/watchers/:id/memory/:memoryId", watcherHandlers.updateMemory);
     protected_.delete("/watchers/:id/memory/:memoryId", watcherHandlers.deleteMemory);
+
+    // Skills (per watcher — pre-built provider integrations)
+    protected_.get("/watchers/:id/skills", skillHandlers.list);
+    protected_.post("/watchers/:id/skills", skillHandlers.create);
+    protected_.put("/watchers/:id/skills/:skillId", skillHandlers.update);
+    protected_.patch("/watchers/:id/skills/:skillId", skillHandlers.update);
+    protected_.delete("/watchers/:id/skills/:skillId", skillHandlers.delete_);
+    protected_.post("/watchers/:id/skills/:skillId/test", skillHandlers.test);
 
     // Custom tools (per watcher)
     protected_.get("/watchers/:id/tools", customToolHandlers.list);

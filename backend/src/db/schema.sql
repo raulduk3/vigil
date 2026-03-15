@@ -184,6 +184,20 @@ CREATE TABLE IF NOT EXISTS api_keys (
 CREATE INDEX IF NOT EXISTS idx_api_keys_account ON api_keys(account_id);
 CREATE INDEX IF NOT EXISTS idx_api_keys_hash ON api_keys(key_hash);
 
+-- Skills (pre-built integrations that watchers can use as tools)
+CREATE TABLE IF NOT EXISTS skills (
+  id TEXT PRIMARY KEY,
+  watcher_id TEXT NOT NULL REFERENCES watchers(id),
+  provider TEXT NOT NULL, -- 'slack', 'discord', 'notion', 'linear', 'pagerduty', 'twilio', 'email_forward', 'http'
+  name TEXT NOT NULL,
+  config_enc TEXT, -- AES-256-GCM encrypted JSON blob (API keys, webhook URLs, etc)
+  enabled BOOLEAN DEFAULT TRUE,
+  execution_count INTEGER DEFAULT 0,
+  last_executed_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_skills_watcher ON skills(watcher_id);
+
 -- Gmail forwarding confirmation codes (Chrome extension support)
 CREATE TABLE IF NOT EXISTS confirm_codes (
   id              TEXT PRIMARY KEY,
