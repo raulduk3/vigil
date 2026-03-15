@@ -7,17 +7,20 @@ import { api, type Watcher } from '@/lib/api/client';
 // Types
 // ============================================================================
 
+interface ConfigField {
+  name: string;
+  label: string;
+  type: string;
+  description?: string;
+  placeholder?: string;
+  required?: boolean;
+}
+
 interface SkillCatalogEntry {
   provider: string;
   name: string;
   description: string;
-  configSchema: Record<string, {
-    label: string;
-    type: 'text' | 'password' | 'url' | 'tel' | 'email';
-    description?: string;
-    placeholder?: string;
-    required?: boolean;
-  }>;
+  configSchema: { fields: ConfigField[] } | Record<string, any>;
 }
 
 interface Skill {
@@ -42,21 +45,25 @@ interface SkillsPanelProps {
 // ============================================================================
 
 const PROVIDER_ICONS: Record<string, string> = {
-  twilio_sms: '📱',
-  slack: '💬',
-  discord: '🎮',
-  notion: '📓',
-  pagerduty: '🚨',
-  http_webhook: '🔗',
+  twilio_sms: 'SMS',
+  twilio: 'SMS',
+  slack: 'SLK',
+  discord: 'DSC',
+  notion: 'NTN',
+  pagerduty: 'PD',
+  http_webhook: 'HTTP',
+  http: 'HTTP',
 };
 
 const PROVIDER_ACCENT: Record<string, string> = {
   twilio_sms: 'border-red-200 bg-red-50',
+  twilio: 'border-red-200 bg-red-50',
   slack: 'border-purple-200 bg-purple-50',
   discord: 'border-indigo-200 bg-indigo-50',
   notion: 'border-gray-200 bg-gray-50',
   pagerduty: 'border-green-200 bg-green-50',
   http_webhook: 'border-blue-200 bg-blue-50',
+  http: 'border-blue-200 bg-blue-50',
 };
 
 // ============================================================================
@@ -80,7 +87,7 @@ function SkillCard({
   testingId: string | null;
   testResults: Record<string, { success: boolean; error?: string; status?: number }>;
 }) {
-  const icon = PROVIDER_ICONS[skill.provider] ?? '⚙️';
+  const icon = PROVIDER_ICONS[skill.provider] ?? 'CFG';
   const result = testResults[skill.id];
 
   return (
@@ -168,7 +175,7 @@ function CatalogGrid({
   return (
     <div className="grid grid-cols-2 gap-3">
       {catalog.map((entry) => {
-        const icon = PROVIDER_ICONS[entry.provider] ?? '⚙️';
+        const icon = PROVIDER_ICONS[entry.provider] ?? 'CFG';
         const accent = PROVIDER_ACCENT[entry.provider] ?? 'border-gray-200 bg-gray-50';
         const isTwilio = entry.provider === 'twilio_sms';
 
@@ -216,11 +223,17 @@ function ConfigForm({
   skillName: string;
   setSkillName: (v: string) => void;
 }) {
+  // Normalize configSchema — API returns { fields: [...] }, fallback handles Record<string, schema>
+  const schemaFields: ConfigField[] = (() => {
+    const s = entry.configSchema as any;
+    if (s?.fields && Array.isArray(s.fields)) return s.fields;
+    if (typeof s === 'object') return Object.entries(s).map(([name, v]: [string, any]) => ({ name, ...v }));
+    return [];
+  })();
+
   const [config, setConfig] = useState<Record<string, string>>(() => {
     const defaults: Record<string, string> = {};
-    Object.keys(entry.configSchema).forEach((k) => {
-      defaults[k] = initial?.[k] ?? '';
-    });
+    schemaFields.forEach((f) => { defaults[f.name] = initial?.[f.name] ?? ''; });
     return defaults;
   });
 
@@ -229,12 +242,10 @@ function ConfigForm({
     onSubmit(config);
   };
 
-  const fields = Object.entries(entry.configSchema);
-
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="flex items-center gap-3 mb-2">
-        <span className="text-2xl">{PROVIDER_ICONS[entry.provider] ?? '⚙️'}</span>
+        <span className="text-2xl">{PROVIDER_ICONS[entry.provider] ?? 'CFG'}</span>
         <div>
           <div className="font-semibold text-gray-900">{entry.name}</div>
           <div className="text-xs text-gray-400">{entry.description}</div>
@@ -256,23 +267,23 @@ function ConfigForm({
       </div>
 
       {/* Dynamic config fields */}
-      {fields.map(([key, schema]) => (
-        <div key={key} className="form-group">
+      {schemaFields.map((field) => (
+        <div key={field.name} className="form-group">
           <label className="form-label">
-            {schema.label}
-            {schema.required !== false && <span className="text-red-400 ml-1">*</span>}
+            {field.label}
+            {field.required !== false && <span className="text-red-400 ml-1">*</span>}
           </label>
           <input
-            type={schema.type ?? 'text'}
-            value={config[key] ?? ''}
-            onChange={(e) => setConfig((prev) => ({ ...prev, [key]: e.target.value }))}
-            placeholder={schema.placeholder ?? ''}
+            type={field.type ?? 'text'}
+            value={config[field.name] ?? ''}
+            onChange={(e) => setConfig((prev) => ({ ...prev, [field.name]: e.target.value }))}
+            placeholder={field.placeholder ?? ''}
             className="input py-2"
-            required={schema.required !== false}
+            required={field.required !== false}
             autoComplete="off"
           />
-          {schema.description && (
-            <p className="text-xs text-gray-400 mt-1">{schema.description}</p>
+          {field.description && (
+            <p className="text-xs text-gray-400 mt-1">{field.description}</p>
           )}
         </div>
       ))}
