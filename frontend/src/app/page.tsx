@@ -4,10 +4,18 @@ import { PublicHeader, Footer } from '@/components/layout';
 import { useEffect, useRef, useState } from 'react';
 
 const heroPromptSamples = [
-  'Alert me when a client hasn\'t heard back in 48 hours.',
-  'Track every invoice and warn me before deadlines.',
-  'Watch support emails and escalate the urgent ones to Slack.',
-  'Monitor vendor emails and fire a webhook when payment is due.',
+  'Alert me when a client hasn\'t responded in 48 hours.',
+  'Track invoices across vendors and warn me before deadlines.',
+  'Escalate urgent support emails to Slack, ignore the rest.',
+  'Fire a webhook to my CRM when a prospect goes cold.',
+  'Monitor customer sentiment and flag frustration in real time.',
+  'Watch three inboxes and consolidate obligations into one feed.',
+  'Forward recruiting emails and summarize candidates weekly.',
+  'Detect payment confirmations and POST them to my accounting API.',
+  'Learn which emails I always ignore and stop surfacing them.',
+  'Track compliance deadlines across regulatory emails.',
+  'Route IT alerts through Vigil and only wake me for P1 incidents.',
+  'Summarize client feedback threads and push insights to Notion.',
 ];
 
 function useScrollReveal() {
@@ -51,7 +59,7 @@ export default function HomePage() {
     if (intent) return;
     const interval = window.setInterval(() => {
       setHeroPromptIndex((current) => (current + 1) % heroPromptSamples.length);
-    }, 3200);
+    }, 4000);
     return () => window.clearInterval(interval);
   }, [intent]);
 
@@ -79,7 +87,7 @@ export default function HomePage() {
             {/* CTA */}
             <div className="w-full max-w-3xl mx-auto">
               <div className="hero-prompt-suggestion mb-3 min-h-10">
-                <p key={heroPromptIndex} className="hero-prompt-copy text-sm text-gray-400 italic">
+                <p key={heroPromptIndex} className="hero-prompt-copy text-sm text-gray-400 italic animate-prompt-fade">
                   &ldquo;{heroPromptSamples[heroPromptIndex]}&rdquo;
                 </p>
               </div>
