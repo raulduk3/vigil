@@ -584,8 +584,8 @@ export async function invokeAgent(
         durationMs: Date.now() - startMs,
     });
 
-    // Bill actual LLM cost + 5% margin. BYOK users are free. Ticks are overhead (not billed).
-    if (trigger.type === "email_received" && !hasAnyByokKey(watcher.account_id) && costUsd > 0) {
+    // Bill actual LLM cost + 5% margin for all invocations. BYOK users are free.
+    if (!hasAnyByokKey(watcher.account_id) && costUsd > 0) {
         const MARGIN = 0.05;
         const billable = costUsd * (1 + MARGIN);
         reportInvocationCost(watcher.account_id, billable).catch((err) =>
