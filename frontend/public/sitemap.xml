@@ -10,6 +10,7 @@
   <url><loc>https://vigil.run/blog/obligation-tracking</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://vigil.run/blog/vigil-for-developers</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://vigil.run/blog/pay-per-use</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://vigil.run/blog/your-ai-agent-cant-read-email</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://vigil.run/blog/the-650-billion-email-problem</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
   <url><loc>https://vigil.run/learn/watchers</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
   <url><loc>https://vigil.run/learn/email-ingestion</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>

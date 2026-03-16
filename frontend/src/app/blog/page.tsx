@@ -5,6 +5,13 @@ import { PublicHeader, Footer } from '@/components/layout';
 
 const posts = [
   {
+    slug: 'your-ai-agent-cant-read-email',
+    title: 'Your AI Agent Can\'t Read Email. That\'s a Problem.',
+    date: 'March 16, 2026',
+    excerpt: '79% of organizations run AI agents in production. But almost none of them can read email without compromising your entire inbox. Here\'s how that changes.',
+    tag: 'industry',
+  },
+  {
     slug: 'the-650-billion-email-problem',
     title: 'The $650 Billion Email Problem Nobody Is Actually Solving',
     date: 'March 15, 2026',
