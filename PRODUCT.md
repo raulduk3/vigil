@@ -30,7 +30,7 @@ Cost passthrough. Every LLM call is billed at actual token cost + 5% margin. BYO
 |---|---|
 | **Model** | Actual token cost + 5% margin |
 | **Avg email cost** | ~1.2¢ (GPT-4.1-mini) |
-| **Ticks** | Free (absorbed, run on gpt-4.1-nano) |
+| **Ticks** | Cost + 5% (run on gpt-4.1-nano, ~0.3¢/tick, smart-skipped when idle) |
 | **Avg chat cost** | ~0.6¢ (GPT-4.1-mini) |
 | **BYOK** | Free (bring your own OpenAI/Anthropic/Google key) |
 | **Free tier** | 50 emails to start, no credit card |
@@ -46,7 +46,7 @@ What users actually pay (GPT-4.1-mini, ticks free):
 | Power (5,000 emails/mo) | ~$60 |
 | BYOK (any volume) | $0 |
 
-No tiers. No plans. No flat rates. Scheduled checks and digests are free (absorbed, run on nano). The dashboard shows every API call, its token cost, and the running total. Total transparency.
+No tiers. No plans. No flat rates. Scheduled checks run on nano (~0.3¢ each, smart-skipped when idle). The dashboard shows every API call, its token cost, and the running total. Total transparency. Nothing is absorbed — every LLM call is passed through.
 
 ## Architecture
 

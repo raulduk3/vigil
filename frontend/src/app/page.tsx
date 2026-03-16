@@ -300,8 +300,8 @@ export default function HomePage() {
             {[
               ['Cost + 5%', 'Real LLM token cost, transparent margin'],
               ['BYOK = Free', 'Bring your own API key, pay nothing'],
+              ['Smart checks', 'Proactive monitoring on the cheapest model'],
               ['50 free emails', 'No credit card required to start'],
-              ['Unlimited watchers', 'As many email streams as you need'],
               ['Full audit trail', 'Every agent call, cost, and decision visible'],
             ].map(([label, desc]) => (
               <div key={label} className="flex items-start gap-3">
