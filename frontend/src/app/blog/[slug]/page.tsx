@@ -278,6 +278,24 @@ export function generateStaticParams() {
   return Object.keys(posts).map(slug => ({ slug }));
 }
 
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const post = posts[slug];
+  if (!post) return {};
+  return {
+    title: post.title,
+    description: post.content.replace(/<[^>]*>/g, '').slice(0, 155).trim() + '…',
+    alternates: { canonical: `https://vigil.run/blog/${slug}` },
+    openGraph: {
+      title: `${post.title} | Vigil`,
+      description: post.content.replace(/<[^>]*>/g, '').slice(0, 155).trim() + '…',
+      url: `https://vigil.run/blog/${slug}`,
+      type: 'article',
+      publishedTime: post.date,
+    },
+  };
+}
+
 export default async function BlogPost({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const post = posts[slug];

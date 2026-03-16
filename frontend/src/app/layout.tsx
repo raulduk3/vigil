@@ -40,9 +40,9 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  alternates: {
-    canonical: 'https://vigil.run',
-  },
+  // canonical is set per-page via metadataBase + route. Do NOT set a global
+  // canonical here — it causes every page to point to the homepage, which
+  // Google treats as duplicate content and blocks indexing.
   icons: {
     icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
   },
@@ -69,7 +69,7 @@ export default function RootLayout({
               operatingSystem: 'Web',
               offers: {
                 '@type': 'Offer',
-                price: '0.012',
+                price: '0.0025',
                 priceCurrency: 'USD',
                 description: 'Actual AI cost + 5% margin. BYOK is free. 50 free emails to start.',
               },
