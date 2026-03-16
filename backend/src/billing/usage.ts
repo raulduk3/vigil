@@ -47,13 +47,18 @@ export async function canProcessEmail(accountId: string): Promise<boolean> {
     const account = queryOne<{
         has_payment_method: number;
         trial_emails_used: number;
+        openai_api_key_enc: string | null;
+        anthropic_api_key_enc: string | null;
+        google_api_key_enc: string | null;
     }>(
-        `SELECT has_payment_method, trial_emails_used FROM accounts WHERE id = ?`,
+        `SELECT has_payment_method, trial_emails_used, openai_api_key_enc, anthropic_api_key_enc, google_api_key_enc FROM accounts WHERE id = ?`,
         [accountId]
     );
 
     if (!account) return false;
     if (account.has_payment_method) return true;
+    // BYOK users bypass trial — they pay their own API costs
+    if (account.openai_api_key_enc || account.anthropic_api_key_enc || account.google_api_key_enc) return true;
     return account.trial_emails_used < FREE_TRIAL_EMAILS;
 }
 

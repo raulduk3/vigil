@@ -100,6 +100,16 @@ function getByokKey(account_id: string, provider: "openai" | "anthropic" | "goog
     }
 }
 
+/** Check if account has any BYOK key configured (skip billing for these users) */
+function hasAnyByokKey(account_id: string): boolean {
+    const row = queryOne<{ has_key: number }>(
+        `SELECT (CASE WHEN openai_api_key_enc IS NOT NULL OR anthropic_api_key_enc IS NOT NULL OR google_api_key_enc IS NOT NULL THEN 1 ELSE 0 END) AS has_key FROM accounts WHERE id = ?`,
+        [account_id]
+    );
+    return !!row?.has_key;
+}
+
+
 // ============================================================================
 // Main Entry Point
 // ============================================================================
@@ -292,8 +302,10 @@ export async function invokeAgent(
             });
 
             // Report flat rate to Stripe
-            const CHAT_FLAT_RATE = 0.01;
-            reportInvocationCost(watcher.account_id, CHAT_FLAT_RATE).catch(() => {});
+            const CHAT_FLAT_RATE = 0.005;
+            if (!hasAnyByokKey(watcher.account_id)) {
+                reportInvocationCost(watcher.account_id, CHAT_FLAT_RATE).catch(() => {});
+            }
 
             return {
                 actions: [],
@@ -574,7 +586,7 @@ export async function invokeAgent(
 
     // Bill $0.01 per email processed. Ticks are overhead (not billed). Chat billed separately above.
     if (trigger.type === "email_received") {
-        const FLAT_RATE_PER_EMAIL = 0.01;
+        const FLAT_RATE_PER_EMAIL = 0.005;
         reportInvocationCost(watcher.account_id, FLAT_RATE_PER_EMAIL).catch((err) =>
             logger.error("Failed to report invocation cost", { watcherId, err })
         );
