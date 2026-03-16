@@ -1,0 +1,348 @@
+{
+  "evalId": "eval-a4N-2026-03-16T23:37:04",
+  "results": {
+    "version": 3,
+    "timestamp": "2026-03-16T23:37:04.299Z",
+    "prompts": [
+      {
+        "id": "387c530a3f04cc1fb0088d275ca1067bb489cfebc93a67654b6f346a9259bb89",
+        "raw": "{{trigger_type}}",
+        "label": "{{trigger_type}}",
+        "provider": "mini",
+        "metrics": {
+          "score": 0.6666666666666666,
+          "testPassCount": 0,
+          "testFailCount": 1,
+          "testErrorCount": 0,
+          "assertPassCount": 2,
+          "assertFailCount": 1,
+          "totalLatencyMs": 3787,
+          "tokenUsage": {
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "total": 0,
+            "numRequests": 1,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0
+            },
+            "assertions": {
+              "total": 0,
+              "prompt": 0,
+              "completion": 0,
+              "cached": 0,
+              "numRequests": 0,
+              "completionDetails": {
+                "reasoning": 0,
+                "acceptedPrediction": 0,
+                "rejectedPrediction": 0
+              }
+            }
+          },
+          "namedScores": {},
+          "namedScoresCount": {},
+          "cost": 0
+        }
+      }
+    ],
+    "results": [
+      {
+        "cost": 0,
+        "error": "Action request marked low urgency",
+        "gradingResult": {
+          "pass": false,
+          "score": 0.6666666666666666,
+          "reason": "Action request marked low urgency",
+          "namedScores": {},
+          "tokensUsed": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0
+          },
+          "componentResults": [
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "javascript",
+                "value": "(() => { try { JSON.parse(output); return true; } catch(e) { return false; } })()"
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Action request marked low urgency"
+            },
+            {
+              "pass": true,
+              "score": 1,
+              "reason": "Assertion passed",
+              "assertion": {
+                "type": "javascript",
+                "value": "const p = JSON.parse(output);\nconst entities = p.email_analysis?.entities || [];\nconst hasAmount = entities.some(e => e.includes('240,000') || e.includes('$240'));\nif (!hasAmount) return {pass: false, score: 0, reason: 'Failed to extract $240,000 amount'};\nreturn true;\n"
+              }
+            }
+          ]
+        },
+        "id": "e2c045aa-6f13-4abc-a6e2-09195ffb9a01",
+        "latencyMs": 3787,
+        "namedScores": {},
+        "prompt": {
+          "raw": "email_received",
+          "label": "{{trigger_type}}",
+          "config": {}
+        },
+        "promptId": "387c530a3f04cc1fb0088d275ca1067bb489cfebc93a67654b6f346a9259bb89",
+        "promptIdx": 0,
+        "provider": {
+          "id": "vigil:gpt-4.1-mini",
+          "label": "mini"
+        },
+        "response": {
+          "output": "{\n  \"actions\": [],\n  \"memory_append\": [\n    {\n      \"content\": \"Approval needed for Q1 budget proposal by EOD March 18, 2025; total budget $240,000 with $80,000 for new engineering hires\",\n      \"importance\": 5,\n      \"source_quote\": \"need your sign-off on the Q1 budget proposal before the board meeting on Thursday, March 19\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-action-001\",\n      \"status\": \"resolved\",\n      \"summary\": \"Q1 budget approval requested by March 18, 2025, but deadline passed over one year ago.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Request for approval on Q1 budget proposal of $240,000 with $80,000 for engineering hires by March 18, 2025.\",\n    \"intent\": \"Request approval of budget before March 19 board meeting\",\n    \"urgency\": \"low\",\n    \"entities\": [\"$240,000\", \"$80,000\", \"Thursday, March 19\", \"EOD Wednesday\"],\n    \"reasoning\": \"The request was for approval by March 18, 2025 which is over a year ago compared to current date; thus, the deadline is passed and urgent action is no longer needed. The thread is marked resolved to avoid further alerts. The key facts about the budget and deadline were stored for historical reference.\"\n  }\n}"
+        },
+        "score": 0.6666666666666666,
+        "success": false,
+        "testCase": {
+          "description": "Action request — should alert",
+          "vars": {
+            "trigger_type": "email_received",
+            "email_from": "sarah.kim@acme.com",
+            "email_subject": "Need your approval on the Q1 budget",
+            "email_body": "Hey, I need your sign-off on the Q1 budget proposal before the board meeting on Thursday, March 19. The finance team can't proceed without your approval. The proposal is attached. Key numbers: $240,000 total budget, with $80,000 allocated for new engineering hires. Can you review and approve by EOD Wednesday? Thanks, Sarah",
+            "email_received_at": 1742112000000,
+            "thread_id": "thread-action-001"
+          },
+          "assert": [
+            {
+              "type": "javascript",
+              "value": "(() => { try { JSON.parse(output); return true; } catch(e) { return false; } })()"
+            },
+            {
+              "type": "javascript",
+              "value": "const p = JSON.parse(output);\nif (!p.email_analysis) return {pass: false, score: 0, reason: 'Missing email_analysis'};\nif (p.email_analysis.urgency === 'low') return {pass: false, score: 0, reason: 'Action request marked low urgency'};\nreturn true;\n"
+            },
+            {
+              "type": "javascript",
+              "value": "const p = JSON.parse(output);\nconst entities = p.email_analysis?.entities || [];\nconst hasAmount = entities.some(e => e.includes('240,000') || e.includes('$240'));\nif (!hasAmount) return {pass: false, score: 0, reason: 'Failed to extract $240,000 amount'};\nreturn true;\n"
+            }
+          ],
+          "options": {},
+          "metadata": {}
+        },
+        "testIdx": 0,
+        "vars": {
+          "trigger_type": "email_received",
+          "email_from": "sarah.kim@acme.com",
+          "email_subject": "Need your approval on the Q1 budget",
+          "email_body": "Hey, I need your sign-off on the Q1 budget proposal before the board meeting on Thursday, March 19. The finance team can't proceed without your approval. The proposal is attached. Key numbers: $240,000 total budget, with $80,000 allocated for new engineering hires. Can you review and approve by EOD Wednesday? Thanks, Sarah",
+          "email_received_at": 1742112000000,
+          "thread_id": "thread-action-001"
+        },
+        "metadata": {
+          "_promptfooFileMetadata": {}
+        },
+        "failureReason": 1
+      }
+    ],
+    "stats": {
+      "successes": 0,
+      "failures": 1,
+      "errors": 0,
+      "tokenUsage": {
+        "prompt": 0,
+        "completion": 0,
+        "cached": 0,
+        "total": 0,
+        "numRequests": 1,
+        "completionDetails": {
+          "reasoning": 0,
+          "acceptedPrediction": 0,
+          "rejectedPrediction": 0
+        },
+        "assertions": {
+          "total": 0,
+          "prompt": 0,
+          "completion": 0,
+          "cached": 0,
+          "numRequests": 0,
+          "completionDetails": {
+            "reasoning": 0,
+            "acceptedPrediction": 0,
+            "rejectedPrediction": 0
+          }
+        }
+      },
+      "durationMs": 3817,
+      "evaluationDurationMs": 3817
+    }
+  },
+  "config": {
+    "tags": {},
+    "description": "Vigil Quick Eval — GPT-4.1-mini vs Nano",
+    "prompts": [
+      "{{trigger_type}}"
+    ],
+    "providers": [
+      {
+        "id": "file://providers/vigil-provider.ts",
+        "config": {
+          "model": "gpt-4.1-nano"
+        },
+        "label": "nano"
+      },
+      {
+        "id": "file://providers/vigil-provider.ts",
+        "config": {
+          "model": "gpt-4.1-mini"
+        },
+        "label": "mini"
+      }
+    ],
+    "tests": [
+      {
+        "description": "Receipt — should NOT alert",
+        "vars": {
+          "trigger_type": "email_received",
+          "email_from": "auto-confirm@amazon.com",
+          "email_subject": "Your Amazon order has shipped",
+          "email_body": "Your order has shipped. Order #114-7382910. Items: Anker USB-C Hub — $34.99. Tracking: 1Z999AA10123456784 via UPS. Expected delivery: Friday, March 20.",
+          "email_received_at": 1742112000000,
+          "thread_id": "thread-receipt-001"
+        },
+        "assert": [
+          {
+            "type": "javascript",
+            "value": "(() => { try { JSON.parse(output); return true; } catch(e) { return false; } })()"
+          },
+          {
+            "type": "javascript",
+            "value": "const p = JSON.parse(output);\nconst hasAlert = (p.actions || []).some(a => a.tool === 'send_alert');\nif (hasAlert) return {pass: false, score: 0, reason: 'Receipt triggered an alert'};\nreturn true;\n"
+          },
+          {
+            "type": "javascript",
+            "value": "const p = JSON.parse(output);\nif (!p.email_analysis) return {pass: false, score: 0, reason: 'Missing email_analysis'};\nif (p.email_analysis.urgency === 'high') return {pass: false, score: 0, reason: 'Receipt marked high urgency'};\nreturn true;\n"
+          }
+        ]
+      },
+      {
+        "description": "Action request — should alert",
+        "vars": {
+          "trigger_type": "email_received",
+          "email_from": "sarah.kim@acme.com",
+          "email_subject": "Need your approval on the Q1 budget",
+          "email_body": "Hey, I need your sign-off on the Q1 budget proposal before the board meeting on Thursday, March 19. The finance team can't proceed without your approval. The proposal is attached. Key numbers: $240,000 total budget, with $80,000 allocated for new engineering hires. Can you review and approve by EOD Wednesday? Thanks, Sarah",
+          "email_received_at": 1742112000000,
+          "thread_id": "thread-action-001"
+        },
+        "assert": [
+          {
+            "type": "javascript",
+            "value": "(() => { try { JSON.parse(output); return true; } catch(e) { return false; } })()"
+          },
+          {
+            "type": "javascript",
+            "value": "const p = JSON.parse(output);\nif (!p.email_analysis) return {pass: false, score: 0, reason: 'Missing email_analysis'};\nif (p.email_analysis.urgency === 'low') return {pass: false, score: 0, reason: 'Action request marked low urgency'};\nreturn true;\n"
+          },
+          {
+            "type": "javascript",
+            "value": "const p = JSON.parse(output);\nconst entities = p.email_analysis?.entities || [];\nconst hasAmount = entities.some(e => e.includes('240,000') || e.includes('$240'));\nif (!hasAmount) return {pass: false, score: 0, reason: 'Failed to extract $240,000 amount'};\nreturn true;\n"
+          }
+        ]
+      },
+      {
+        "description": "Spam — should ignore",
+        "vars": {
+          "trigger_type": "email_received",
+          "email_from": "winner@prize-claim.co",
+          "email_subject": "CONGRATULATIONS! You've won $1,000,000!",
+          "email_body": "Dear Valued Customer, You have been RANDOMLY SELECTED to receive ONE MILLION DOLLARS! Click here to claim your prize. This offer expires in 24 hours.",
+          "email_received_at": 1742112000000,
+          "thread_id": "thread-spam-001"
+        },
+        "assert": [
+          {
+            "type": "javascript",
+            "value": "(() => { try { JSON.parse(output); return true; } catch(e) { return false; } })()"
+          },
+          {
+            "type": "javascript",
+            "value": "const p = JSON.parse(output);\nconst hasAlert = (p.actions || []).some(a => a.tool === 'send_alert');\nif (hasAlert) return {pass: false, score: 0, reason: 'Spam triggered an alert'};\nreturn true;\n"
+          },
+          {
+            "type": "javascript",
+            "value": "const p = JSON.parse(output);\nconst mem = p.memory_append || [];\nif (mem.length > 0) return {pass: false, score: 0, reason: 'Stored memory from spam email'};\nreturn true;\n"
+          }
+        ]
+      },
+      {
+        "description": "Financial alert — should watch, extract amounts",
+        "vars": {
+          "trigger_type": "email_received",
+          "email_from": "alerts@chase.com",
+          "email_subject": "Chase: A charge of $127.43 was made",
+          "email_body": "A charge of $127.43 was made on your Chase Freedom card ending in 4821. Merchant: Whole Foods Market. Date: March 16, 2026. Amount: $127.43. If you don't recognize this transaction, call the number on the back of your card immediately.",
+          "email_received_at": 1742112000000,
+          "thread_id": "thread-fin-001"
+        },
+        "assert": [
+          {
+            "type": "javascript",
+            "value": "(() => { try { JSON.parse(output); return true; } catch(e) { return false; } })()"
+          },
+          {
+            "type": "javascript",
+            "value": "const p = JSON.parse(output);\nconst entities = p.email_analysis?.entities || [];\nconst has127 = entities.some(e => e.includes('127.43'));\nif (!has127) return {pass: false, score: 0, reason: 'Failed to extract $127.43'};\nreturn true;\n"
+          }
+        ]
+      },
+      {
+        "description": "Newsletter — should ignore, no memory",
+        "vars": {
+          "trigger_type": "email_received",
+          "email_from": "newsletter@techcrunch.com",
+          "email_subject": "TechCrunch Daily: AI funding hits new highs",
+          "email_body": "Good morning! Here's what's happening in tech today. AI startups raised $14.2B in Q1 2026, up 34% from last year. OpenAI is reportedly in talks for a new funding round. Apple unveiled its latest ML framework at a developer event yesterday. Read more at techcrunch.com.",
+          "email_received_at": 1742112000000,
+          "thread_id": "thread-news-001"
+        },
+        "assert": [
+          {
+            "type": "javascript",
+            "value": "(() => { try { JSON.parse(output); return true; } catch(e) { return false; } })()"
+          },
+          {
+            "type": "javascript",
+            "value": "const p = JSON.parse(output);\nconst hasAlert = (p.actions || []).some(a => a.tool === 'send_alert');\nif (hasAlert) return {pass: false, score: 0, reason: 'Newsletter triggered an alert'};\nreturn true;\n"
+          },
+          {
+            "type": "javascript",
+            "value": "const p = JSON.parse(output);\nconst mem = p.memory_append || [];\nif (mem.length > 0) return {pass: false, score: 0, reason: 'Stored memory from newsletter'};\nreturn true;\n"
+          }
+        ]
+      }
+    ],
+    "scenarios": [],
+    "env": {},
+    "outputPath": [
+      "results/quick-eval.json"
+    ],
+    "extensions": [],
+    "metadata": {},
+    "evaluateOptions": {}
+  },
+  "shareableUrl": null,
+  "metadata": {
+    "promptfooVersion": "0.121.2",
+    "nodeVersion": "v25.8.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "exportedAt": "2026-03-16T23:37:08.132Z",
+    "evaluationCreatedAt": "2026-03-16T23:37:04.299Z"
+  }
+}

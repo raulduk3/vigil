@@ -1,0 +1,134 @@
+description: "Vigil Quick Eval — GPT-4.1-mini vs Nano"
+
+providers:
+  - id: "file://providers/vigil-provider.ts"
+    config:
+      model: "gpt-4.1-nano"
+    label: "nano"
+
+  - id: "file://providers/vigil-provider.ts"
+    config:
+      model: "gpt-4.1-mini"
+    label: "mini"
+
+prompts:
+  - "{{trigger_type}}"
+
+tests:
+  - description: "Receipt — should NOT alert"
+    vars:
+      trigger_type: "email_received"
+      email_from: "auto-confirm@amazon.com"
+      email_subject: "Your Amazon order has shipped"
+      email_body: "Your order has shipped. Order #114-7382910. Items: Anker USB-C Hub — $34.99. Tracking: 1Z999AA10123456784 via UPS. Expected delivery: Friday, March 20."
+      email_received_at: 1742112000000
+      thread_id: "thread-receipt-001"
+    assert:
+      - type: javascript
+        value: "(() => { try { JSON.parse(output); return true; } catch(e) { return false; } })()"
+      - type: javascript
+        value: |
+          const p = JSON.parse(output);
+          const hasAlert = (p.actions || []).some(a => a.tool === 'send_alert');
+          if (hasAlert) return {pass: false, score: 0, reason: 'Receipt triggered an alert'};
+          return true;
+      - type: javascript
+        value: |
+          const p = JSON.parse(output);
+          if (!p.email_analysis) return {pass: false, score: 0, reason: 'Missing email_analysis'};
+          if (p.email_analysis.urgency === 'high') return {pass: false, score: 0, reason: 'Receipt marked high urgency'};
+          return true;
+
+  - description: "Action request — should alert"
+    vars:
+      trigger_type: "email_received"
+      email_from: "sarah.kim@acme.com"
+      email_subject: "Need your approval on the Q1 budget"
+      email_body: "Hey, I need your sign-off on the Q1 budget proposal before the board meeting on Thursday, March 19. The finance team can't proceed without your approval. The proposal is attached. Key numbers: $240,000 total budget, with $80,000 allocated for new engineering hires. Can you review and approve by EOD Wednesday? Thanks, Sarah"
+      email_received_at: 1742112000000
+      thread_id: "thread-action-001"
+    assert:
+      - type: javascript
+        value: "(() => { try { JSON.parse(output); return true; } catch(e) { return false; } })()"
+      - type: javascript
+        value: |
+          const p = JSON.parse(output);
+          if (!p.email_analysis) return {pass: false, score: 0, reason: 'Missing email_analysis'};
+          if (p.email_analysis.urgency === 'low') return {pass: false, score: 0, reason: 'Action request marked low urgency'};
+          return true;
+      - type: javascript
+        value: |
+          const p = JSON.parse(output);
+          const entities = p.email_analysis?.entities || [];
+          const hasAmount = entities.some(e => e.includes('240,000') || e.includes('$240'));
+          if (!hasAmount) return {pass: false, score: 0, reason: 'Failed to extract $240,000 amount'};
+          return true;
+
+  - description: "Spam — should ignore"
+    vars:
+      trigger_type: "email_received"
+      email_from: "winner@prize-claim.co"
+      email_subject: "CONGRATULATIONS! You've won $1,000,000!"
+      email_body: "Dear Valued Customer, You have been RANDOMLY SELECTED to receive ONE MILLION DOLLARS! Click here to claim your prize. This offer expires in 24 hours."
+      email_received_at: 1742112000000
+      thread_id: "thread-spam-001"
+    assert:
+      - type: javascript
+        value: "(() => { try { JSON.parse(output); return true; } catch(e) { return false; } })()"
+      - type: javascript
+        value: |
+          const p = JSON.parse(output);
+          const hasAlert = (p.actions || []).some(a => a.tool === 'send_alert');
+          if (hasAlert) return {pass: false, score: 0, reason: 'Spam triggered an alert'};
+          return true;
+      - type: javascript
+        value: |
+          const p = JSON.parse(output);
+          const mem = p.memory_append || [];
+          if (mem.length > 0) return {pass: false, score: 0, reason: 'Stored memory from spam email'};
+          return true;
+
+  - description: "Financial alert — should watch, extract amounts"
+    vars:
+      trigger_type: "email_received"
+      email_from: "alerts@chase.com"
+      email_subject: "Chase: A charge of $127.43 was made"
+      email_body: "A charge of $127.43 was made on your Chase Freedom card ending in 4821. Merchant: Whole Foods Market. Date: March 16, 2026. Amount: $127.43. If you don't recognize this transaction, call the number on the back of your card immediately."
+      email_received_at: 1742112000000
+      thread_id: "thread-fin-001"
+    assert:
+      - type: javascript
+        value: "(() => { try { JSON.parse(output); return true; } catch(e) { return false; } })()"
+      - type: javascript
+        value: |
+          const p = JSON.parse(output);
+          const entities = p.email_analysis?.entities || [];
+          const has127 = entities.some(e => e.includes('127.43'));
+          if (!has127) return {pass: false, score: 0, reason: 'Failed to extract $127.43'};
+          return true;
+
+  - description: "Newsletter — should ignore, no memory"
+    vars:
+      trigger_type: "email_received"
+      email_from: "newsletter@techcrunch.com"
+      email_subject: "TechCrunch Daily: AI funding hits new highs"
+      email_body: "Good morning! Here's what's happening in tech today. AI startups raised $14.2B in Q1 2026, up 34% from last year. OpenAI is reportedly in talks for a new funding round. Apple unveiled its latest ML framework at a developer event yesterday. Read more at techcrunch.com."
+      email_received_at: 1742112000000
+      thread_id: "thread-news-001"
+    assert:
+      - type: javascript
+        value: "(() => { try { JSON.parse(output); return true; } catch(e) { return false; } })()"
+      - type: javascript
+        value: |
+          const p = JSON.parse(output);
+          const hasAlert = (p.actions || []).some(a => a.tool === 'send_alert');
+          if (hasAlert) return {pass: false, score: 0, reason: 'Newsletter triggered an alert'};
+          return true;
+      - type: javascript
+        value: |
+          const p = JSON.parse(output);
+          const mem = p.memory_append || [];
+          if (mem.length > 0) return {pass: false, score: 0, reason: 'Stored memory from newsletter'};
+          return true;
+
+outputPath: "results/quick-eval.json"

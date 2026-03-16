@@ -487,6 +487,28 @@ export async function invokeAgent(
         }
     }
 
+    // Post-process: validate and correct urgency based on the model's own signals.
+    // Smaller models (4.1-mini) systematically under-classify urgency even when they
+    // correctly identify deadlines and action requests. If the model stored a high-importance
+    // memory or triggered an alert, urgency should not be "low".
+    if (agentResponse.email_analysis) {
+        const analysis = agentResponse.email_analysis;
+        const hasHighMemory = (agentResponse.memory_append ?? []).some(
+            (m: any) => (m.importance ?? 3) >= 4
+        );
+        const hasAlert = (agentResponse.actions ?? []).some(
+            (a: any) => a.tool === "send_alert"
+        );
+
+        if (analysis.urgency === "low" && (hasHighMemory || hasAlert)) {
+            logger.info("Urgency correction: model said low but signals say otherwise", {
+                watcherId, hadHighMemory: hasHighMemory, hadAlert: hasAlert,
+                originalUrgency: "low", correctedTo: "normal",
+            });
+            analysis.urgency = "normal";
+        }
+    }
+
     // Store email analysis on the email record
     if (emailId && agentResponse.email_analysis) {
         run(
@@ -1028,24 +1050,41 @@ async function callLLMRaw(
 }
 
 function parseAgentResponse(text: string): AgentResponse {
-    // Strip markdown fences if model adds them
-    const cleaned = text
-        .replace(/^```json\s*/m, "")
-        .replace(/^```\s*/m, "")
-        .replace(/```\s*$/m, "")
+    // Strip markdown fences if model adds them (common with smaller models)
+    let cleaned = text
+        .replace(/^```json\s*\n?/gm, "")
+        .replace(/^```\s*\n?/gm, "")
+        .replace(/\n?```\s*$/gm, "")
         .trim();
+
+    // Some models prepend commentary before the JSON. Try to extract the JSON object.
+    if (cleaned && !cleaned.startsWith("{")) {
+        const jsonStart = cleaned.indexOf("{");
+        if (jsonStart > 0) {
+            const jsonEnd = cleaned.lastIndexOf("}");
+            if (jsonEnd > jsonStart) {
+                logger.warn("Stripping pre-JSON text from response", {
+                    stripped: cleaned.slice(0, jsonStart).trim().slice(0, 100),
+                });
+                cleaned = cleaned.slice(jsonStart, jsonEnd + 1);
+            }
+        }
+    }
 
     try {
         const parsed = JSON.parse(cleaned);
         return {
-            actions: parsed.actions ?? [],
+            actions: Array.isArray(parsed.actions) ? parsed.actions : [],
             memory_append: parsed.memory_append ?? null,
             memory_obsolete: parsed.memory_obsolete ?? null,
             thread_updates: parsed.thread_updates ?? null,
             email_analysis: parsed.email_analysis ?? null,
         };
     } catch (err) {
-        logger.warn("Failed to parse agent response as JSON", { text: text.slice(0, 200) });
+        logger.error("Failed to parse agent response as JSON", {
+            text: text.slice(0, 300),
+            error: String(err),
+        });
         return { actions: [], memory_append: null, memory_obsolete: null, thread_updates: null, email_analysis: null };
     }
 }

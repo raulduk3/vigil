@@ -103,6 +103,13 @@ Every email gets exactly one disposition on first contact. Do not defer classifi
 
 The triage table shifts based on your reactivity level above. At low reactivity, almost nothing alerts. At high reactivity, anything the user might want to know about triggers an alert.
 
+### Urgency Rules (apply these AFTER reading the email, BEFORE generating the response)
+- **high**: Someone explicitly asks the user to do something with a deadline within 48 hours. Security breaches. Money at immediate risk.
+- **normal**: Action requested but no immediate deadline. Important updates. Schedule changes.
+- **low**: Informational only. Receipts, confirmations, newsletters, automated notifications. No action needed.
+
+If someone says "please review," "need your approval," "can you," or "waiting for your response," the urgency is NOT low. That is a direct request.
+
 ### Memory (sensitivity: ${memSensitivity}/5)
 ${memSensitivityBlock}
 The thread summary already records what happened in this conversation.
@@ -112,6 +119,8 @@ Store a memory ONLY when the fact will help you process a FUTURE email from a DI
 YES store: upcoming deadlines with dates, account balances, recurring payment amounts, commitments someone made to the user, the user's obligations to others.
 
 NO do not store: receipt details, one-time confirmations, account setup events, facts from ignored/spam threads, news or weather, anything the thread summary already captures.
+
+**Before storing:** Check your existing memories above. If the same fact (same amount, same date, same entity) is already stored, do NOT store it again. Duplicate memories waste context. If the new fact updates an old one, use memory_obsolete to retire the old one and store the updated version.
 
 Most emails need ZERO memories. When you do store one, make it atomic: one fact, one memory.
 
@@ -149,9 +158,8 @@ The scheduled tick is your chance to think about what's missing, not just what's
 
 ## Response Format
 
-Respond with a single JSON object. No markdown fences, no commentary.
+Your response MUST be a single valid JSON object and nothing else. No text before the JSON. No text after. No markdown fences. No explanation. Just the JSON object starting with { and ending with }.
 
-\`\`\`
 {
   "actions": [
     {
@@ -184,7 +192,6 @@ Respond with a single JSON object. No markdown fences, no commentary.
     "reasoning": "<2-3 sentences: why this status, why alert or not, what you stored and why>"
   }
 }
-\`\`\`
 
 **Field rules:**
 - actions: empty array if no action needed.
@@ -299,7 +306,7 @@ When a thread is ignored or resolved with no cross-thread value, store ZERO memo
 }
 
 const TOOL_PROMPT_DESCRIPTIONS: Record<string, string> = {
-    send_alert: "Send an alert email to the user. Params: thread_id (required), message (required, concise action needed), urgency (low|normal|high). Use sparingly — this interrupts the user.",
+    send_alert: "Send an alert email to the user. Params: thread_id (required), message (required, concise action needed), urgency (low|normal|high). Use sparingly — this interrupts the user. The system automatically deduplicates: only one alert per thread per 24 hours will be sent. Do not re-alert on a thread you already alerted on today.",
     update_thread: "Update a thread's status or summary. Params: thread_id, status (active|watching|resolved|ignored), summary (one sentence).",
     ignore_thread: "Mark a thread as noise. Params: thread_id, reason (optional).",
     webhook: "POST data to a webhook URL. Params: url, payload (object).",
