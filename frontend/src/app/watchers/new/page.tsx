@@ -362,7 +362,7 @@ function NewWatcherContent() {
               <div className="panel-inset px-4 py-3 text-sm text-gray-600 space-y-1">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-gray-800">{selectedModel.label}</span>
-                  <span className="font-mono text-xs">{selectedModel.costPerEmail} per email</span>
+                  <span className="font-mono text-xs">{selectedModel.costPerEmail}/email + 5%</span>
                 </div>
                 <div className="text-xs text-gray-500">{selectedModel.quality} · {selectedModel.speed}</div>
               </div>

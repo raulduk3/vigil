@@ -251,7 +251,7 @@ export default function BillingPage() {
       <div className="rounded-lg bg-gray-50 border border-gray-200 px-4 py-3">
         <p className="text-xs text-gray-500 max-w-none">
           <span className="font-medium text-gray-700">Pay-per-use, no tiers.</span>{' '}
-          $0.005 per email processed. 50 free emails each month. AI included. Billed monthly through Stripe.{!billing?.has_payment_method && ` ${billing?.trial_emails_remaining ?? 50} free emails remaining this month.`}
+          Actual AI token cost + 5% margin on all usage. 50 free emails to start. Billed monthly through Stripe. Bring your own API key for free usage.{!billing?.has_payment_method && ` ${billing?.trial_emails_remaining ?? 50} free emails remaining.`}
         </p>
       </div>
     </main>

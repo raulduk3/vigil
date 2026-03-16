@@ -8,7 +8,7 @@ export function Footer() {
           <div>
             <p className="font-display font-semibold text-gray-900 mb-3">Vigil</p>
             <p className="text-sm text-gray-500 leading-relaxed">
-              Forward emails to an AI agent that reads them, remembers context, and surfaces what matters. $0.005 per email.
+              Forward emails to an AI agent that reads them, remembers context, and surfaces what matters. Pay actual AI cost + 5%. BYOK is free.
             </p>
           </div>
           <div>

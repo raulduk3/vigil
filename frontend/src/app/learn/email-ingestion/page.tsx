@@ -8,7 +8,7 @@ export default function EmailIngestionPage() {
         <div className="grid gap-3 md:grid-cols-3">
           <LinkCard href="/auth/register" label="1. Create account" copy="Start with one watcher and get your forwarding address." />
           <LinkCard href="/extension" label="2. Use the extension" copy="Fastest path for Gmail and Outlook forwarding." />
-          <LinkCard href="/pricing" label="Need the math?" copy="50 free emails each month, then $0.005 per processed email." />
+          <LinkCard href="/pricing" label="Need the math?" copy="Actual AI cost + 5%. BYOK is free. 50 free emails to start." />
         </div>
       </div>
       <p>Vigil's entire design is built around a single constraint: it never connects to your inbox. There are no passwords to share, no OAuth permissions to grant, no read access to your email account.</p>

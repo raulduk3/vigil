@@ -12,6 +12,6 @@ export const GLOSSARY: Record<string, string> = {
   'watching': 'A thread being tracked but without silence alerts. For low-priority items.',
   'resolved': 'A thread that has been handled. No more monitoring.',
   'ignored': 'A thread classified as noise. Not tracked.',
-  'platform fee': 'A flat $0.001 charge per agent invocation covering infrastructure costs.',
+  'platform fee': 'A 5% margin on actual LLM token costs. BYOK users pay no platform fee.',
   'invocation': 'Each time the agent processes an email, runs a review, or handles a chat message.',
 };

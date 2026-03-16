@@ -126,7 +126,7 @@ function KeysContent() {
         <h3 className="text-sm font-semibold text-gray-900 mb-2">How it works</h3>
         <ul className="text-xs text-gray-600 space-y-1.5">
           <li>When your key is set, Vigil uses it for all LLM calls on your watchers. You pay the provider directly at their rates.</li>
-          <li>The platform fee ($0.005/email) still applies. Token costs go to your own API account.</li>
+          <li>With your own key, Vigil is completely free. No platform fee. No metering. Token costs go directly to your API provider.</li>
           <li>If your key fails (expired, rate limited, invalid), Vigil falls back to the platform key automatically.</li>
           <li>Keys are encrypted with AES-256-GCM. They are never logged, never returned by any API, and never visible to anyone.</li>
         </ul>

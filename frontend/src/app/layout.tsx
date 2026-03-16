@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     default: 'Vigil — AI Email Agent That Reads, Remembers, and Surfaces What Matters',
     template: '%s | Vigil',
   },
-  description: 'Forward emails to an AI agent that reads them, remembers context, and tells you when something matters. No inbox access. No stored email bodies. $0.005 per email.',
+  description: 'Forward emails to an AI agent that reads them, remembers context, and tells you when something matters. No inbox access. No stored email bodies. Pay actual AI cost + 5%. BYOK is free.',
   keywords: ['AI email agent', 'email automation', 'obligation tracking', 'email monitoring', 'email API', 'no inbox access', 'pay per use email', 'email webhook', 'email AI', 'autonomous email agent'],
   metadataBase: new URL('https://vigil.run'),
   openGraph: {
@@ -20,12 +20,12 @@ export const metadata: Metadata = {
     url: 'https://vigil.run',
     siteName: 'Vigil',
     title: 'Vigil — AI Email Agent That Reads, Remembers, and Surfaces What Matters',
-    description: 'Forward emails to an AI agent that reads them, remembers context, and tells you when something matters. No inbox access. $0.005 per email.',
+    description: 'Forward emails to an AI agent that reads them, remembers context, and tells you when something matters. No inbox access. Actual AI cost + 5%. BYOK is free.',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Vigil — AI Email Agent',
-    description: 'Forward emails to an AI agent that reads them, remembers context, and tells you when something matters. No inbox access. $0.005 per email.',
+    description: 'Forward emails to an AI agent that reads them, remembers context, and tells you when something matters. No inbox access. Actual AI cost + 5%. BYOK is free.',
   },
   robots: {
     index: true,
@@ -67,9 +67,9 @@ export default function RootLayout({
               operatingSystem: 'Web',
               offers: {
                 '@type': 'Offer',
-                price: '0.005',
+                price: '0.012',
                 priceCurrency: 'USD',
-                description: 'Pay per email processed. Free tier included. No subscriptions.',
+                description: 'Actual AI cost + 5% margin. BYOK is free. 50 free emails to start.',
               },
             }),
           }}

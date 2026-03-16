@@ -206,24 +206,25 @@ chmod +x ~/.openclaw/skills/vigil/scripts/vigil.sh</code></pre>
     content: `
 <p>Superhuman costs $30/month. You pay the same whether you process 10 emails or 10,000. For a power user, that's a deal. For everyone else, it's a tax on having an email address.</p>
 
-<p>Vigil charges per email processed. Here's what that looks like in practice:</p>
+<p>Vigil charges the actual LLM token cost plus a 5% margin. Bring your own API key and it's completely free. Here's what that looks like:</p>
 
 <h2>The Math</h2>
 <ul>
-<li><strong>10 emails/day</strong> (light user): ~$1/month</li>
-<li><strong>50 emails/day</strong> (typical professional): ~$5/month</li>
-<li><strong>200 emails/day</strong> (heavy user): ~$19/month</li>
+<li><strong>Light</strong> (100 emails/mo + hourly checks): ~$11/month</li>
+<li><strong>Normal</strong> (500 emails/mo + hourly checks): ~$16/month</li>
+<li><strong>Heavy</strong> (2,000 emails/mo + hourly checks): ~$34/month</li>
+<li><strong>BYOK</strong> (any volume, your own API key): $0/month</li>
 </ul>
 
-<p>Each email costs about $0.003 to process on GPT-4.1 (our recommended model), plus a $0.001 platform fee. Alerts cost $0.005 each. That's it.</p>
+<p>Each email costs about 1.2¢ to process on GPT-4.1-mini (default model). Scheduled checks cost about 1.3¢ each. We add 5% on top. That's it. Your dashboard shows every call and its exact cost.</p>
 
 <h2>Why This Is More Honest</h2>
 <p>Subscription pricing hides the real cost. A $30/month email tool needs you to use it a lot to feel worth it. If you go on vacation for a week, you're paying for nothing. If you have a slow month, same price.</p>
 
-<p>Pay-per-use aligns our incentives with yours. We make money when the agent does useful work. If it sits idle, you pay nothing. If you process 1,000 emails in a busy week, the cost scales proportionally.</p>
+<p>Cost passthrough aligns our incentives with yours. We make 5% when the agent does work. If it sits idle, you pay nothing. If you bring your own key, we make nothing and that's fine — adoption matters more than margin.</p>
 
 <h2>No Tiers, No Limits</h2>
-<p>There are no artificial limits. Unlimited watchers. Unlimited memory. Unlimited threads. Unlimited API access. You pay for compute (the AI model processing each email) and infrastructure (the platform fee). Nothing else is gated.</p>
+<p>There are no artificial limits. Unlimited watchers. Unlimited memory. Unlimited threads. Unlimited API access. You pay for compute (the AI model processing each email) plus 5%. Nothing else is gated. Bring your own API key and even the compute is on you.</p>
 
 <p>We think this is how software should be priced. You pay for what you use. You see exactly what each email costs. No surprises.</p>
 
