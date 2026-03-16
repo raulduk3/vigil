@@ -583,9 +583,9 @@ export async function invokeAgent(
         durationMs: Date.now() - startMs,
     });
 
-    // Bill actual LLM cost + 5% on emails and chat. Ticks are free (absorbed, run on nano).
-    if (!hasAnyByokKey(watcher.account_id) && costUsd > 0 && trigger.type !== "scheduled_tick") {
-        const MARGIN = 0.05;
+    // Bill all usage. Emails + chat: cost + 5%. Ticks: cost at zero markup.
+    if (!hasAnyByokKey(watcher.account_id) && costUsd > 0) {
+        const MARGIN = trigger.type === "scheduled_tick" ? 0 : 0.05;
         const billable = costUsd * (1 + MARGIN);
         reportInvocationCost(watcher.account_id, billable).catch((err) =>
             logger.error("Failed to report invocation cost", { watcherId, err })
