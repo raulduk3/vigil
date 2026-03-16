@@ -286,11 +286,10 @@ export default function HomePage() {
         <div className="grid md:grid-cols-[1.2fr_0.8fr] gap-10 items-center">
           <div>
             <p className="landing-section-kicker">Pricing</p>
-            <h2 className="landing-section-title mt-3" style={{ wordSpacing: '0.08em' }}>Half a cent per email. No surprises.</h2>
+            <h2 className="landing-section-title mt-3" style={{ wordSpacing: '0.08em' }}>Actual cost + 5%. That&apos;s it.</h2>
             <p className="text-base text-gray-600 mt-4 leading-relaxed">
-              50 emails free every month. After that, $0.005 per email Vigil processes.
-              That&apos;s it. No tiers. No per-seat pricing. No annual contracts. No hidden token costs.
-              A thousand emails costs five dollars.
+              You pay the real LLM token cost plus a 5% margin. No flat rates. No hidden markup.
+              Bring your own API key and Vigil is completely free. 50 emails free to start.
             </p>
             <div className="mt-6 flex gap-4">
               <Link href="/auth/register" className="btn btn-primary">Start free</Link>
@@ -299,11 +298,11 @@ export default function HomePage() {
           </div>
           <div className="panel p-6 space-y-3">
             {[
-              ['50 free emails', 'Every month, forever, no card needed'],
-              ['$0.005 per email', 'Half a cent. A thousand emails = $5'],
-              ['Alerts included', 'No extra charge when the agent reaches out'],
+              ['Cost + 5%', 'Real LLM token cost, transparent margin'],
+              ['BYOK = Free', 'Bring your own API key, pay nothing'],
+              ['50 free emails', 'No credit card required to start'],
               ['Unlimited watchers', 'As many email streams as you need'],
-              ['Full audit trail', 'Every agent decision logged and visible'],
+              ['Full audit trail', 'Every agent call, cost, and decision visible'],
             ].map(([label, desc]) => (
               <div key={label} className="flex items-start gap-3">
                 <svg className="w-4 h-4 text-status-ok flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

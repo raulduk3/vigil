@@ -24,30 +24,31 @@ Comparable energy: OpenClaw, Retell. Tools built by engineers who respect their 
 
 ## Pricing
 
-Usage-based. The unit is one email processed (one agent invocation).
+Cost passthrough. Every LLM call is billed at actual token cost + 5% margin. BYOK users pay nothing.
 
 | | |
 |---|---|
-| **Price per email** | $0.005 (half a cent) |
-| **Cost per email** | ~$0.001–0.003 (gpt-4.1-mini inference) |
-| **Margin** | 2–5x |
-| **Free tier** | 50 emails/month, 1 watcher, no credit card |
-| **Scheduled ticks** | Free (included, not billed) |
-| **Weekly digests** | Free (included, not billed) |
+| **Model** | Actual token cost + 5% margin |
+| **Avg email cost** | ~1.2¢ (GPT-4.1-mini) |
+| **Avg tick cost** | ~1.3¢ (GPT-4.1-mini) |
+| **Avg chat cost** | ~0.6¢ (GPT-4.1-mini) |
+| **BYOK** | Free (bring your own OpenAI/Anthropic/Google key) |
+| **Free tier** | 50 emails to start, no credit card |
 | **Billing** | Monthly invoice via Stripe metered billing |
 
-What users actually pay:
+What users actually pay (GPT-4.1-mini, hourly ticks):
 
 | Usage | Monthly cost |
 |---|---|
-| Light (100 emails/mo) | $0.50 |
-| Normal (500 emails/mo) | $2.50 |
-| Heavy (2,000 emails/mo) | $10.00 |
-| Power (5,000 emails/mo) | $25.00 |
+| Light (100 emails + hourly ticks) | ~$11 |
+| Normal (500 emails + hourly ticks) | ~$16 |
+| Heavy (2,000 emails + hourly ticks) | ~$34 |
+| Power (5,000 emails + 2x hourly ticks) | ~$79 |
+| BYOK (any volume) | $0 |
 
-No tiers. No plans. No "Starter" or "Professional" or "Enterprise." One price, one meter, total transparency. Usage dashboard shows exactly what you've used and what it cost.
+No tiers. No plans. No flat rates. The dashboard shows every API call, its token cost, and the running total. Total transparency.
 
-Ticks and digests are free because they're cheap inference and they're what make the product sticky. Never charge for the thing that keeps people around.
+Every LLM call is billed: emails, ticks, chat, digests. We eat nothing. The 5% margin keeps Vigil running.
 
 ## Architecture
 
@@ -192,17 +193,18 @@ The current landing page is good but leans too hard on "alerts" and "notificatio
 
 ## Revenue Model
 
-At $0.005/email with ~$0.002 average cost:
+Revenue = 5% of all LLM costs. Guaranteed profitable per-call.
 
-| Users | Avg emails/mo | Revenue/mo | Cost/mo | Gross margin |
+| Users | Avg LLM cost/mo/user | Revenue (5%) | Infra cost | Net |
 |---|---|---|---|---|
-| 100 | 500 | $250 | $100 | 60% |
-| 1,000 | 500 | $2,500 | $1,000 | 60% |
-| 10,000 | 500 | $25,000 | $10,000 | 60% |
+| 100 | $15 | $75 | $28 | $47 |
+| 1,000 | $15 | $750 | $48 | $702 |
+| 10,000 | $15 | $7,500 | $250 | $7,250 |
 
-Infrastructure cost (Cloudflare free tier + VPS + Resend): ~$20/month until 10K+ users.
+BYOK users cost us only infrastructure (~$0.001/user/mo). They drive adoption and trust.
+Paying users generate 5% on every API call with zero risk of negative margin.
 
-Break-even: effectively 1 paying user. The business becomes interesting at 1,000+.
+Infrastructure cost (Cloudflare free tier + VPS + Resend): ~$28/month until 10K+ users.
 
 ## Transparency
 

@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { PublicHeader, Footer } from '@/components/layout';
-import { PRICE_PER_EMAIL, calculateMonthlyEstimate, formatUsd } from '@/lib/pricing';
+import { AVG_COST_PER_EMAIL, MARGIN, estimateMonthly, formatUsd } from '@/lib/pricing';
 
 const scenarios = [
-  { label: 'Light', emailsPerMonth: 100, summary: 'One watcher for the few streams that really matter.' },
-  { label: 'Normal', emailsPerMonth: 500, summary: 'Work plus bills, client mail, or vendor follow-up.' },
-  { label: 'Heavy', emailsPerMonth: 2000, summary: 'Several active watchers handling real operational flow.' },
-  { label: 'Power', emailsPerMonth: 5000, summary: 'High-volume teams routing lots of mail through Vigil.' },
+  { label: 'Light', emails: 100, ticks: 24, summary: 'One watcher, hourly checks. A few streams that matter.' },
+  { label: 'Normal', emails: 500, ticks: 24, summary: 'Work email plus bills or vendor follow-up.' },
+  { label: 'Heavy', emails: 2000, ticks: 24, summary: 'Several active watchers handling real operational flow.' },
+  { label: 'Power', emails: 5000, ticks: 48, summary: 'High-volume routing with frequent monitoring.' },
 ];
 
 export default function PricingPage() {
@@ -21,43 +21,48 @@ export default function PricingPage() {
           <div className="text-center mb-14">
             <p className="text-sm font-medium text-vigil-700 uppercase tracking-wider mb-3">Pricing</p>
             <h1 className="text-4xl md:text-5xl font-display font-semibold text-gray-900 tracking-tight mb-5">
-              Half a cent per email.
+              Pay what it costs. Plus 5%.
             </h1>
             <p className="text-xl text-gray-600 leading-relaxed">
-              No plans. No alert fees. No token math in the UI. 50 emails free each month,
-              then {formatUsd(PRICE_PER_EMAIL)} per email Vigil processes.
+              Every API call is billed at the actual LLM token cost plus a 5% margin.
+              No flat rates. No hidden markup. Bring your own API key and it&apos;s free.
             </p>
           </div>
 
           <div className="panel p-8 mb-8">
             <div className="grid gap-6 text-center md:grid-cols-3">
               <div>
-                <div className="text-4xl font-display font-semibold text-gray-900 mb-1">0.5¢</div>
-                <div className="text-sm text-gray-500">per email processed</div>
+                <div className="text-4xl font-display font-semibold text-gray-900 mb-1">5%</div>
+                <div className="text-sm text-gray-500">margin on LLM costs</div>
               </div>
               <div>
                 <div className="text-4xl font-display font-semibold text-gray-900 mb-1">50</div>
-                <div className="text-sm text-gray-500">free emails each month</div>
+                <div className="text-sm text-gray-500">free emails to start</div>
               </div>
               <div>
                 <div className="text-4xl font-display font-semibold text-gray-900 mb-1">$0</div>
-                <div className="text-sm text-gray-500">for ticks and weekly digests</div>
+                <div className="text-sm text-gray-500">with your own API key</div>
               </div>
             </div>
           </div>
 
           <div className="panel p-6 mb-8 bg-vigil-900 text-white">
-            <h3 className="text-sm font-semibold uppercase tracking-wider text-vigil-200 mb-4">What is included</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-vigil-200 mb-4">What you pay for</h3>
+            <p className="text-sm text-vigil-100 mb-4">
+              Every LLM call Vigil makes on your behalf: email processing, scheduled checks, chat messages, and digests.
+              You see the exact token cost in your dashboard. We add 5%.
+            </p>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-vigil-200 mb-4 mt-6">What&apos;s included free</h3>
             <div className="grid grid-cols-2 gap-3">
               {[
                 'Unlimited watchers',
-                'Unlimited email forwarding rules',
-                'Agent memory and thread tracking',
+                'Unlimited forwarding rules',
+                'Agent memory and threads',
                 'Full audit trail',
-                'Weekly digests included',
-                'Scheduled ticks included',
                 'Custom tools and webhooks',
                 'Developer API access',
+                'Chrome extension',
+                'Daily or weekly digests',
               ].map((item) => (
                 <div key={item} className="flex items-center gap-2 text-sm text-vigil-100">
                   <svg className="w-4 h-4 text-vigil-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -69,22 +74,37 @@ export default function PricingPage() {
             </div>
           </div>
 
-          {/* Real costs */}
+          {/* BYOK callout */}
+          <div className="panel p-6 mb-8 border-2 border-vigil-300 bg-vigil-50">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-vigil-900 text-white flex items-center justify-center text-lg font-bold flex-shrink-0">🔑</div>
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">Bring Your Own Key</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  Add your own OpenAI, Anthropic, or Google API key and Vigil is completely free.
+                  No trial limit. No metering. No margin. You pay your provider directly.
+                  We never store your key in plaintext (AES-256-GCM encrypted at rest).
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Estimates */}
           <div className="mb-14">
-            <h2 className="text-xl font-display font-semibold text-gray-900 mb-1">What it actually costs</h2>
-            <p className="text-sm text-gray-500 mb-4">You do not forward your whole inbox. You forward the streams that matter.</p>
+            <h2 className="text-xl font-display font-semibold text-gray-900 mb-1">Typical monthly costs</h2>
+            <p className="text-sm text-gray-500 mb-4">Estimates based on GPT-4.1-mini (default model). Actual costs vary by email length and model choice.</p>
             <div className="grid grid-cols-2 gap-4">
               {scenarios.map((s) => {
-                const monthly = calculateMonthlyEstimate(s.emailsPerMonth);
+                const monthly = estimateMonthly(s.emails, s.ticks);
                 return (
                   <div key={s.label} className="panel p-5">
                     <div className="flex justify-between items-start mb-1">
                       <div className="font-medium text-gray-900">{s.label}</div>
                       <div className="text-xl font-display font-semibold text-gray-900">
-                        {formatUsd(monthly)}<span className="text-sm font-normal text-gray-400">/mo</span>
+                        ~{formatUsd(monthly)}<span className="text-sm font-normal text-gray-400">/mo</span>
                       </div>
                     </div>
-                    <div className="text-xs text-gray-500">{s.emailsPerMonth.toLocaleString()} emails/month</div>
+                    <div className="text-xs text-gray-500">{s.emails.toLocaleString()} emails + {s.ticks} checks/day</div>
                     <p className="text-sm text-gray-600 mt-3 max-w-none">{s.summary}</p>
                   </div>
                 );
@@ -92,24 +112,30 @@ export default function PricingPage() {
             </div>
           </div>
 
+          {/* Cost breakdown */}
           <div className="panel p-6 mb-14">
-            <h2 className="text-xl font-display font-semibold text-gray-900 mb-2">How to start cheap</h2>
-            <p className="text-sm text-gray-600 leading-relaxed max-w-none mb-5">
-              Start with one watcher and one live stream, then add more only if Vigil earns the right to stay in the loop.
-            </p>
-            <div className="grid gap-3 md:grid-cols-3">
-              <Link href="/auth/register" className="panel-inset rounded-md p-4 hover:bg-white transition-colors">
-                <p className="text-xs uppercase tracking-[0.18em] text-vigil-700">Step 1</p>
-                <p className="text-base font-semibold text-gray-900 mt-2">Create your account</p>
-              </Link>
-              <Link href="/extension" className="panel-inset rounded-md p-4 hover:bg-white transition-colors">
-                <p className="text-xs uppercase tracking-[0.18em] text-vigil-700">Step 2</p>
-                <p className="text-base font-semibold text-gray-900 mt-2">Use the extension</p>
-              </Link>
-              <Link href="/learn/email-ingestion" className="panel-inset rounded-md p-4 hover:bg-white transition-colors">
-                <p className="text-xs uppercase tracking-[0.18em] text-vigil-700">Alternative</p>
-                <p className="text-base font-semibold text-gray-900 mt-2">Manual forwarding docs</p>
-              </Link>
+            <h2 className="text-xl font-display font-semibold text-gray-900 mb-4">Where the cost comes from</h2>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-gray-600">Email processing (per email)</span>
+                <span className="font-mono text-gray-900">~1.2¢</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-gray-600">Scheduled tick (per check)</span>
+                <span className="font-mono text-gray-900">~1.3¢</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-gray-600">Chat message (per message)</span>
+                <span className="font-mono text-gray-900">~0.6¢</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-gray-600">Vigil margin</span>
+                <span className="font-mono text-gray-900">5%</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-gray-600">BYOK (your own API key)</span>
+                <span className="font-mono text-vigil-700 font-semibold">Free</span>
+              </div>
             </div>
           </div>
 
@@ -117,12 +143,12 @@ export default function PricingPage() {
             <h2 className="text-2xl font-display font-semibold text-gray-900 text-center mb-8">Questions</h2>
             <div className="space-y-4">
               {[
-                { q: 'What counts as an email processed?', a: 'Each email that arrives at your watcher address. The agent reads it, analyzes it, and decides what to do. That\'s one email processed.' },
-                { q: 'Do alerts cost extra?', a: 'No. The unit is one processed email. Alerts are just one of the tools Vigil may choose to use.' },
-                { q: 'Is there a free tier?', a: 'Yes. You get 50 processed emails each month with no credit card required.' },
-                { q: 'Are there any limits?', a: 'No tiers and no watcher limits. You pay only for processed emails above the free allowance.' },
-                { q: 'What AI model do you use?', a: 'GPT-4.1-mini is the default. The model cost is already built into the per-email price.' },
-                { q: 'How do I pay?', a: 'Monthly via Stripe. Your dashboard shows real-time usage. No surprises.' },
+                { q: 'How is my bill calculated?', a: 'Every time Vigil calls an AI model on your behalf, the token cost is recorded. At the end of the month, you pay the sum of those costs plus 5%. Your dashboard shows every call, its cost, and the running total in real time.' },
+                { q: 'What does BYOK mean?', a: 'Bring Your Own Key. Add your OpenAI, Anthropic, or Google API key in account settings. Vigil uses your key for all LLM calls. You pay your provider directly. Vigil charges nothing.' },
+                { q: 'Is there a free tier?', a: '50 emails free to start, no credit card required. After that, add billing or bring your own API key.' },
+                { q: 'What model do you use?', a: 'GPT-4.1-mini by default. You can switch models per watcher. Costs vary by model. The dashboard shows exact costs per call.' },
+                { q: 'Can costs spike unexpectedly?', a: 'Costs scale linearly with usage. A typical watcher processing 500 emails/month with hourly checks runs about $15. Your dashboard shows real-time usage so there are no surprises.' },
+                { q: 'Do I pay for ticks?', a: 'Yes. Scheduled checks are LLM calls. They cost about 1.3¢ each. You control the frequency per watcher (hourly, every 2 hours, etc). Lower frequency = lower cost.' },
               ].map((faq) => (
                 <div key={faq.q} className="panel p-5">
                   <h3 className="font-medium text-gray-900 mb-2">{faq.q}</h3>
@@ -134,7 +160,7 @@ export default function PricingPage() {
 
           <div className="text-center">
             <Link href="/auth/register" className="btn btn-primary btn-lg">Start for free</Link>
-            <p className="text-sm text-gray-500 mt-3">50 free emails each month. No credit card required.</p>
+            <p className="text-sm text-gray-500 mt-3">50 free emails. No credit card required. BYOK = free forever.</p>
           </div>
         </div>
       </main>
