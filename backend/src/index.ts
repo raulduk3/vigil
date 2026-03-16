@@ -92,7 +92,28 @@ async function runScheduledTicks(): Promise<void> {
         const intervalMs = watcher.tick_interval * 60 * 1000;
 
         if (msSinceLastTick >= intervalMs) {
-            logger.debug("Running scheduled tick", { watcherId: watcher.id });
+            // Smart tick: skip LLM call if nothing changed since last tick
+            const lastTickIso = watcher.last_tick_at ?? "1970-01-01T00:00:00Z";
+            const hasNewEmails = queryOne<{ count: number }>(
+                `SELECT COUNT(*) as count FROM emails WHERE watcher_id = ? AND created_at > ?`,
+                [watcher.id, lastTickIso]
+            );
+            const hasThreadUpdates = queryOne<{ count: number }>(
+                `SELECT COUNT(*) as count FROM threads WHERE watcher_id = ? AND last_activity > ? AND status IN ('active', 'watching')`,
+                [watcher.id, lastTickIso]
+            );
+
+            const newEmails = hasNewEmails?.count ?? 0;
+            const updatedThreads = hasThreadUpdates?.count ?? 0;
+
+            if (newEmails === 0 && updatedThreads === 0) {
+                // Nothing changed — update last_tick_at but skip the LLM call
+                run(`UPDATE watchers SET last_tick_at = CURRENT_TIMESTAMP WHERE id = ?`, [watcher.id]);
+                logger.debug("Smart tick: skipped (no changes)", { watcherId: watcher.id });
+                continue;
+            }
+
+            logger.debug("Running scheduled tick", { watcherId: watcher.id, newEmails, updatedThreads });
             invokeAgent(watcher.id, { type: "scheduled_tick", timestamp: now }).catch(
                 (err) => logger.error("Tick invocation failed", { watcherId: watcher.id, err })
             );
