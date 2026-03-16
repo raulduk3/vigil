@@ -316,6 +316,10 @@ export const api = {
     return request(`/api/watchers/${id}/digest`, { method: 'POST' });
   },
 
+  async flushWatcher(id: string): Promise<{ flushed: boolean; deleted: { emails: number; threads: number; memories: number } }> {
+    return request(`/api/watchers/${id}/flush`, { method: 'POST' });
+  },
+
   // Threads
   async getThreads(watcherId: string): Promise<{ threads: Thread[] }> {
     return request(`/api/watchers/${watcherId}/threads`);

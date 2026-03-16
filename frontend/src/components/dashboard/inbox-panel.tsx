@@ -39,6 +39,8 @@ export function InboxPanel({
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [savingReactivity, setSavingReactivity] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [flushing, setFlushing] = useState(false);
+  const [showFlushConfirm, setShowFlushConfirm] = useState(false);
 
   const filtered = threads.filter((t) => {
     if (filter === 'all') return true;
@@ -101,15 +103,55 @@ export function InboxPanel({
             {copied ? 'Copied!' : watcher.ingestion_address}
           </button>
         </div>
-        <button
-          onClick={onRefresh}
-          className="p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors shrink-0"
-          title="Refresh"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-1 shrink-0">
+          {showFlushConfirm ? (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="text-red-600 font-medium">Flush all data?</span>
+              <button
+                onClick={async () => {
+                  if (!watcher) return;
+                  setFlushing(true);
+                  try {
+                    await api.flushWatcher(watcher.id);
+                    onRefresh();
+                    onMemoriesChange([]);
+                  } catch {}
+                  setFlushing(false);
+                  setShowFlushConfirm(false);
+                }}
+                disabled={flushing}
+                className="px-2 py-0.5 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
+              >
+                {flushing ? 'Flushing…' : 'Confirm'}
+              </button>
+              <button
+                onClick={() => setShowFlushConfirm(false)}
+                className="px-2 py-0.5 rounded text-gray-500 hover:bg-gray-100 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowFlushConfirm(true)}
+              className="p-1.5 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              title="Flush inbox"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          )}
+          <button
+            onClick={onRefresh}
+            className="p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            title="Refresh"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* Main tabs */}
