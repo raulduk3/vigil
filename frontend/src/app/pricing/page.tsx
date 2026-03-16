@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { PublicHeader, Footer } from '@/components/layout';
-import { AVG_COST_PER_EMAIL, MARGIN, estimateMonthly, formatUsd } from '@/lib/pricing';
+import { AVG_COST_PER_EMAIL, formatUsd } from '@/lib/pricing';
 
 const scenarios = [
-  { label: 'Light', emails: 100, ticks: 24, summary: 'One watcher, hourly checks. A few streams that matter.' },
-  { label: 'Normal', emails: 500, ticks: 24, summary: 'Work email plus bills or vendor follow-up.' },
-  { label: 'Heavy', emails: 2000, ticks: 24, summary: 'Several active watchers handling real operational flow.' },
-  { label: 'Power', emails: 5000, ticks: 48, summary: 'High-volume routing with frequent monitoring.' },
+  { label: 'Light', emails: 100, summary: 'One watcher for a few streams that matter.' },
+  { label: 'Normal', emails: 500, summary: 'Work email plus bills or vendor follow-up.' },
+  { label: 'Heavy', emails: 2000, summary: 'Several active watchers handling real operational flow.' },
+  { label: 'Power', emails: 5000, summary: 'High-volume teams routing lots of mail through Vigil.' },
 ];
 
 export default function PricingPage() {
@@ -40,8 +40,8 @@ export default function PricingPage() {
                 <div className="text-sm text-gray-500">free emails to start</div>
               </div>
               <div>
-                <div className="text-4xl font-display font-semibold text-gray-900 mb-1">$0</div>
-                <div className="text-sm text-gray-500">with your own API key</div>
+                <div className="text-4xl font-display font-semibold text-gray-900 mb-1">Free</div>
+                <div className="text-sm text-gray-500">scheduled checks + BYOK</div>
               </div>
             </div>
           </div>
@@ -49,8 +49,8 @@ export default function PricingPage() {
           <div className="panel p-6 mb-8 bg-vigil-900 text-white">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-vigil-200 mb-4">What you pay for</h3>
             <p className="text-sm text-vigil-100 mb-4">
-              Every LLM call Vigil makes on your behalf: email processing, scheduled checks, chat messages, and digests.
-              You see the exact token cost in your dashboard. We add 5%.
+              Email processing and chat messages are billed at actual LLM token cost + 5%.
+              Scheduled checks and digests are free (we absorb the cost). Your dashboard shows every call and its exact cost.
             </p>
             <h3 className="text-sm font-semibold uppercase tracking-wider text-vigil-200 mb-4 mt-6">What&apos;s included free</h3>
             <div className="grid grid-cols-2 gap-3">
@@ -92,10 +92,10 @@ export default function PricingPage() {
           {/* Estimates */}
           <div className="mb-14">
             <h2 className="text-xl font-display font-semibold text-gray-900 mb-1">Typical monthly costs</h2>
-            <p className="text-sm text-gray-500 mb-4">Estimates based on GPT-4.1-mini (default model). Actual costs vary by email length and model choice.</p>
+            <p className="text-sm text-gray-500 mb-4">Estimates based on GPT-4.1-mini (default model). Scheduled checks and digests are free. Actual costs vary by email length and model.</p>
             <div className="grid grid-cols-2 gap-4">
               {scenarios.map((s) => {
-                const monthly = estimateMonthly(s.emails, s.ticks);
+                const monthly = s.emails * AVG_COST_PER_EMAIL;
                 return (
                   <div key={s.label} className="panel p-5">
                     <div className="flex justify-between items-start mb-1">
@@ -104,7 +104,7 @@ export default function PricingPage() {
                         ~{formatUsd(monthly)}<span className="text-sm font-normal text-gray-400">/mo</span>
                       </div>
                     </div>
-                    <div className="text-xs text-gray-500">{s.emails.toLocaleString()} emails + {s.ticks} checks/day</div>
+                    <div className="text-xs text-gray-500">{s.emails.toLocaleString()} emails/month · checks free</div>
                     <p className="text-sm text-gray-600 mt-3 max-w-none">{s.summary}</p>
                   </div>
                 );
@@ -121,12 +121,12 @@ export default function PricingPage() {
                 <span className="font-mono text-gray-900">~1.2¢</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-gray-100">
-                <span className="text-gray-600">Scheduled tick (per check)</span>
-                <span className="font-mono text-gray-900">~1.3¢</span>
-              </div>
-              <div className="flex justify-between items-center py-2 border-b border-gray-100">
                 <span className="text-gray-600">Chat message (per message)</span>
                 <span className="font-mono text-gray-900">~0.6¢</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                <span className="text-gray-600">Scheduled checks + digests</span>
+                <span className="font-mono text-vigil-700 font-semibold">Free</span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-gray-100">
                 <span className="text-gray-600">Vigil margin</span>
@@ -148,7 +148,7 @@ export default function PricingPage() {
                 { q: 'Is there a free tier?', a: '50 emails free to start, no credit card required. After that, add billing or bring your own API key.' },
                 { q: 'What model do you use?', a: 'GPT-4.1-mini by default. You can switch models per watcher. Costs vary by model. The dashboard shows exact costs per call.' },
                 { q: 'Can costs spike unexpectedly?', a: 'Costs scale linearly with usage. A typical watcher processing 500 emails/month with hourly checks runs about $15. Your dashboard shows real-time usage so there are no surprises.' },
-                { q: 'Do I pay for ticks?', a: 'Yes. Scheduled checks are LLM calls. They cost about 1.3¢ each. You control the frequency per watcher (hourly, every 2 hours, etc). Lower frequency = lower cost.' },
+                { q: 'Do I pay for scheduled checks?', a: 'No. Scheduled checks (ticks) and digests are free. We absorb that cost. You only pay for email processing and chat messages.' },
               ].map((faq) => (
                 <div key={faq.q} className="panel p-5">
                   <h3 className="font-medium text-gray-900 mb-2">{faq.q}</h3>

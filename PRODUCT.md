@@ -30,25 +30,23 @@ Cost passthrough. Every LLM call is billed at actual token cost + 5% margin. BYO
 |---|---|
 | **Model** | Actual token cost + 5% margin |
 | **Avg email cost** | ~1.2¢ (GPT-4.1-mini) |
-| **Avg tick cost** | ~1.3¢ (GPT-4.1-mini) |
+| **Ticks** | Free (absorbed, run on gpt-4.1-nano) |
 | **Avg chat cost** | ~0.6¢ (GPT-4.1-mini) |
 | **BYOK** | Free (bring your own OpenAI/Anthropic/Google key) |
 | **Free tier** | 50 emails to start, no credit card |
 | **Billing** | Monthly invoice via Stripe metered billing |
 
-What users actually pay (GPT-4.1-mini, hourly ticks):
+What users actually pay (GPT-4.1-mini, ticks free):
 
 | Usage | Monthly cost |
 |---|---|
-| Light (100 emails + hourly ticks) | ~$11 |
-| Normal (500 emails + hourly ticks) | ~$16 |
-| Heavy (2,000 emails + hourly ticks) | ~$34 |
-| Power (5,000 emails + 2x hourly ticks) | ~$79 |
+| Light (100 emails/mo) | ~$1.20 |
+| Normal (500 emails/mo) | ~$6 |
+| Heavy (2,000 emails/mo) | ~$24 |
+| Power (5,000 emails/mo) | ~$60 |
 | BYOK (any volume) | $0 |
 
-No tiers. No plans. No flat rates. The dashboard shows every API call, its token cost, and the running total. Total transparency.
-
-Every LLM call is billed: emails, ticks, chat, digests. We eat nothing. The 5% margin keeps Vigil running.
+No tiers. No plans. No flat rates. Scheduled checks and digests are free (absorbed, run on nano). The dashboard shows every API call, its token cost, and the running total. Total transparency.
 
 ## Architecture
 

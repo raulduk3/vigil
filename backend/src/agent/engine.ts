@@ -395,11 +395,10 @@ export async function invokeAgent(
     let contextTokens = 0;
     let costUsd = 0;
 
-    // Ticks always use gpt-4.1 to control costs (ticks are overhead, not user-triggered)
-    // Email processing and chat use the watcher's chosen model
+    // Ticks use nano (cheapest model, absorbed by platform). Emails/chat use watcher's model.
     const model = trigger.type === "scheduled_tick"
-        ? "gpt-4.1"
-        : (watcher.model || process.env.VIGIL_MODEL || "gpt-4.1");
+        ? "gpt-4.1-nano"
+        : (watcher.model || process.env.VIGIL_MODEL || "gpt-4.1-mini");
 
     try {
         const result = await callLLM(systemPrompt, userPrompt, model, watcher.account_id);
@@ -584,8 +583,8 @@ export async function invokeAgent(
         durationMs: Date.now() - startMs,
     });
 
-    // Bill actual LLM cost + 5% margin for all invocations. BYOK users are free.
-    if (!hasAnyByokKey(watcher.account_id) && costUsd > 0) {
+    // Bill actual LLM cost + 5% on emails and chat. Ticks are free (absorbed, run on nano).
+    if (!hasAnyByokKey(watcher.account_id) && costUsd > 0 && trigger.type !== "scheduled_tick") {
         const MARGIN = 0.05;
         const billable = costUsd * (1 + MARGIN);
         reportInvocationCost(watcher.account_id, billable).catch((err) =>
