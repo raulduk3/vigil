@@ -40,9 +40,10 @@ export const metadata: Metadata = {
       'max-snippet': -1,
     },
   },
-  // canonical is set per-page via metadataBase + route. Do NOT set a global
-  // canonical here — it causes every page to point to the homepage, which
-  // Google treats as duplicate content and blocks indexing.
+  // Default canonical for the homepage. Child layouts override this with their own.
+  alternates: {
+    canonical: 'https://vigil.run',
+  },
   icons: {
     icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
   },
