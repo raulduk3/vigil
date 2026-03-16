@@ -1,4 +1,4 @@
-description: "Vigil Quick Eval — GPT-4.1-mini vs Nano"
+description: "Vigil Prompt Eval — nano vs mini"
 
 providers:
   - id: "file://providers/vigil-provider.ts"
@@ -14,8 +14,25 @@ providers:
 prompts:
   - "{{trigger_type}}"
 
+defaultTest:
+  assert:
+    - type: javascript
+      value: |
+        const parsed = (() => { try { return JSON.parse(output); } catch { return null; } })();
+        if (!parsed) return { pass: false, score: 0, reason: "Invalid JSON" };
+        return { pass: true, score: 1, reason: "Valid JSON" };
+    - type: javascript
+      value: |
+        const p = JSON.parse(output);
+        if (!Array.isArray(p.actions)) return { pass: false, score: 0, reason: "actions is not an array" };
+        if (!p.email_analysis) return { pass: false, score: 0, reason: "missing email_analysis" };
+        if (!p.email_analysis.summary) return { pass: false, score: 0, reason: "missing email_analysis.summary" };
+        if (!p.email_analysis.urgency) return { pass: false, score: 0, reason: "missing email_analysis.urgency" };
+        return { pass: true, score: 1, reason: "All required fields present" };
+
 tests:
-  - description: "Receipt — should NOT alert"
+  # 1. Receipt
+  - description: "Receipt — no alert, low urgency"
     vars:
       trigger_type: "email_received"
       email_from: "auto-confirm@amazon.com"
@@ -25,110 +42,144 @@ tests:
       thread_id: "thread-receipt-001"
     assert:
       - type: javascript
-        value: "(() => { try { JSON.parse(output); return true; } catch(e) { return false; } })()"
-      - type: javascript
         value: |
           const p = JSON.parse(output);
           const hasAlert = (p.actions || []).some(a => a.tool === 'send_alert');
-          if (hasAlert) return {pass: false, score: 0, reason: 'Receipt triggered an alert'};
-          return true;
-      - type: javascript
-        value: |
-          const p = JSON.parse(output);
-          if (!p.email_analysis) return {pass: false, score: 0, reason: 'Missing email_analysis'};
-          if (p.email_analysis.urgency === 'high') return {pass: false, score: 0, reason: 'Receipt marked high urgency'};
-          return true;
+          if (hasAlert) return { pass: false, score: 0, reason: 'Receipt should not trigger alert' };
+          return { pass: true, score: 1, reason: 'No alert — correct' };
 
-  - description: "Action request — should alert"
+  # 2. Action request
+  - description: "Action request — high/normal urgency, extract deadline"
     vars:
       trigger_type: "email_received"
       email_from: "sarah.kim@acme.com"
       email_subject: "Need your approval on the Q1 budget"
-      email_body: "Hey, I need your sign-off on the Q1 budget proposal before the board meeting on Thursday, March 19. The finance team can't proceed without your approval. The proposal is attached. Key numbers: $240,000 total budget, with $80,000 allocated for new engineering hires. Can you review and approve by EOD Wednesday? Thanks, Sarah"
+      email_body: "Hey, I need your sign-off on the Q1 budget proposal before the board meeting on Thursday, March 19. The finance team can't proceed without your approval. Key numbers: $240,000 total budget, with $80,000 for new engineering hires. Can you review and approve by EOD Wednesday? Thanks, Sarah"
       email_received_at: 1742112000000
       thread_id: "thread-action-001"
     assert:
       - type: javascript
-        value: "(() => { try { JSON.parse(output); return true; } catch(e) { return false; } })()"
+        value: |
+          const p = JSON.parse(output);
+          if (p.email_analysis.urgency === 'low') return { pass: false, score: 0, reason: 'Action request must not be low urgency — someone is waiting' };
+          return { pass: true, score: 1, reason: 'Urgency correct' };
       - type: javascript
         value: |
           const p = JSON.parse(output);
-          if (!p.email_analysis) return {pass: false, score: 0, reason: 'Missing email_analysis'};
-          if (p.email_analysis.urgency === 'low') return {pass: false, score: 0, reason: 'Action request marked low urgency'};
-          return true;
-      - type: javascript
-        value: |
-          const p = JSON.parse(output);
-          const entities = p.email_analysis?.entities || [];
-          const hasAmount = entities.some(e => e.includes('240,000') || e.includes('$240'));
-          if (!hasAmount) return {pass: false, score: 0, reason: 'Failed to extract $240,000 amount'};
-          return true;
+          const ents = (p.email_analysis.entities || []).join(' ');
+          if (!ents.includes('240,000') && !ents.includes('240000') && !ents.includes('$240')) return { pass: false, score: 0, reason: 'Failed to extract $240,000' };
+          return { pass: true, score: 1, reason: 'Amount extracted' };
 
-  - description: "Spam — should ignore"
+  # 3. Spam
+  - description: "Spam — no alert, no memory"
     vars:
       trigger_type: "email_received"
       email_from: "winner@prize-claim.co"
       email_subject: "CONGRATULATIONS! You've won $1,000,000!"
-      email_body: "Dear Valued Customer, You have been RANDOMLY SELECTED to receive ONE MILLION DOLLARS! Click here to claim your prize. This offer expires in 24 hours."
+      email_body: "Dear Valued Customer, You have been RANDOMLY SELECTED to receive ONE MILLION DOLLARS! Click here to claim your prize. Provide your bank details. This offer expires in 24 hours."
       email_received_at: 1742112000000
       thread_id: "thread-spam-001"
     assert:
       - type: javascript
-        value: "(() => { try { JSON.parse(output); return true; } catch(e) { return false; } })()"
-      - type: javascript
         value: |
           const p = JSON.parse(output);
           const hasAlert = (p.actions || []).some(a => a.tool === 'send_alert');
-          if (hasAlert) return {pass: false, score: 0, reason: 'Spam triggered an alert'};
-          return true;
+          if (hasAlert) return { pass: false, score: 0, reason: 'Spam triggered an alert' };
+          return { pass: true, score: 1, reason: 'No alert — correct' };
       - type: javascript
         value: |
           const p = JSON.parse(output);
           const mem = p.memory_append || [];
-          if (mem.length > 0) return {pass: false, score: 0, reason: 'Stored memory from spam email'};
-          return true;
+          if (mem.length > 0) return { pass: false, score: 0, reason: 'Stored memory from spam' };
+          return { pass: true, score: 1, reason: 'No memory — correct' };
 
-  - description: "Financial alert — should watch, extract amounts"
+  # 4. Financial transaction
+  - description: "Financial — extract $127.43, no alert at reactivity 3"
     vars:
       trigger_type: "email_received"
       email_from: "alerts@chase.com"
       email_subject: "Chase: A charge of $127.43 was made"
-      email_body: "A charge of $127.43 was made on your Chase Freedom card ending in 4821. Merchant: Whole Foods Market. Date: March 16, 2026. Amount: $127.43. If you don't recognize this transaction, call the number on the back of your card immediately."
+      email_body: "A charge of $127.43 was made on your Chase Freedom card ending in 4821. Merchant: Whole Foods Market. Date: March 16, 2026. Amount: $127.43. If you don't recognize this transaction, call the number on the back of your card."
       email_received_at: 1742112000000
       thread_id: "thread-fin-001"
     assert:
       - type: javascript
-        value: "(() => { try { JSON.parse(output); return true; } catch(e) { return false; } })()"
-      - type: javascript
         value: |
           const p = JSON.parse(output);
-          const entities = p.email_analysis?.entities || [];
-          const has127 = entities.some(e => e.includes('127.43'));
-          if (!has127) return {pass: false, score: 0, reason: 'Failed to extract $127.43'};
-          return true;
+          const ents = (p.email_analysis.entities || []).join(' ');
+          if (!ents.includes('127.43')) return { pass: false, score: 0, reason: 'Failed to extract $127.43' };
+          return { pass: true, score: 1, reason: 'Amount extracted' };
 
-  - description: "Newsletter — should ignore, no memory"
+  # 5. Newsletter
+  - description: "Newsletter — no alert, no memory"
     vars:
       trigger_type: "email_received"
       email_from: "newsletter@techcrunch.com"
       email_subject: "TechCrunch Daily: AI funding hits new highs"
-      email_body: "Good morning! Here's what's happening in tech today. AI startups raised $14.2B in Q1 2026, up 34% from last year. OpenAI is reportedly in talks for a new funding round. Apple unveiled its latest ML framework at a developer event yesterday. Read more at techcrunch.com."
+      email_body: "Good morning! Here's what's happening in tech today. AI startups raised $14.2B in Q1 2026, up 34% from last year. OpenAI is reportedly in talks for a new funding round. Apple unveiled its latest ML framework."
       email_received_at: 1742112000000
       thread_id: "thread-news-001"
     assert:
       - type: javascript
-        value: "(() => { try { JSON.parse(output); return true; } catch(e) { return false; } })()"
-      - type: javascript
         value: |
           const p = JSON.parse(output);
           const hasAlert = (p.actions || []).some(a => a.tool === 'send_alert');
-          if (hasAlert) return {pass: false, score: 0, reason: 'Newsletter triggered an alert'};
-          return true;
+          if (hasAlert) return { pass: false, score: 0, reason: 'Newsletter triggered alert' };
+          return { pass: true, score: 1, reason: 'No alert — correct' };
       - type: javascript
         value: |
           const p = JSON.parse(output);
           const mem = p.memory_append || [];
-          if (mem.length > 0) return {pass: false, score: 0, reason: 'Stored memory from newsletter'};
-          return true;
+          if (mem.length > 0) return { pass: false, score: 0, reason: 'Stored memory from newsletter (' + mem.length + ' items)' };
+          return { pass: true, score: 1, reason: 'No memory — correct' };
+
+  # 6. Security alert
+  - description: "Security — high urgency, should alert"
+    vars:
+      trigger_type: "email_received"
+      email_from: "no-reply@accounts.google.com"
+      email_subject: "Security alert: New sign-in from unknown device"
+      email_body: "Someone just signed in to your Google Account rawalvarez731@gmail.com from a new Windows device in Baltimore, MD. If this wasn't you, your account may be compromised. Review this activity immediately at myaccount.google.com/notifications."
+      email_received_at: 1742112000000
+      thread_id: "thread-sec-001"
+    assert:
+      - type: javascript
+        value: |
+          const p = JSON.parse(output);
+          if (p.email_analysis.urgency === 'low') return { pass: false, score: 0, reason: 'Security alert must not be low urgency' };
+          return { pass: true, score: 1, reason: 'Urgency correct' };
+
+  # 7. Subscription confirmation
+  - description: "Subscription confirmation — no alert, low urgency"
+    vars:
+      trigger_type: "email_received"
+      email_from: "billing@vercel.com"
+      email_subject: "Payment receipt for Vercel Pro"
+      email_body: "Thanks for your payment. Your Vercel Pro subscription has been renewed. Amount: $20.00. Next billing date: April 16, 2026. Manage your subscription at vercel.com/account."
+      email_received_at: 1742112000000
+      thread_id: "thread-sub-001"
+    assert:
+      - type: javascript
+        value: |
+          const p = JSON.parse(output);
+          const hasAlert = (p.actions || []).some(a => a.tool === 'send_alert');
+          if (hasAlert) return { pass: false, score: 0, reason: 'Payment receipt should not alert' };
+          return { pass: true, score: 1, reason: 'No alert — correct' };
+
+  # 8. Thread reply with question
+  - description: "Direct question — normal+ urgency"
+    vars:
+      trigger_type: "email_received"
+      email_from: "cory@layer7systems.com"
+      email_subject: "Re: Workflow Analyzer update"
+      email_body: "Hey Ricky, quick question — can you have the Bulley & Andrews demo ready by next Tuesday? They moved the kickoff meeting up. Let me know if that's doable. - Cory"
+      email_received_at: 1742112000000
+      thread_id: "thread-work-001"
+    assert:
+      - type: javascript
+        value: |
+          const p = JSON.parse(output);
+          if (p.email_analysis.urgency === 'low') return { pass: false, score: 0, reason: 'Direct question from boss must not be low urgency' };
+          return { pass: true, score: 1, reason: 'Urgency correct' };
 
 outputPath: "results/quick-eval.json"

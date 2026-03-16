@@ -500,12 +500,31 @@ export async function invokeAgent(
             (a: any) => a.tool === "send_alert"
         );
 
+        // Correction 1: model's own signals contradict its urgency
         if (analysis.urgency === "low" && (hasHighMemory || hasAlert)) {
             logger.info("Urgency correction: model said low but signals say otherwise", {
                 watcherId, hadHighMemory: hasHighMemory, hadAlert: hasAlert,
                 originalUrgency: "low", correctedTo: "normal",
             });
             analysis.urgency = "normal";
+        }
+
+        // Correction 2: security-related emails should never be low urgency
+        if (analysis.urgency === "low" && trigger.type === "email_received") {
+            const email = trigger.email;
+            const securitySignals = [
+                "security alert", "new sign-in", "unauthorized", "suspicious activity",
+                "password changed", "account compromised", "verify your identity",
+                "unusual activity", "new device", "fraud alert",
+            ];
+            const emailText = `${email.subject} ${email.body}`.toLowerCase();
+            const isSecurityEmail = securitySignals.some(s => emailText.includes(s));
+            if (isSecurityEmail) {
+                logger.info("Urgency correction: security email detected", {
+                    watcherId, originalUrgency: "low", correctedTo: "high",
+                });
+                analysis.urgency = "high";
+            }
         }
     }
 
