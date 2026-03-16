@@ -353,7 +353,7 @@ function NewWatcherContent() {
             >
               {MODEL_OPTIONS.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.label} — {m.costPer1M}/1M tokens ({m.costPerEmail}/email){m.default ? ' ★ default' : ''}
+                  {m.label} — {m.costPerEmail}/email{m.default ? ' ★ default' : ''}
                 </option>
               ))}
             </select>

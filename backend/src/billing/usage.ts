@@ -12,13 +12,26 @@ import { logger } from "../logger";
 
 /**
  * Report an invocation cost to the Stripe meter.
- * Silently skips if Stripe is not configured or account has no payment method.
+ * Also increments account-level usage tracking (survives watcher deletion).
+ * Silently skips Stripe if not configured or account has no payment method.
  */
 export async function reportInvocationCost(
     accountId: string,
     costUsd: number
 ): Promise<void> {
-    if (!isStripeConfigured() || costUsd <= 0) return;
+    if (costUsd <= 0) return;
+
+    // Always update account-level usage (independent of Stripe)
+    const currentMonth = new Date().toISOString().slice(0, 7); // "2026-03"
+    run(
+        `UPDATE accounts SET
+            usage_month_cost = CASE WHEN usage_month = ? THEN usage_month_cost + ? ELSE ? END,
+            usage_month = ?
+         WHERE id = ?`,
+        [currentMonth, costUsd, costUsd, currentMonth, accountId]
+    );
+
+    if (!isStripeConfigured()) return;
 
     const account = queryOne<{
         stripe_customer_id: string | null;
@@ -79,36 +92,52 @@ export async function getUsageSummary(accountId: string): Promise<{
     stripe_customer_id: string | null;
     stripe_subscription_id: string | null;
 }> {
+    const currentMonth = new Date().toISOString().slice(0, 7); // "2026-03"
+
     const account = queryOne<{
         has_payment_method: number;
         trial_emails_used: number;
         stripe_customer_id: string | null;
         stripe_subscription_id: string | null;
+        usage_month: string | null;
+        usage_month_cost: number | null;
     }>(
-        `SELECT has_payment_method, trial_emails_used, stripe_customer_id, stripe_subscription_id
+        `SELECT has_payment_method, trial_emails_used, stripe_customer_id, stripe_subscription_id,
+                usage_month, usage_month_cost
          FROM accounts WHERE id = ?`,
         [accountId]
     );
 
-    const monthStart = new Date();
-    monthStart.setUTCDate(1);
-    monthStart.setUTCHours(0, 0, 0, 0);
-
-    const watchers = queryMany<{ id: string }>(
-        `SELECT id FROM watchers WHERE account_id = ? AND status != 'deleted'`,
-        [accountId]
-    );
-
+    // Account-level usage is the source of truth (survives watcher deletion/flush).
+    // If the account month matches, use it. Otherwise it's a new month = $0.
     let currentMonthCost = 0;
-    if (watchers.length > 0) {
-        const placeholders = watchers.map(() => "?").join(",");
-        const watcherIds = watchers.map((w) => w.id);
-        const costResult = queryOne<{ cost: number }>(
-            `SELECT COALESCE(SUM(cost_usd), 0) as cost FROM actions
-             WHERE watcher_id IN (${placeholders}) AND created_at >= ?`,
-            [...watcherIds, monthStart.toISOString()]
+    if (account?.usage_month === currentMonth && account?.usage_month_cost) {
+        currentMonthCost = account.usage_month_cost;
+    }
+
+    // Fallback: if account-level tracking hasn't kicked in yet (pre-migration data),
+    // derive from actions table across ALL watchers (including deleted ones).
+    if (currentMonthCost === 0) {
+        const monthStart = new Date();
+        monthStart.setUTCDate(1);
+        monthStart.setUTCHours(0, 0, 0, 0);
+
+        // Query ALL watchers for this account, including deleted ones
+        const watchers = queryMany<{ id: string }>(
+            `SELECT id FROM watchers WHERE account_id = ?`,
+            [accountId]
         );
-        currentMonthCost = costResult?.cost ?? 0;
+
+        if (watchers.length > 0) {
+            const placeholders = watchers.map(() => "?").join(",");
+            const watcherIds = watchers.map((w) => w.id);
+            const costResult = queryOne<{ cost: number }>(
+                `SELECT COALESCE(SUM(cost_usd), 0) as cost FROM actions
+                 WHERE watcher_id IN (${placeholders}) AND created_at >= ?`,
+                [...watcherIds, monthStart.toISOString()]
+            );
+            currentMonthCost = costResult?.cost ?? 0;
+        }
     }
 
     const trialUsed = account?.trial_emails_used ?? 0;

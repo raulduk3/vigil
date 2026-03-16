@@ -2,7 +2,7 @@
 
 **An autonomous email agent. Forward your email. Vigil handles the rest.**
 
-Vigil reads your email 24/7, remembers every conversation, and only interrupts you when something actually needs your attention. No inbox access. No email bodies stored. Half a cent per email on the hosted version, or self-host it for free.
+Vigil reads your email 24/7, remembers every conversation, and only interrupts you when something actually needs your attention. No inbox access. No email bodies stored. About 0.25¢ per email on the default model (GPT-4.1-mini), or self-host it for free.
 
 ## What it does
 
@@ -52,8 +52,8 @@ See [CLAUDE.md](CLAUDE.md) for full setup details.
 
 **[vigil.run](https://vigil.run)** — managed service, no setup required.
 
-- 50 emails free every month
-- $0.005 per email after that
+- 50 emails free to start
+- ~0.25¢ per email after that (GPT-4.1-mini + 5% margin)
 - Chrome extension for 30-second Gmail/Outlook setup
 - No credit card to start
 

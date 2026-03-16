@@ -1,7 +1,7 @@
 {
   "name": "vigil",
   "version": "2.0.0",
-  "description": "Autonomous email monitoring agent — V2",
+  "description": "Autonomous email monitoring agent \u2014 V2",
   "private": true,
   "type": "module",
   "scripts": {
@@ -15,7 +15,10 @@
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\"",
-    "check": "bun run typecheck && bun run lint && bun run format:check && bun run test"
+    "check": "bun run typecheck && bun run lint && bun run format:check && bun run test",
+    "test:prompts": "cd promptfoo && npx promptfoo eval",
+    "test:prompts:view": "cd promptfoo && npx promptfoo view",
+    "test:prompts:sample": "cd promptfoo && npx promptfoo eval --filter-sample 2"
   },
   "dependencies": {
     "hono": "^4.12.7",
@@ -29,6 +32,7 @@
     "@typescript-eslint/parser": "^7.18.0",
     "eslint": "^8.57.1",
     "prettier": "^3.7.4",
+    "promptfoo": "^0.121.2",
     "typescript": "^5.9.3"
   }
 }

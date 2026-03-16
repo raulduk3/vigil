@@ -172,11 +172,11 @@ Usage-based pricing. See PRODUCT.md for full model.
 
 | Metric | Value |
 |--------|-------|
-| Price per email processed | $0.005 |
-| Cost per invocation (gpt-4.1-mini) | ~$0.001–0.003 |
-| Margin per email | 2–5x |
-| Free tier | 50 emails/month, 1 watcher |
-| Scheduled ticks & digests | Free (not billed) |
+| Price per email processed | ~0.25¢ (gpt-4.1-mini + 5%) |
+| Cost per invocation (gpt-4.1-mini) | ~$0.0025 |
+| Margin | 5% on token cost |
+| Free tier | 50 emails one-time (no monthly reset) |
+| Scheduled ticks (gpt-4.1-nano) | ~0.07¢/tick, smart-skipped when idle |
 | Infrastructure (Cloudflare free + VPS) | ~$20/mo |
 | Break-even | 1 paying user |
 
@@ -236,11 +236,11 @@ vigil.run/
 
 See PRODUCT.md for sequenced roadmap. Summary:
 
-- [ ] Deploy backend publicly (api.vigil.run DNS)
+- [x] Deploy backend publicly (api.vigil.run DNS)
+- [x] Stripe metered billing (usage-based, cost + 5% margin)
+- [x] Google OAuth
 - [ ] End-to-end real email flow test
 - [ ] Three-panel frontend redesign (agent chat, inbox, watcher switcher)
-- [ ] Usage metering (instrument invocations per account)
-- [ ] Stripe metered billing ($0.005/email)
 - [ ] Usage dashboard
 - [ ] Onboarding flow with forwarding instructions
 - [ ] Landing page refresh (reframe: agent intelligence, not alerts)

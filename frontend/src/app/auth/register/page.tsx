@@ -220,7 +220,7 @@ function RegisterContent() {
               <Link href="/learn/email-ingestion" className="btn btn-ghost w-full justify-center">
                 Manual setup guide
               </Link>
-              <p className="text-xs text-gray-500 max-w-none">50 emails free each month. No credit card required.</p>
+              <p className="text-xs text-gray-500 max-w-none">50 emails free to start. No credit card required.</p>
             </div>
           </aside>
         </div>

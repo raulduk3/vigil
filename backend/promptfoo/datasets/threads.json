@@ -1,0 +1,150 @@
+[
+  {
+    "description": "Scheduled tick — overdue active thread should trigger silence alert",
+    "vars": {
+      "trigger_type": "scheduled_tick",
+      "email_type": "tick",
+      "tick_timestamp": 1742284800000,
+      "silence_hours": 48,
+      "should_alert": true,
+      "active_threads": [
+        {
+          "id": "thread-overdue-001",
+          "watcher_id": "test-watcher-001",
+          "subject": "Q1 budget proposal approval needed",
+          "participants": "[\"sarah.kim@acme.com\"]",
+          "status": "active",
+          "first_seen": "2026-03-12T10:00:00Z",
+          "last_activity": "2026-03-12T10:00:00Z",
+          "email_count": 1,
+          "summary": "Sarah Kim requested approval on Q1 budget proposal ($240K) by EOD Wednesday. No response yet.",
+          "flags": null,
+          "created_at": "2026-03-12T10:00:00Z"
+        },
+        {
+          "id": "thread-watching-001",
+          "watcher_id": "test-watcher-001",
+          "subject": "FedEx package #783209438209 — out for delivery",
+          "participants": "[\"shipment-tracking@fedex.com\"]",
+          "status": "watching",
+          "first_seen": "2026-03-16T08:00:00Z",
+          "last_activity": "2026-03-16T08:00:00Z",
+          "email_count": 1,
+          "summary": "FedEx package out for delivery today.",
+          "flags": null,
+          "created_at": "2026-03-16T08:00:00Z"
+        }
+      ],
+      "memory_context": "[id:mem-001] Q1 budget proposal approval: Sarah Kim needs sign-off on $240,000 Q1 budget by EOD Wednesday March 18, board meeting on Thursday. (importance: 5)\n[id:mem-002] Alliant checking account ••••7734 balance as of March 16: $487.32. Savings ••••7735: $12,450.00. (importance: 3)"
+    },
+    "assert": [
+      { "type": "javascript", "value": "file://assertions/valid-json.js" },
+      { "type": "javascript", "value": "file://assertions/required-fields.js" },
+      { "type": "javascript", "value": "file://assertions/alert-budget.js" }
+    ]
+  },
+  {
+    "description": "Scheduled tick — all threads healthy, no alerts needed",
+    "vars": {
+      "trigger_type": "scheduled_tick",
+      "email_type": "tick",
+      "tick_timestamp": 1742112000000,
+      "silence_hours": 48,
+      "should_alert": false,
+      "active_threads": [
+        {
+          "id": "thread-watching-002",
+          "watcher_id": "test-watcher-001",
+          "subject": "Partnership proposal — David Chen",
+          "participants": "[\"david.chen@partner.com\"]",
+          "status": "watching",
+          "first_seen": "2026-03-15T14:00:00Z",
+          "last_activity": "2026-03-16T09:00:00Z",
+          "email_count": 2,
+          "summary": "David Chen proposed meeting Tuesday or Wednesday to discuss updated partnership numbers. Watching for response.",
+          "flags": null,
+          "created_at": "2026-03-15T14:00:00Z"
+        }
+      ],
+      "memory_context": "No memories stored yet."
+    },
+    "assert": [
+      { "type": "javascript", "value": "file://assertions/valid-json.js" },
+      { "type": "javascript", "value": "file://assertions/required-fields.js" }
+    ]
+  },
+  {
+    "description": "Scheduled tick — deadline from memory approaching within 48 hours",
+    "vars": {
+      "trigger_type": "scheduled_tick",
+      "email_type": "tick",
+      "tick_timestamp": 1742284800000,
+      "silence_hours": 72,
+      "should_alert": true,
+      "active_threads": [
+        {
+          "id": "thread-sprint-001",
+          "watcher_id": "test-watcher-001",
+          "subject": "JIRA Sprint 14 closes March 18 — 3 open tickets",
+          "participants": "[\"jira-notifications@atlassian.com\"]",
+          "status": "active",
+          "first_seen": "2026-03-16T10:00:00Z",
+          "last_activity": "2026-03-16T10:00:00Z",
+          "email_count": 1,
+          "summary": "Sprint 14 closes March 18 5:00 PM CT. 3 open tickets assigned: PHXN-441 (in progress), PHXN-452, PHXN-461 (to do).",
+          "flags": null,
+          "created_at": "2026-03-16T10:00:00Z"
+        }
+      ],
+      "memory_context": "[id:mem-003] Sprint 14 (Project Phoenix) closes March 18, 2026 at 5:00 PM CT. 3 tickets open. (importance: 5)\n[id:mem-004] Q1 budget sign-off needed by EOD Wednesday March 18 — board meeting Thursday March 19. (importance: 5)"
+    },
+    "assert": [
+      { "type": "javascript", "value": "file://assertions/valid-json.js" },
+      { "type": "javascript", "value": "file://assertions/required-fields.js" },
+      { "type": "javascript", "value": "file://assertions/alert-budget.js" }
+    ]
+  },
+  {
+    "description": "Scheduled tick — stale resolved/ignored threads should be pruned",
+    "vars": {
+      "trigger_type": "scheduled_tick",
+      "email_type": "tick",
+      "tick_timestamp": 1742284800000,
+      "silence_hours": 48,
+      "should_alert": false,
+      "active_threads": [
+        {
+          "id": "thread-stale-001",
+          "watcher_id": "test-watcher-001",
+          "subject": "Your Notion account is ready",
+          "participants": "[\"welcome@notion.so\"]",
+          "status": "watching",
+          "first_seen": "2026-03-01T08:00:00Z",
+          "last_activity": "2026-03-01T08:00:00Z",
+          "email_count": 1,
+          "summary": "Notion account setup confirmation — no action needed.",
+          "flags": null,
+          "created_at": "2026-03-01T08:00:00Z"
+        },
+        {
+          "id": "thread-stale-002",
+          "watcher_id": "test-watcher-001",
+          "subject": "TechCrunch Daily newsletter",
+          "participants": "[\"newsletter@techcrunch.com\"]",
+          "status": "watching",
+          "first_seen": "2026-03-10T07:00:00Z",
+          "last_activity": "2026-03-10T07:00:00Z",
+          "email_count": 5,
+          "summary": "Recurring TechCrunch newsletter — no action needed.",
+          "flags": null,
+          "created_at": "2026-03-10T07:00:00Z"
+        }
+      ],
+      "memory_context": "No memories stored yet."
+    },
+    "assert": [
+      { "type": "javascript", "value": "file://assertions/valid-json.js" },
+      { "type": "javascript", "value": "file://assertions/required-fields.js" }
+    ]
+  }
+]

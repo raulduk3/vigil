@@ -1,0 +1,278 @@
+{
+  "evalId": "eval-fzh-2026-03-16T16:13:59",
+  "results": {
+    "version": 3,
+    "timestamp": "2026-03-16T16:13:59.121Z",
+    "prompts": [
+      {
+        "id": "387c530a3f04cc1fb0088d275ca1067bb489cfebc93a67654b6f346a9259bb89",
+        "raw": "{{trigger_type}}",
+        "label": "{{trigger_type}}",
+        "provider": "gpt-4.1-mini",
+        "metrics": {
+          "score": 0.15,
+          "testPassCount": 0,
+          "testFailCount": 1,
+          "testErrorCount": 0,
+          "assertPassCount": 0,
+          "assertFailCount": 6,
+          "totalLatencyMs": 9060,
+          "tokenUsage": {
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "total": 0,
+            "numRequests": 1,
+            "completionDetails": {
+              "reasoning": 0,
+              "acceptedPrediction": 0,
+              "rejectedPrediction": 0
+            },
+            "assertions": {
+              "total": 0,
+              "prompt": 0,
+              "completion": 0,
+              "cached": 0,
+              "numRequests": 0,
+              "completionDetails": {
+                "reasoning": 0,
+                "acceptedPrediction": 0,
+                "rejectedPrediction": 0
+              }
+            }
+          },
+          "namedScores": {},
+          "namedScoresCount": {},
+          "cost": 0
+        }
+      }
+    ],
+    "results": [
+      {
+        "cost": 0,
+        "error": "Memory importance median too high: 5 (should be ≤ 3). Importances: [5]. The system prompt says: \"If most of your memories are 4 or 5, recalibrate.\"",
+        "gradingResult": {
+          "pass": false,
+          "score": 0.15,
+          "reason": "Memory importance median too high: 5 (should be ≤ 3). Importances: [5]. The system prompt says: \"If most of your memories are 4 or 5, recalibrate.\"",
+          "namedScores": {},
+          "tokensUsed": {
+            "total": 0,
+            "prompt": 0,
+            "completion": 0,
+            "cached": 0,
+            "numRequests": 0
+          },
+          "componentResults": [
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Custom function threw error: Custom function must return a boolean, number, or GradingResult object. Got type object: {\"pass\":true,\"score\":1}\nStack Trace: Error: Custom function must return a boolean, number, or GradingResult object. Got type object: {\"pass\":true,\"score\":1}\n    at validateResult (file:///Users/richardalvarez/Dev/websites/vigil.run/backend/node_modules/promptfoo/dist/src/evaluator-BhoWwp5b.js:1309:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async handleJavascript (file:///Users/richardalvarez/Dev/websites/vigil.run/backend/node_modules/promptfoo/dist/src/evaluator-BhoWwp5b.js:1344:13)\n    at async runAssertion (file:///Users/richardalvarez/Dev/websites/vigil.run/backend/node_modules/promptfoo/dist/src/evaluator-BhoWwp5b.js:2872:18)\n    at async file:///Users/richardalvarez/Dev/websites/vigil.run/backend/node_modules/promptfoo/dist/src/evaluator-BhoWwp5b.js:2915:18\nfile://assertions/valid-json.js",
+              "assertion": {
+                "type": "javascript",
+                "value": "file://assertions/valid-json.js"
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Custom function threw error: Custom function must return a boolean, number, or GradingResult object. Got type object: {\"pass\":true,\"score\":1}\nStack Trace: Error: Custom function must return a boolean, number, or GradingResult object. Got type object: {\"pass\":true,\"score\":1}\n    at validateResult (file:///Users/richardalvarez/Dev/websites/vigil.run/backend/node_modules/promptfoo/dist/src/evaluator-BhoWwp5b.js:1309:13)\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)\n    at async handleJavascript (file:///Users/richardalvarez/Dev/websites/vigil.run/backend/node_modules/promptfoo/dist/src/evaluator-BhoWwp5b.js:1344:13)\n    at async runAssertion (file:///Users/richardalvarez/Dev/websites/vigil.run/backend/node_modules/promptfoo/dist/src/evaluator-BhoWwp5b.js:2872:18)\n    at async file:///Users/richardalvarez/Dev/websites/vigil.run/backend/node_modules/promptfoo/dist/src/evaluator-BhoWwp5b.js:2915:18\nfile://assertions/required-fields.js",
+              "assertion": {
+                "type": "javascript",
+                "value": "file://assertions/required-fields.js"
+              }
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "action_request emails must not be low urgency. Someone is waiting for a response."
+            },
+            {
+              "pass": false,
+              "score": 0.4,
+              "reason": "Test expects an alert (should_alert=true) but no send_alert action was found. Other actions: []"
+            },
+            {
+              "pass": false,
+              "score": 0,
+              "reason": "Hallucinated quote not in email: \"I need your sign-off on the Q1 budget proposal before the board meeting on Thursday, March 19. The f\""
+            },
+            {
+              "pass": false,
+              "score": 0.5,
+              "reason": "Memory importance median too high: 5 (should be ≤ 3). Importances: [5]. The system prompt says: \"If most of your memories are 4 or 5, recalibrate.\""
+            }
+          ]
+        },
+        "id": "e548e899-9e9e-44fc-950f-ff9bafd7e234",
+        "latencyMs": 9060,
+        "namedScores": {},
+        "prompt": {
+          "raw": "email_received",
+          "label": "{{trigger_type}}",
+          "config": {}
+        },
+        "promptId": "387c530a3f04cc1fb0088d275ca1067bb489cfebc93a67654b6f346a9259bb89",
+        "promptIdx": 0,
+        "provider": {
+          "id": "vigil:gpt-4.1-mini",
+          "label": "gpt-4.1-mini"
+        },
+        "response": {
+          "output": "{\n  \"actions\": [],\n  \"memory_append\": [\n    {\n      \"content\": \"User needs to approve Q1 budget proposal by EOD Wednesday, March 18, 2025, for board meeting on Thursday, March 19, 2025; proposal includes $240,000 total budget with $80,000 for new engineering hires.\",\n      \"importance\": 5,\n      \"source_quote\": \"I need your sign-off on the Q1 budget proposal before the board meeting on Thursday, March 19. The finance team can't proceed without your approval. Can you review and approve by EOD Wednesday?\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-budget-001\",\n      \"status\": \"resolved\",\n      \"summary\": \"Request for approval of Q1 budget proposal by March 18, 2025, for board meeting on March 19, 2025; email received long ago and deadline passed.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Request for approval of Q1 budget proposal by March 18, 2025, for a board meeting on March 19, 2025, received a year ago.\",\n    \"intent\": \"Request approval of budget proposal\",\n    \"urgency\": \"low\",\n    \"entities\": [\n      \"$240,000 total budget\",\n      \"$80,000 allocated for the new engineering hires\",\n      \"Thursday, March 19\",\n      \"EOD Wednesday\"\n    ],\n    \"reasoning\": \"The email requests urgent approval for a budget with a deadline that has passed over a year ago. Since the date has long passed (March 18, 2025), there is no current action needed and the thread is resolved. The key facts about the budget and deadlines are stored for historical context but no alert is generated.\"\n  }\n}"
+        },
+        "score": 0.15,
+        "success": false,
+        "testCase": {
+          "description": "Colleague action request — should alert, normal/high urgency",
+          "vars": {
+            "trigger_type": "email_received",
+            "email_type": "action_request",
+            "email_from": "sarah.kim@acme.com",
+            "email_to": "me@vigil.run",
+            "email_subject": "Need your approval on the Q1 budget proposal",
+            "email_body": "Hey,\n\nI need your sign-off on the Q1 budget proposal before the board meeting on Thursday, March 19. The finance team can't proceed without your approval.\n\nThe proposal is attached. Key numbers: $240,000 total budget, with $80,000 allocated for the new engineering hires.\n\nCan you review and approve by EOD Wednesday?\n\nThanks,\nSarah",
+            "email_received_at": 1742112000000,
+            "thread_id": "thread-budget-001",
+            "expected_urgency": "high",
+            "should_alert": true
+          },
+          "assert": [
+            {
+              "type": "javascript",
+              "value": "file://assertions/valid-json.js"
+            },
+            {
+              "type": "javascript",
+              "value": "file://assertions/required-fields.js"
+            },
+            {
+              "type": "javascript",
+              "value": "file://assertions/urgency-calibration.js"
+            },
+            {
+              "type": "javascript",
+              "value": "file://assertions/alert-budget.js"
+            },
+            {
+              "type": "javascript",
+              "value": "file://assertions/no-hallucinated-quotes.js"
+            },
+            {
+              "type": "javascript",
+              "value": "file://assertions/reasonable-memory.js"
+            }
+          ],
+          "options": {},
+          "metadata": {}
+        },
+        "testIdx": 0,
+        "vars": {
+          "trigger_type": "email_received",
+          "email_type": "action_request",
+          "email_from": "sarah.kim@acme.com",
+          "email_to": "me@vigil.run",
+          "email_subject": "Need your approval on the Q1 budget proposal",
+          "email_body": "Hey,\n\nI need your sign-off on the Q1 budget proposal before the board meeting on Thursday, March 19. The finance team can't proceed without your approval.\n\nThe proposal is attached. Key numbers: $240,000 total budget, with $80,000 allocated for the new engineering hires.\n\nCan you review and approve by EOD Wednesday?\n\nThanks,\nSarah",
+          "email_received_at": 1742112000000,
+          "thread_id": "thread-budget-001",
+          "expected_urgency": "high",
+          "should_alert": true
+        },
+        "metadata": {
+          "_promptfooFileMetadata": {}
+        },
+        "failureReason": 1
+      }
+    ],
+    "stats": {
+      "successes": 0,
+      "failures": 1,
+      "errors": 0,
+      "tokenUsage": {
+        "prompt": 0,
+        "completion": 0,
+        "cached": 0,
+        "total": 0,
+        "numRequests": 1,
+        "completionDetails": {
+          "reasoning": 0,
+          "acceptedPrediction": 0,
+          "rejectedPrediction": 0
+        },
+        "assertions": {
+          "total": 0,
+          "prompt": 0,
+          "completion": 0,
+          "cached": 0,
+          "numRequests": 0,
+          "completionDetails": {
+            "reasoning": 0,
+            "acceptedPrediction": 0,
+            "rejectedPrediction": 0
+          }
+        }
+      },
+      "durationMs": 9112,
+      "evaluationDurationMs": 9112
+    }
+  },
+  "config": {
+    "description": "Vigil Agent Prompt Evaluation Suite — Email Triage + Scheduled Tick",
+    "prompts": [
+      "{{trigger_type}}"
+    ],
+    "providers": [
+      {
+        "id": "file://providers/vigil-provider.ts",
+        "config": {
+          "model": "gpt-4.1-nano"
+        },
+        "label": "gpt-4.1-nano"
+      },
+      {
+        "id": "file://providers/vigil-provider.ts",
+        "config": {
+          "model": "gpt-4.1-mini"
+        },
+        "label": "gpt-4.1-mini"
+      },
+      {
+        "id": "file://providers/vigil-provider.ts",
+        "config": {
+          "model": "gpt-4.1"
+        },
+        "label": "gpt-4.1"
+      },
+      {
+        "id": "file://providers/vigil-provider.ts",
+        "config": {
+          "model": "claude-haiku-4"
+        },
+        "label": "claude-haiku-4"
+      },
+      {
+        "id": "file://providers/vigil-provider.ts",
+        "config": {
+          "model": "gemini-2.5-flash"
+        },
+        "label": "gemini-2.5-flash"
+      }
+    ],
+    "tests": [
+      "file://datasets/emails.json",
+      "file://datasets/threads.json"
+    ],
+    "outputPath": "results/eval-results.json",
+    "extensions": []
+  },
+  "shareableUrl": null,
+  "metadata": {
+    "promptfooVersion": "0.121.2",
+    "nodeVersion": "v25.8.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "exportedAt": "2026-03-16T16:14:08.257Z",
+    "evaluationCreatedAt": "2026-03-16T16:13:59.121Z"
+  }
+}

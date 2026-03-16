@@ -83,6 +83,24 @@ export async function initializeDatabase(): Promise<void> {
         try { database.exec(sql); } catch { /* already exists */ }
     }
 
+    // Migrate: add account-level usage tracking (survives watcher deletion/flush)
+    const usageMigrations = [
+        `ALTER TABLE accounts ADD COLUMN usage_month TEXT`,       // e.g. "2026-03"
+        `ALTER TABLE accounts ADD COLUMN usage_month_cost REAL DEFAULT 0`, // cumulative cost for usage_month
+    ];
+    for (const sql of usageMigrations) {
+        try { database.exec(sql); } catch { /* column already exists */ }
+    }
+
+    // Migrate: add input_tokens and output_tokens to actions table
+    const tokenMigrations = [
+        `ALTER TABLE actions ADD COLUMN input_tokens INTEGER`,
+        `ALTER TABLE actions ADD COLUMN output_tokens INTEGER`,
+    ];
+    for (const sql of tokenMigrations) {
+        try { database.exec(sql); } catch { /* column already exists */ }
+    }
+
     // Rebuild FTS5 index to keep it in sync (handles schema changes, manual data wipes)
     try {
         database.exec(`INSERT INTO memories_fts(memories_fts) VALUES('rebuild')`);

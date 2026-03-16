@@ -1,78 +1,63 @@
-# Vigil Payment Model
+# Vigil Pricing
 
-## Overview
+## Model
 
-Vigil is entirely pay-per-use. No tiers, no subscriptions, no monthly minimums. Users pay for what they use.
+Every LLM call is billed at actual token cost + 5% margin. That's it. No platform fees. No per-alert charges. No hidden markup.
 
-## Revenue Per Invocation
+BYOK users (bring your own API key) pay nothing. They use their own OpenAI, Anthropic, or Google key and Vigil charges zero.
 
-Each time the agent processes an email, runs a scheduled tick, or handles a chat query:
+## Real Per-Invocation Costs (with 5% margin)
 
-```
-Total cost = Platform fee + Token cost (with 20% markup)
-```
+Based on actual MODEL_CATALOG rates. Typical email: ~4000 input tokens, ~400 output tokens.
 
-### Platform Fee
-- **$0.001** per agent invocation (email, tick, or chat)
-- Covers: server compute, Cloudflare email routing, SQLite storage, Resend delivery infrastructure, engineering
+| Model | Provider | Per Email | Per Chat | Per Tick* |
+|-------|----------|-----------|----------|-----------|
+| GPT-4.1 Nano | OpenAI | ~0.06¢ | ~0.07¢ | ~0.07¢ |
+| GPT-4o Mini | OpenAI | ~0.09¢ | ~0.11¢ | — |
+| Gemini 2.5 Flash | Google | ~0.09¢ | ~0.11¢ | — |
+| GPT-4.1 Mini | OpenAI | **~0.25¢** | ~0.30¢ | — |
+| Claude Haiku 4 | Anthropic | ~0.50¢ | ~0.59¢ | — |
+| Gemini 2.5 Pro | Google | ~0.95¢ | ~1.00¢ | — |
+| GPT-4.1 | OpenAI | ~1.18¢ | ~1.43¢ | — |
+| GPT-4o | OpenAI | ~1.47¢ | ~1.79¢ | — |
+| Claude Sonnet 4 | Anthropic | ~1.89¢ | ~2.21¢ | — |
 
-### Token Markup
-- **20%** on top of provider base rates
-- Applied to both input and output tokens
+*Ticks always run on GPT-4.1 Nano regardless of watcher model.
 
-### Alert Delivery
-- **$0.005** per alert email sent via Resend
+## Monthly Estimates
 
-## Model Pricing (per 1K tokens, includes 20% markup)
+500 emails/month, hourly ticks (smart-skipped when idle), 50 chat messages.
 
-| Model | Provider | Input | Output | Tier |
-|-------|----------|-------|--------|------|
-| GPT-4.1 Nano | OpenAI | $0.00012 | $0.00048 | nano |
-| GPT-4o Mini | OpenAI | $0.00018 | $0.00072 | mini |
-| Gemini 2.5 Flash | Google | $0.00018 | $0.00072 | mini |
-| GPT-4.1 Mini | OpenAI | $0.00048 | $0.00192 | mini |
-| Claude Haiku 4 | Anthropic | $0.00096 | $0.0048 | mini |
-| Gemini 2.5 Pro | Google | $0.0015 | $0.012 | standard |
-| GPT-4.1 | OpenAI | $0.0024 | $0.0096 | standard |
-| GPT-4o | OpenAI | $0.003 | $0.012 | standard |
-| Claude Sonnet 4 | Anthropic | $0.0036 | $0.018 | standard |
+| Model | Emails | Ticks | Chat | Total |
+|-------|--------|-------|------|-------|
+| GPT-4.1 Mini (default) | $1.25 | $0.15 | $0.15 | **~$1.55** |
+| GPT-4.1 | $5.88 | $0.15 | $0.71 | **~$6.74** |
+| Claude Sonnet 4 | $9.45 | $0.15 | $1.10 | **~$10.70** |
 
-## Revenue Breakdown (50 emails/day, GPT-4.1 Mini)
-
-Per email:
-- Platform fee: $0.001
-- Token cost (~1500 tokens): ~$0.00048 input + ~$0.00192 output ≈ $0.0005
-- **Total per email: ~$0.0015**
-
-Monthly (50/day × 30 days = 1,500 emails):
-- Platform fees: $1.50
-- Token revenue: ~$0.75
-- Alert revenue (est. 2 alerts/day): ~$0.30
-- **Monthly total: ~$2.55**
-
-Revenue split:
-- Platform fee: 59%
-- Token markup: 29%
-- Alert delivery: 12%
+Tick costs assume ~720/month with ~80% smart-skipped = ~144 actual ticks × $0.001 = ~$0.15.
 
 ## What's Free
 
-- Unlimited watchers
-- Unlimited threads and memory
-- Full audit trail
-- Agent chat
-- Obligation tracking
-- Webhook integrations
-- Model selection (9 models)
-- Reactivity control
-- Account, auth, dashboard
+- Unlimited watchers, threads, memory
+- Full audit trail of every agent decision
+- Agent chat interface
+- Chrome extension
+- Developer API
+- Custom webhook tools and skills
+- Model selection (9 models, 3 providers)
+- Reactivity and memory sensitivity controls
+- Daily and weekly digests
+- Alert delivery (via Resend)
 
-## Infrastructure Costs
+## Free Trial
 
-- DigitalOcean droplet: $6/month (1 vCPU, 2GB RAM)
+50 emails, one-time. No credit card required. After that: add billing or BYOK.
+
+## Infrastructure
+
+- DigitalOcean: $6/month
 - Cloudflare: Free (email routing + DNS)
-- Resend: Free tier (100 emails/day), then $20/month
+- Resend: Free tier (100 emails/day)
 - Vercel: Free tier for frontend
-- Domain: ~$12/year
 
-Break-even at current infra: ~4 active users at 50 emails/day each.
+Break-even: ~4 active users at 500 emails/month on GPT-4.1 Mini.

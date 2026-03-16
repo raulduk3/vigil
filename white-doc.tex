@@ -199,7 +199,7 @@ Superhuman & \$30--40/mo & Full OAuth & Write/summarize & Low \\
 Shortwave & \$7--100/mo & Full OAuth & Write/search/draft & Low \\
 SaneBox & \$3.50--37/mo & IMAP/OAuth & Filter/sort & Medium \\
 Spike & Free--\$12/mo & Full OAuth & Chat/summarize & Low \\
-\textbf{Vigil} & \textbf{\$9/mo} & \textbf{None} & \textbf{Full agent} & \textbf{High} \\
+\textbf{Vigil} & \textbf{$\sim$1.2\textcent/email} & \textbf{None} & \textbf{Full agent} & \textbf{High} \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -231,28 +231,32 @@ privacy posture that cannot be replicated by products built on OAuth/IMAP access
 \toprule
 \textbf{Metric} & \textbf{Value} \\
 \midrule
-Cost per agent invocation (GPT-4.1-mini) & \$0.001 \\
-Cost per user/month (200 emails) & \$0.20 \\
-Cost per user/month (1,000 emails) & \$1.00 \\
-Target price point & \$9/mo \\
-Gross margin (200 emails/mo) & 97.8\% \\
-Gross margin (1,000 emails/mo) & 88.9\% \\
+Margin model & Actual token cost + 5\% \\
+Cost per email (GPT-4.1-mini, incl.\ margin) & $\sim$\$0.012 \\
+Cost per scheduled tick (GPT-4.1-nano) & $\sim$\$0.003 \\
+Cost per chat message (GPT-4.1-mini) & $\sim$\$0.006 \\
+Free trial & 50 emails one-time, no credit card \\
+BYOK users & \$0 (pay provider directly) \\
 Infrastructure (Cloudflare free + VPS) & $\sim$\$10/mo \\
-Break-even & 2 paying users \\
 \bottomrule
 \end{tabular}
 \end{center}
+
+Typical monthly cost at default settings: \$1.60 at 100 emails/mo, \$6.40 at 500 emails/mo,
+\$24.40 at 2,000 emails/mo (including $\sim$\$0.40/watcher in smart-skipped nano ticks).
 
 Memory retrieval uses SQLite FTS5 (no embedding API calls). Alert delivery via Resend is included
 in their free tier (100 emails/day). The cost structure is dominated by LLM inference, which decreases
 with every model generation.
 
-\subsection*{5.1 Pricing Tiers}
+\subsection*{5.1 Pricing Model}
+Vigil is entirely usage-based. No tiers, no subscriptions, no monthly minimums.
 \begin{itemize}[nosep]
-  \item \textbf{Free:} 2 watchers, 50 emails/week, email alerts, full audit trail
-  \item \textbf{Pro (\$9/mo):} Unlimited watchers, 500 emails/week, webhooks, priority support
-  \item \textbf{Team (\$19/mo per seat):} Shared watchers, team dashboards, API access
-  \item \textbf{Enterprise:} Custom pricing, SLA, SSO, dedicated infrastructure
+  \item Users pay actual LLM token cost + 5\% margin on every invocation
+  \item BYOK (bring your own API key) users pay nothing---Vigil charges no margin on BYOK
+  \item 50 emails free to start, no credit card required
+  \item After the trial: add billing or provide a BYOK key to continue
+  \item Available models: 9 across OpenAI, Anthropic, and Google (user selects per watcher)
 \end{itemize}
 
 % ============================================================================
@@ -283,11 +287,11 @@ with every model generation.
 \subsection*{7.1 Strengths}
 \begin{itemize}[nosep]
   \item \textbf{Architectural moat:} Forwarding model cannot be replicated by OAuth-based competitors without abandoning their core value proposition
-  \item \textbf{Cost structure:} 88--98\% gross margins at \$0.001/invocation; costs decrease with model improvements
+  \item \textbf{Cost structure:} 5\% margin on token cost; guaranteed profitable per-call; costs decrease with model improvements
   \item \textbf{No cold start:} Agent begins learning from first email; no training period required
   \item \textbf{Privacy narrative:} Increasingly resonant as email surveillance awareness grows
   \item \textbf{Low infrastructure:} Single-process Bun + SQLite. No Kubernetes, no Redis, no message queues.
-  \item \textbf{Underpriced vs. market:} \$9/mo vs. Superhuman's \$30/mo and Shortwave's \$7--100/mo
+  \item \textbf{Underpriced vs. market:} $\sim$1.2\textcent/email vs. Superhuman's \$30/mo and Shortwave's \$7--100/mo flat rates
 \end{itemize}
 
 \subsection*{7.2 Risks}
@@ -305,7 +309,7 @@ Three trends favor Vigil in 2026:
 \begin{enumerate}[nosep]
   \item \textbf{AI agent adoption:} The market is shifting from AI assistants (copilots that help you write) to AI agents (autonomous systems that act). Vigil is agent-native.
   \item \textbf{Privacy regulation:} GDPR, state privacy laws, and corporate security policies increasingly restrict third-party inbox access. Forwarding bypasses these restrictions.
-  \item \textbf{LLM cost collapse:} GPT-4.1-mini is 100x cheaper than GPT-4 was at launch. The economics of per-email AI processing are now viable for a \$9/mo product.
+  \item \textbf{LLM cost collapse:} GPT-4.1-mini is 100x cheaper than GPT-4 was at launch. Per-email AI processing at $\sim$1.2\textcent\ is viable and passes directly to users.
 \end{enumerate}
 
 % ============================================================================
@@ -335,11 +339,11 @@ Raw MIME parsing (postal-mime) & Complete \\
 End-to-end test suite & Complete \\
 Documentation (SDD, system design, all READMEs) & Complete \\
 Frontend rebrand and redocumentation & Complete \\
-Backend deployment (public server) & In progress \\
+Backend deployment (public server, api.vigil.run) & Complete \\
+Stripe metered billing integration & Complete \\
+OAuth providers (Google, GitHub) & Complete \\
 Real email pipeline test (Cloudflare $\rightarrow$ backend) & Pending \\
-Frontend dashboard rebuild (V2 API) & Pending \\
-Stripe billing integration & Planned \\
-OAuth providers (Google, GitHub) & Planned \\
+Frontend dashboard rebuild (V2 API, three-panel) & Pending \\
 \bottomrule
 \end{tabular}
 \end{center}

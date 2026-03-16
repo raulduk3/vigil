@@ -18,9 +18,9 @@ Vigil is an AI agent that reads your email, tracks obligations across conversati
 - Developer API. Any AI agent system can query Vigil for email awareness. Your CRM bot, your support agent, your personal assistant.
 - Extensible. Custom webhook tools fire when the agent reads a matching email. Connect to Slack, Jira, Notion, anything with an API.
 
-**Pricing:** You pay the actual LLM token cost + 5% margin on emails and chat. About 1.2¢ per email on GPT-4.1-mini. Scheduled checks are free. Bring your own API key and the whole thing is free. 50 free emails to start.
+**Pricing:** You pay the actual LLM token cost + 5% margin on emails, chat, and scheduled checks. About 0.25¢ per email on GPT-4.1-mini. Scheduled checks run on GPT-4.1-nano at ~0.07¢ each (smart-skipped when idle, ~$0.15/watcher/month). Bring your own API key and the whole thing is free. 50 free emails to start.
 
-**Tech stack:** Bun + Hono backend, SQLite, Cloudflare Email Routing, Next.js on Vercel. Multi-model: GPT-4.1 (default), GPT-4o, Claude Sonnet 4, Gemini 2.5 Pro.
+**Tech stack:** Bun + Hono backend, SQLite, Cloudflare Email Routing, Next.js on Vercel. Multi-model: GPT-4.1-mini (default), GPT-4o, Claude Sonnet 4, Gemini 2.5 Pro.
 
 I built this because I kept dropping email obligations. Someone would ask me something, I'd think "I'll respond later," and forget. Google and Microsoft help you read email faster. Nobody helps you track what you owe people and what they owe you.
 

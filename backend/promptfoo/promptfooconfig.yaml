@@ -1,0 +1,48 @@
+description: "Vigil Agent Prompt Evaluation Suite — Email Triage + Scheduled Tick"
+
+# ---------------------------------------------------------------------------
+# Model matrix — evaluate all models in use or under consideration
+# ---------------------------------------------------------------------------
+providers:
+  - id: "file://providers/vigil-provider.ts"
+    config:
+      model: "gpt-4.1-nano"
+    label: "gpt-4.1-nano"
+
+  - id: "file://providers/vigil-provider.ts"
+    config:
+      model: "gpt-4.1-mini"
+    label: "gpt-4.1-mini"
+
+  - id: "file://providers/vigil-provider.ts"
+    config:
+      model: "gpt-4.1"
+    label: "gpt-4.1"
+
+  - id: "file://providers/vigil-provider.ts"
+    config:
+      model: "claude-haiku-4"
+    label: "claude-haiku-4"
+
+  - id: "file://providers/vigil-provider.ts"
+    config:
+      model: "gemini-2.5-flash"
+    label: "gemini-2.5-flash"
+
+# ---------------------------------------------------------------------------
+# Prompt — a dummy passthrough; the provider builds real prompts from vars
+# ---------------------------------------------------------------------------
+prompts:
+  - "{{trigger_type}}"
+
+# ---------------------------------------------------------------------------
+# Test datasets
+# ---------------------------------------------------------------------------
+tests:
+  - file://datasets/emails.json
+  - file://datasets/threads.json
+
+# ---------------------------------------------------------------------------
+# Output settings
+# ---------------------------------------------------------------------------
+outputPath: "results/eval-results.json"

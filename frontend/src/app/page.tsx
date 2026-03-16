@@ -106,7 +106,7 @@ export default function HomePage() {
                   Start free
                 </button>
               </form>
-              <p className="text-sm text-gray-400 mt-3 text-center">50 emails free every month. No credit card. Set up in 30 seconds.</p>
+              <p className="text-sm text-gray-400 mt-3 text-center">50 emails free to start. No credit card. Set up in 30 seconds.</p>
             </div>
           </div>
         </div>

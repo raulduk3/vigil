@@ -79,6 +79,8 @@ export interface Action {
   model: string | null;
   memory_delta: string | null;
   context_tokens: number | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
   cost_usd: number | null;
   duration_ms: number | null;
   created_at: string;

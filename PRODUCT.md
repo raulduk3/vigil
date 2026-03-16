@@ -29,24 +29,24 @@ Cost passthrough. Every LLM call is billed at actual token cost + 5% margin. BYO
 | | |
 |---|---|
 | **Model** | Actual token cost + 5% margin |
-| **Avg email cost** | ~1.2¢ (GPT-4.1-mini) |
-| **Ticks** | Cost + 5% (run on gpt-4.1-nano, ~0.3¢/tick, smart-skipped when idle) |
+| **Avg email cost** | ~0.25¢ (GPT-4.1-mini) |
+| **Ticks** | Cost + 5% (run on gpt-4.1-nano, ~0.07¢/tick, smart-skipped when idle) |
 | **Avg chat cost** | ~0.6¢ (GPT-4.1-mini) |
 | **BYOK** | Free (bring your own OpenAI/Anthropic/Google key) |
 | **Free tier** | 50 emails to start, no credit card |
 | **Billing** | Monthly invoice via Stripe metered billing |
 
-What users actually pay (GPT-4.1-mini, ticks free):
+What users actually pay (GPT-4.1-mini emails + nano ticks, ~$0.15/watcher/mo in checks):
 
 | Usage | Monthly cost |
 |---|---|
-| Light (100 emails/mo) | ~$1.20 |
-| Normal (500 emails/mo) | ~$6 |
-| Heavy (2,000 emails/mo) | ~$24 |
-| Power (5,000 emails/mo) | ~$60 |
+| Light (100 emails/mo) | ~$0.40 |
+| Normal (500 emails/mo) | ~$1.40 |
+| Heavy (2,000 emails/mo) | ~$5.15 |
+| Power (5,000 emails/mo) | ~$12.65 |
 | BYOK (any volume) | $0 |
 
-No tiers. No plans. No flat rates. Scheduled checks run on nano (~0.3¢ each, smart-skipped when idle). The dashboard shows every API call, its token cost, and the running total. Total transparency. Nothing is absorbed — every LLM call is passed through.
+No tiers. No plans. No flat rates. Scheduled checks run on nano (~0.07¢ each, smart-skipped when idle, ~$0.15/watcher/mo). The dashboard shows every API call, its token cost, and the running total. Total transparency. Nothing is absorbed — every LLM call is passed through.
 
 ## Architecture
 
@@ -134,14 +134,14 @@ No credit card for free tier. No onboarding wizard. No tooltips. The product is 
 The landing page should communicate three things:
 
 1. **What it does** — an AI agent reads your forwarded email, remembers context, and tells you when something matters
-2. **What it costs** — half a cent per email, free tier included
+2. **What it costs** — about a quarter of a penny per email (GPT-4.1-mini + 5% margin), free tier included
 3. **How it works** — forward emails, agent processes them, you see the results
 
 Hero copy (draft):
 
 > **Your email has a brain now.**
 >
-> Forward emails to an AI agent. It reads them, tracks conversations, remembers context, and tells you when something needs your attention. Half a cent per email. No inbox access. No email bodies stored.
+> Forward emails to an AI agent. It reads them, tracks conversations, remembers context, and tells you when something needs your attention. About 0.25¢ per email. No inbox access. No email bodies stored.
 
 The current landing page is good but leans too hard on "alerts" and "notifications." Reframe around the agent's intelligence: reading, thinking, remembering. Alerts are a capability, not the product.
 
@@ -166,16 +166,17 @@ The current landing page is good but leans too hard on "alerts" and "notificatio
 - Current: basic dashboard with tables. Functional but not the product.
 - Target: three-panel layout described above.
 
-**Not built yet**:
-- [ ] Public backend deployment (DNS: api.vigil.run)
+**Built since initial spec**:
+- [x] Public backend deployment (api.vigil.run)
+- [x] Stripe metered billing integration
+- [x] Google OAuth
+
+**Still pending**:
 - [ ] Real email flow end-to-end test
 - [ ] Three-panel frontend redesign
-- [ ] Usage metering (count invocations per account per billing period)
-- [ ] Stripe metered billing integration
 - [ ] Usage dashboard (emails processed, cost, billing period)
 - [ ] Onboarding flow with forwarding instructions
 - [ ] Dark mode
-- [ ] Google OAuth
 
 ## Sequence
 
@@ -195,9 +196,9 @@ Revenue = 5% of all LLM costs. Guaranteed profitable per-call.
 
 | Users | Avg LLM cost/mo/user | Revenue (5%) | Infra cost | Net |
 |---|---|---|---|---|
-| 100 | $15 | $75 | $28 | $47 |
-| 1,000 | $15 | $750 | $48 | $702 |
-| 10,000 | $15 | $7,500 | $250 | $7,250 |
+| 100 | $1.50 | $7.50 | $28 | -$20.50 |
+| 1,000 | $1.50 | $75 | $48 | $27 |
+| 10,000 | $1.50 | $750 | $250 | $500 |
 
 BYOK users cost us only infrastructure (~$0.001/user/mo). They drive adoption and trust.
 Paying users generate 5% on every API call with zero risk of negative margin.

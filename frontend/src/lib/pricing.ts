@@ -4,20 +4,16 @@
  * Vigil bills actual LLM token cost + 5%. No flat rates.
  * BYOK users are free (they pay their own provider directly).
  *
- * Typical costs per invocation (gpt-4.1-mini):
- *   Email processing: ~$0.011
- *   Scheduled tick: ~$0.012
- *   Chat message: ~$0.006
- *
- * With 5% margin:
- *   Email: ~$0.0116
- *   Tick: ~$0.0126
- *   Chat: ~$0.0063
+ * Real costs per invocation (from MODEL_CATALOG in engine.ts):
+ *   Email (gpt-4.1-mini, ~4K in + ~400 out): ~$0.00224 raw → ~$0.00235 billed
+ *   Tick (gpt-4.1-nano, ~5K in + ~300 out):  ~$0.00062 raw → ~$0.00065 billed
+ *   Chat (gpt-4.1-mini, ~6K in + ~200 out):  ~$0.00272 raw → ~$0.00286 billed
  */
 
-// Average cost estimates for the pricing page (gpt-4.1-mini)
-export const AVG_COST_PER_EMAIL = 0.012;   // ~1.2¢ per email (cost + 5%)
-export const AVG_COST_PER_TICK = 0.013;     // ~1.3¢ per tick
+// Average cost estimates (gpt-4.1-mini default, with 5% margin)
+export const AVG_COST_PER_EMAIL = 0.0025;   // ~0.25¢ per email
+export const AVG_COST_PER_TICK = 0.00065;   // ~0.065¢ per tick (nano)
+export const AVG_COST_PER_CHAT = 0.003;     // ~0.3¢ per chat message
 export const MARGIN = 0.05;
 
 export function estimateMonthly(

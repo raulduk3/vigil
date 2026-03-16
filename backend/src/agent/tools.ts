@@ -38,6 +38,22 @@ async function sendAlertHandler(
         return { success: false, error: "send_alert requires body or message" };
     }
 
+    // Alert dedup: skip if this thread already got an alert in the last 24h
+    if (params.thread_id) {
+        const recentThreadAlert = queryOne<{ count: number }>(
+            `SELECT COUNT(*) as count FROM actions
+             WHERE watcher_id = ? AND tool = 'send_alert' AND result = 'success'
+             AND thread_id = ? AND created_at >= datetime('now', '-24 hours')`,
+            [ctx.watcher.id, params.thread_id]
+        );
+        if ((recentThreadAlert?.count || 0) > 0) {
+            logger.info("Alert dedup: thread already alerted in last 24h", {
+                watcherId: ctx.watcher.id, threadId: params.thread_id, priorAlerts: recentThreadAlert?.count,
+            });
+            return { success: true, message: "Alert suppressed — this thread was already alerted in the last 24 hours." };
+        }
+    }
+
     // Alert budget: max 5 alerts per watcher per 24h
     const recentAlerts = queryOne<{ count: number }>(
         `SELECT COUNT(*) as count FROM actions
@@ -144,9 +160,8 @@ async function sendAlertHandler(
         );
     }
 
-    // Track alert delivery cost: $0.005 per email sent
-    const ALERT_COST = 0.005;
-    const alertsCost = destinations.length * ALERT_COST;
+    // Alert delivery is free (absorbed in infrastructure, no per-alert charge)
+    const alertsCost = 0;
 
     return {
         success: allSucceeded,

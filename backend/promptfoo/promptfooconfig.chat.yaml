@@ -1,0 +1,27 @@
+description: "Vigil Agent Prompt Evaluation Suite — Chat Mode"
+
+# Chat mode uses gpt-4.1 by default in engine.ts (watcher.model || "gpt-4.1")
+# Test all viable chat models
+providers:
+  - id: "file://providers/vigil-provider.ts"
+    config:
+      model: "gpt-4.1-mini"
+    label: "gpt-4.1-mini"
+
+  - id: "file://providers/vigil-provider.ts"
+    config:
+      model: "gpt-4.1"
+    label: "gpt-4.1"
+
+  - id: "file://providers/vigil-provider.ts"
+    config:
+      model: "claude-haiku-4"
+    label: "claude-haiku-4"
+
+prompts:
+  - "{{trigger_type}}"
+
+tests:
+  - file://datasets/chat-queries.json
+
+outputPath: "results/eval-results-chat.json"

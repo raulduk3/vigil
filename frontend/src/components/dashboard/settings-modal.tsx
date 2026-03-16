@@ -395,7 +395,7 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
                     onChange={(e) => setTickInterval(Math.max(60, parseInt(e.target.value) || 60))}
                     className="input py-2"
                   />
-                  <p className="text-xs text-gray-400 mt-1">Minimum 60 minutes. Each tick is an LLM call that costs 1¢.</p>
+                  <p className="text-xs text-gray-400 mt-1">Minimum 60 minutes. Each tick runs on GPT-4.1 Nano (~0.06¢ per check, skipped when idle).</p>
                 </div>
               </div>
 

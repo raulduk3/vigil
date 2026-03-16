@@ -291,7 +291,7 @@ export async function invokeAgent(
                 watcherId, null, null, "user_chat",
                 null, "chat", null, null,
                 "success", null, startMs,
-                null, result.inputTokens + result.outputTokens, totalCost, model
+                null, result.inputTokens, result.outputTokens, totalCost, model
             );
 
             logger.info("Chat invocation complete", {
@@ -392,7 +392,8 @@ export async function invokeAgent(
 
     // 6. Call Claude API
     let agentResponse: AgentResponse;
-    let contextTokens = 0;
+    let inputTokens = 0;
+    let outputTokens = 0;
     let costUsd = 0;
 
     // Ticks use nano (cheapest model, absorbed by platform). Emails/chat use watcher's model.
@@ -403,7 +404,8 @@ export async function invokeAgent(
     try {
         const result = await callLLM(systemPrompt, userPrompt, model, watcher.account_id);
         agentResponse = result.response;
-        contextTokens = result.inputTokens + result.outputTokens;
+        inputTokens = result.inputTokens;
+        outputTokens = result.outputTokens;
         // Pricing: marked-up token cost + platform fee per invocation
         const rates = MODEL_CATALOG[model]?.pricing ?? { input: 0.0004, output: 0.0016 };
         costUsd =
@@ -416,7 +418,8 @@ export async function invokeAgent(
         try {
             const retry = await callLLM(systemPrompt, userPrompt, model, watcher.account_id);
             agentResponse = retry.response;
-            contextTokens = retry.inputTokens + retry.outputTokens;
+            inputTokens = retry.inputTokens;
+            outputTokens = retry.outputTokens;
             const rates = MODEL_CATALOG[model]?.pricing ?? { input: 0.0024, output: 0.0096 };
             costUsd =
                 (retry.inputTokens / 1000) * rates.input +
@@ -528,51 +531,22 @@ export async function invokeAgent(
             result.result.success ? "success" : "failed",
             result.result.error ?? null,
             startMs,
-            null, i === 0 ? contextTokens : 0, actionCost > 0 ? actionCost : null,
+            null, i === 0 ? inputTokens : 0, i === 0 ? outputTokens : 0, actionCost > 0 ? actionCost : null,
             i === 0 ? model : null
         );
     }
 
-    // Log memory operations as actions so they're visible in activity
-    if (agentResponse.memory_append && Array.isArray(agentResponse.memory_append)) {
-        for (const mem of agentResponse.memory_append) {
-            if (!mem.content?.trim()) continue;
-            await logAction(
-                watcherId, threadId, emailId, trigger.type,
-                null, "memory_store",
-                JSON.stringify({ content: mem.content, importance: mem.importance ?? 3, confidence: mem.confidence ?? 5 }),
-                null, "success", null, startMs
-            );
-        }
-    }
-
-    if (agentResponse.memory_obsolete?.length) {
-        await logAction(
-            watcherId, threadId, emailId, trigger.type,
-            null, "memory_obsolete",
-            JSON.stringify({ ids: agentResponse.memory_obsolete }),
-            null, "success", null, startMs
-        );
-    }
-
-    // Log thread updates as actions
-    for (const update of agentResponse.thread_updates ?? []) {
-        await logAction(
-            watcherId, threadId, emailId, trigger.type,
-            null, "thread_update",
-            JSON.stringify(update),
-            null, "success", null, startMs
-        );
-    }
-
-    // If no tool actions at all, log the invocation itself
-    if (toolResults.length === 0 && !(agentResponse.memory_append && Array.isArray(agentResponse.memory_append) && agentResponse.memory_append.length > 0)) {
+    // Always log one invocation record with cost, model, and analysis.
+    // Tool actions (send_alert, webhook, etc.) are logged separately above.
+    // Memory and thread operations are NOT logged as separate action rows
+    // to avoid duplicate counting. They're part of the invocation.
+    if (toolResults.length === 0) {
         await logAction(
             watcherId, threadId, emailId, trigger.type,
             agentResponse.email_analysis ? JSON.stringify(agentResponse.email_analysis) : null,
             null, null, null,
             "success", null, startMs,
-            null, contextTokens, costUsd, model
+            null, inputTokens, outputTokens, costUsd, model
         );
     }
 
@@ -1134,14 +1108,15 @@ async function logAction(
     error: string | null,
     startMs: number,
     memoryDelta?: string | null,
-    contextTokens?: number,
+    inputTokens?: number,
+    outputTokens?: number,
     costUsd?: number,
     modelUsed?: string | null
 ): Promise<void> {
     run(
         `INSERT INTO actions
-         (id, watcher_id, thread_id, trigger_type, email_id, decision, tool, tool_params, reasoning, model, result, error, memory_delta, context_tokens, cost_usd, duration_ms, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+         (id, watcher_id, thread_id, trigger_type, email_id, decision, tool, tool_params, reasoning, model, result, error, memory_delta, context_tokens, input_tokens, output_tokens, cost_usd, duration_ms, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
         [
             crypto.randomUUID(),
             watcherId,
@@ -1156,7 +1131,9 @@ async function logAction(
             result,
             error,
             memoryDelta ?? null,
-            contextTokens ?? null,
+            (inputTokens ?? 0) + (outputTokens ?? 0),  // backward compat context_tokens
+            inputTokens ?? null,
+            outputTokens ?? null,
             costUsd ?? null,
             Date.now() - startMs,
         ]

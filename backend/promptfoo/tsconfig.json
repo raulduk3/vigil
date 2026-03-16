@@ -1,0 +1,26 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "CommonJS",
+        "moduleResolution": "node",
+        "lib": ["ESNext"],
+        "strict": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "resolveJsonModule": true,
+        "outDir": "../dist/promptfoo",
+        "baseUrl": "..",
+        "paths": {
+            "@/*": ["src/*"]
+        }
+    },
+    "include": [
+        "**/*.ts",
+        "../src/agent/prompts.ts",
+        "../src/agent/schema.ts"
+    ],
+    "exclude": [
+        "../node_modules"
+    ]
+}

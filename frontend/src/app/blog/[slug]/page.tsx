@@ -257,7 +257,7 @@ chmod +x ~/.openclaw/skills/vigil/scripts/vigil.sh</code></pre>
 <li><strong>BYOK</strong> (any volume, your own API key): $0/month</li>
 </ul>
 
-<p>Each email costs about 1.2¢ to process on GPT-4.1-mini (default model). Scheduled checks cost about 1.3¢ each. We add 5% on top. That's it. Your dashboard shows every call and its exact cost.</p>
+<p>Each email costs about 0.25¢ to process on GPT-4.1-mini (default model). Scheduled checks cost about 0.07¢ each on GPT-4.1 Nano. We add 5% on top. That's it. Your dashboard shows every call and its exact cost.</p>
 
 <h2>Why This Is More Honest</h2>
 <p>Subscription pricing hides the real cost. A $30/month email tool needs you to use it a lot to feel worth it. If you go on vacation for a week, you're paying for nothing. If you have a slow month, same price.</p>

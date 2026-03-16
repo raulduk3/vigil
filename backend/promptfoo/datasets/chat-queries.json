@@ -1,0 +1,164 @@
+[
+  {
+    "description": "Chat: 'What needs attention?' — summary query, no action blocks needed",
+    "vars": {
+      "trigger_type": "user_chat",
+      "message": "What needs attention right now?",
+      "email_type": "chat_query",
+      "active_threads": [
+        {
+          "id": "thread-budget-001",
+          "watcher_id": "test-watcher-001",
+          "subject": "Q1 budget proposal approval needed",
+          "participants": "[\"sarah.kim@acme.com\"]",
+          "status": "active",
+          "first_seen": "2026-03-12T10:00:00Z",
+          "last_activity": "2026-03-12T10:00:00Z",
+          "email_count": 1,
+          "summary": "Sarah Kim needs sign-off on Q1 budget ($240K) by EOD Wednesday.",
+          "flags": null,
+          "created_at": "2026-03-12T10:00:00Z"
+        },
+        {
+          "id": "thread-alliant-001",
+          "watcher_id": "test-watcher-001",
+          "subject": "Alliant checking balance below $500",
+          "participants": "[\"billing@alliantcreditunion.org\"]",
+          "status": "watching",
+          "first_seen": "2026-03-16T09:00:00Z",
+          "last_activity": "2026-03-16T09:00:00Z",
+          "email_count": 1,
+          "summary": "Alliant checking ••••7734 balance $487.32 — below $500 alert threshold.",
+          "flags": null,
+          "created_at": "2026-03-16T09:00:00Z"
+        }
+      ],
+      "memory_context": "[id:mem-001] Q1 budget sign-off needed by EOD Wednesday March 18. Board meeting Thursday March 19. (importance: 5)\n[id:mem-002] Alliant checking ••••7734 balance: $487.32 as of March 16. (importance: 3)"
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "/* Chat response — not JSON. Check it's a non-empty string. */\noutput && output.length > 20"
+      }
+    ]
+  },
+  {
+    "description": "Chat: 'Ignore all GitHub emails' — should emit action block",
+    "vars": {
+      "trigger_type": "user_chat",
+      "message": "Ignore all GitHub emails going forward",
+      "email_type": "chat_action",
+      "active_threads": [
+        {
+          "id": "thread-github-001",
+          "watcher_id": "test-watcher-001",
+          "subject": "GitHub: New sign-in from unrecognized device",
+          "participants": "[\"security@github.com\"]",
+          "status": "active",
+          "first_seen": "2026-03-16T03:47:00Z",
+          "last_activity": "2026-03-16T03:47:00Z",
+          "email_count": 1,
+          "summary": "GitHub security alert — new sign-in from Chongqing, China.",
+          "flags": null,
+          "created_at": "2026-03-16T03:47:00Z"
+        },
+        {
+          "id": "thread-github-pr-001",
+          "watcher_id": "test-watcher-001",
+          "subject": "Pull request: Merge branch feature/auth into main",
+          "participants": "[\"notifications@github.com\"]",
+          "status": "watching",
+          "first_seen": "2026-03-15T15:00:00Z",
+          "last_activity": "2026-03-15T15:00:00Z",
+          "email_count": 3,
+          "summary": "GitHub PR notifications for feature/auth branch.",
+          "flags": null,
+          "created_at": "2026-03-15T15:00:00Z"
+        }
+      ],
+      "memory_context": "No memories stored yet."
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "output && output.includes('[[action:')"
+      }
+    ]
+  },
+  {
+    "description": "Chat: 'Resolve the Alliant thread' — should emit update_thread action",
+    "vars": {
+      "trigger_type": "user_chat",
+      "message": "Resolve the Alliant thread, I already handled it",
+      "email_type": "chat_action",
+      "active_threads": [
+        {
+          "id": "thread-alliant-001",
+          "watcher_id": "test-watcher-001",
+          "subject": "Alliant checking balance below $500",
+          "participants": "[\"billing@alliantcreditunion.org\"]",
+          "status": "watching",
+          "first_seen": "2026-03-16T09:00:00Z",
+          "last_activity": "2026-03-16T09:00:00Z",
+          "email_count": 1,
+          "summary": "Alliant checking ••••7734 balance $487.32 — below threshold.",
+          "flags": null,
+          "created_at": "2026-03-16T09:00:00Z"
+        }
+      ],
+      "memory_context": "[id:mem-002] Alliant checking ••••7734 balance: $487.32 as of March 16. (importance: 3)"
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "output && output.includes('update_thread') && output.includes('resolved')"
+      }
+    ]
+  },
+  {
+    "description": "Chat: 'Never alert me about receipts' — should emit add_rule action",
+    "vars": {
+      "trigger_type": "user_chat",
+      "message": "Never alert me about receipts or payment confirmations",
+      "email_type": "chat_action",
+      "active_threads": [],
+      "memory_context": "No memories stored yet."
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "output && output.includes('add_rule')"
+      }
+    ]
+  },
+  {
+    "description": "Chat: Account balance question — should answer from memory",
+    "vars": {
+      "trigger_type": "user_chat",
+      "message": "What's the current balance on my Alliant account?",
+      "email_type": "chat_query",
+      "active_threads": [
+        {
+          "id": "thread-alliant-001",
+          "watcher_id": "test-watcher-001",
+          "subject": "Alliant checking balance below $500",
+          "participants": "[\"billing@alliantcreditunion.org\"]",
+          "status": "watching",
+          "first_seen": "2026-03-16T09:00:00Z",
+          "last_activity": "2026-03-16T09:00:00Z",
+          "email_count": 1,
+          "summary": "Alliant checking ••••7734 balance $487.32 — below threshold.",
+          "flags": null,
+          "created_at": "2026-03-16T09:00:00Z"
+        }
+      ],
+      "memory_context": "[id:mem-002] Alliant checking ••••7734 balance: $487.32 as of March 16. Savings ••••7735: $12,450.00. (importance: 3)"
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "output && (output.includes('487') || output.includes('Alliant'))"
+      }
+    ]
+  }
+]

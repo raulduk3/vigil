@@ -292,7 +292,12 @@ export async function sendDigest(watcherId: string, periodDays: number = 7): Pro
             return false;
         }
 
-        // Record digest action for dedup        run(`INSERT INTO actions (id, watcher_id, trigger_type, tool, result, created_at) VALUES (?, ?, 'digest', 'send_digest', 'success', CURRENT_TIMESTAMP)`, [crypto.randomUUID(), watcherId]);        logger.info("Digest sent", { watcherId, to: account.email, periodDays });
+        // Record digest action for dedup
+        run(
+            `INSERT INTO actions (id, watcher_id, trigger_type, tool, result, created_at) VALUES (?, ?, 'digest', 'send_digest', 'success', CURRENT_TIMESTAMP)`,
+            [crypto.randomUUID(), watcherId]
+        );
+        logger.info("Digest sent", { watcherId, to: account.email, periodDays });
         return true;
     } catch (err) {
         logger.error("Digest send error", { err });
