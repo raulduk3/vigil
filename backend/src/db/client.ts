@@ -59,6 +59,7 @@ export async function initializeDatabase(): Promise<void> {
         `ALTER TABLE accounts ADD COLUMN anthropic_api_key_enc TEXT`,
         `ALTER TABLE accounts ADD COLUMN google_api_key_enc TEXT`,
     ];
+    // Migrate: add digest_frequency to watchers    try { database.exec(`ALTER TABLE watchers ADD COLUMN digest_frequency TEXT DEFAULT 'weekly'`); } catch {}
     for (const sql of byokMigrations) {
         try { database.exec(sql); } catch { /* column already exists */ }
     }

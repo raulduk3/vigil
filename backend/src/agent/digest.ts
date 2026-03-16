@@ -5,7 +5,7 @@
  * "focus" paragraph. Everything else is deterministic.
  */
 
-import { queryMany, queryOne } from "../db/client";
+import { queryMany, queryOne, run } from "../db/client";
 // Memory functions available if needed for future enrichment
 import { logger } from "../logger";
 import type { ThreadRow, WatcherRow } from "./schema";
@@ -124,7 +124,7 @@ export function collectDigestData(watcherId: string, periodDays: number = 7): Di
 // HTML Builder
 // ============================================================================
 
-export function buildDigestHtml(data: DigestData, focusParagraph: string): string {
+export function buildDigestHtml(data: DigestData, focusParagraph: string, periodDays: number = 7): string {
     const { watcher, period, stats, activeThreads, upcomingDeadlines, topMemories } = data;
     const periodLabel = `${new Date(period.start).toLocaleDateString("en-US", { month: "short", day: "numeric" })} — ${new Date(period.end).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
 
@@ -159,7 +159,7 @@ export function buildDigestHtml(data: DigestData, focusParagraph: string): strin
     <div style="background:white;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">
         <!-- Header -->
         <div style="background:linear-gradient(135deg,#0d9488,#0f766e);padding:24px 28px;color:white;">
-            <h1 style="margin:0;font-size:20px;font-weight:700;">Weekly Digest</h1>
+            <h1 style="margin:0;font-size:20px;font-weight:700;">${periodDays <= 1 ? "Daily" : "Weekly"} Digest</h1>
             <p style="margin:4px 0 0;font-size:13px;opacity:0.85;">${esc(watcher.name)} · ${periodLabel}</p>
         </div>
 
@@ -227,7 +227,7 @@ export function buildDigestHtml(data: DigestData, focusParagraph: string): strin
 
         <!-- Footer -->
         <div style="padding:16px 28px;background:#f9fafb;font-size:11px;color:#9ca3af;text-align:center;">
-            Vigil Weekly Digest · ${esc(watcher.name)} · ${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+            Vigil ${periodDays <= 1 ? "Daily" : "Weekly"} Digest · ${esc(watcher.name)} · ${new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
         </div>
     </div>
 </body>
@@ -238,8 +238,8 @@ export function buildDigestHtml(data: DigestData, focusParagraph: string): strin
 // Send Digest
 // ============================================================================
 
-export async function sendDigest(watcherId: string): Promise<boolean> {
-    const data = collectDigestData(watcherId);
+export async function sendDigest(watcherId: string, periodDays: number = 7): Promise<boolean> {
+    const data = collectDigestData(watcherId, periodDays);
 
     // Get a short LLM "focus" paragraph
     let focusParagraph = "";
@@ -249,7 +249,7 @@ export async function sendDigest(watcherId: string): Promise<boolean> {
         logger.warn("Failed to generate focus paragraph, sending digest without it", { err });
     }
 
-    const html = buildDigestHtml(data, focusParagraph);
+    const html = buildDigestHtml(data, focusParagraph, periodDays);
 
     // Send via Resend
     const apiKey = process.env.RESEND_API_KEY;
@@ -278,7 +278,7 @@ export async function sendDigest(watcherId: string): Promise<boolean> {
             body: JSON.stringify({
                 from,
                 to: [account.email],
-                subject: `[Vigil] Weekly Digest — ${data.watcher.name}`,
+                subject: `[Vigil] ${periodDays <= 1 ? "Daily" : "Weekly"} Digest — ${data.watcher.name}`,
                 html,
             }),
         });
@@ -289,7 +289,7 @@ export async function sendDigest(watcherId: string): Promise<boolean> {
             return false;
         }
 
-        logger.info("Weekly digest sent", { watcherId, to: account.email });
+        // Record digest action for dedup        run(`INSERT INTO actions (id, watcher_id, trigger_type, tool, result, created_at) VALUES (?, ?, 'digest', 'send_digest', 'success', CURRENT_TIMESTAMP)`, [crypto.randomUUID(), watcherId]);        logger.info("Digest sent", { watcherId, to: account.email, periodDays });
         return true;
     } catch (err) {
         logger.error("Digest send error", { err });

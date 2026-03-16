@@ -112,6 +112,7 @@ export const watcherHandlers = {
             "status",
             "reactivity",
             "memory_sensitivity",
+            "digest_frequency",
         ] as const;
 
         for (const key of allowed) {
@@ -119,6 +120,7 @@ export const watcherHandlers = {
                 let value = key === "tools" ? JSON.stringify(body[key]) : body[key];
                 // Enforce minimum tick interval of 60 minutes (ticks are LLM calls)
                 if (key === "tick_interval" && typeof value === "number" && value < 60) value = 60;
+                if (key === "digest_frequency" && !["off", "daily", "weekly"].includes(value)) value = "weekly";
                 updates.push(`${key} = ?`);
                 vals.push(value);
             }
@@ -508,6 +510,7 @@ function formatWatcher(row: WatcherRow) {
         status: row.status,
         reactivity: row.reactivity ?? 3,
         memory_sensitivity: row.memory_sensitivity ?? 3,
+        digest_frequency: row.digest_frequency ?? "weekly",
         template_id: row.template_id,
         last_tick_at: row.last_tick_at,
         created_at: row.created_at,

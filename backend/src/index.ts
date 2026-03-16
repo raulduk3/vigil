@@ -109,25 +109,37 @@ async function runScheduledTicks(): Promise<void> {
 // Weekly Digest
 // ============================================================================
 
-function startWeeklyDigest(): void {
-    // Check every hour if it's time for a digest (Sunday 9am in watcher's configured timezone, default UTC)
+function startDigestRunner(): void {
+    // Check every hour if any digests need sending
     const DIGEST_CHECK_MS = 60 * 60 * 1000;
 
     setInterval(async () => {
         try {
-            await runWeeklyDigest();
+            await runDigests();
         } catch (err) {
-            logger.error("Weekly digest error", { err });
+            logger.error("Digest runner error", { err });
         }
     }, DIGEST_CHECK_MS);
 
-    logger.info("Weekly digest runner started");
+    // Also run once on startup after a short delay (catch missed digests from downtime)
+    setTimeout(async () => {
+        try {
+            await runDigests();
+        } catch (err) {
+            logger.error("Digest startup check error", { err });
+        }
+    }, 30_000);
+
+    logger.info("Digest runner started (daily + weekly)");
 }
 
-async function runWeeklyDigest(): Promise<void> {
+async function runDigests(): Promise<void> {
     const now = new Date();
-    // Only run on Sundays between 9:00-9:59 UTC
-    if (now.getUTCDay() !== 0 || now.getUTCHours() !== 9) return;
+    const utcHour = now.getUTCHours();
+    const utcDay = now.getUTCDay(); // 0 = Sunday
+
+    // Digests send at 14:00 UTC (9am CDT / 8am CST)
+    if (utcHour !== 14) return;
 
     const watchers = queryMany<WatcherRow>(
         `SELECT * FROM watchers WHERE status = 'active'`,
@@ -135,19 +147,31 @@ async function runWeeklyDigest(): Promise<void> {
     );
 
     for (const watcher of watchers) {
-        // Check if we already sent a digest this week (look for digest action in last 6 days)
+        const freq = (watcher as any).digest_frequency ?? "weekly";
+
+        // Skip watchers with digests turned off
+        if (freq === "off") continue;
+
+        // Weekly: only on Sundays
+        if (freq === "weekly" && utcDay !== 0) continue;
+
+        // Check for recent digest to prevent duplicates
+        const dedupeHours = freq === "daily" ? 20 : 144; // 20h for daily, 6 days for weekly
         const recentDigest = queryOne<{ id: string }>(
-            `SELECT id FROM actions WHERE watcher_id = ? AND trigger_type = 'weekly_digest' AND created_at >= datetime('now', '-6 days')`,
+            `SELECT id FROM actions WHERE watcher_id = ? AND trigger_type = 'digest' AND created_at >= datetime('now', '-${dedupeHours} hours')`,
             [watcher.id]
         );
         if (recentDigest) continue;
 
-        logger.info("Sending weekly digest", { watcherId: watcher.id });
-        sendDigest(watcher.id).catch(
+        const periodDays = freq === "daily" ? 1 : 7;
+        logger.info("Sending digest", { watcherId: watcher.id, frequency: freq, periodDays });
+
+        sendDigest(watcher.id, periodDays).catch(
             (err) => logger.error("Digest send failed", { watcherId: watcher.id, err })
         );
     }
 }
+
 
 // ============================================================================
 // Startup
@@ -160,7 +184,7 @@ async function main() {
     logger.info("Database initialized");
 
     startScheduledTicks();
-    startWeeklyDigest();
+    startDigestRunner();
 
     // Cleanup expired/revoked refresh tokens every hour
     setInterval(() => {

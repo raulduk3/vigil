@@ -23,6 +23,7 @@ export interface WatcherRow {
     last_tick_at: string | null;
     reactivity: number; // 1-5, controls alert sensitivity
     memory_sensitivity: number; // 1-5, controls how much the agent remembers
+    digest_frequency: string; // off, daily, weekly
     created_at: string;
     updated_at: string;
 }
