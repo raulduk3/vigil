@@ -280,9 +280,8 @@ export async function invokeAgent(
         try {
             const result = await callLLMRaw(chatSystem, chatUser, model, watcher.account_id);
             const rates = MODEL_CATALOG[model]?.pricing ?? { input: 0.0004, output: 0.0016 };
-            const PLATFORM_FEE = 0.005;
-            const tokenCost = (result.inputTokens / 1000) * rates.input + (result.outputTokens / 1000) * rates.output;
-            const totalCost = tokenCost + PLATFORM_FEE;
+                        const tokenCost = (result.inputTokens / 1000) * rates.input + (result.outputTokens / 1000) * rates.output;
+            const totalCost = tokenCost;
 
             // Parse and execute inline action blocks
             const { text: cleanText, actionsExecuted } = await executeChatActions(result.text, ctx);
@@ -302,9 +301,11 @@ export async function invokeAgent(
             });
 
             // Report flat rate to Stripe
-            const CHAT_FLAT_RATE = 0.005;
-            if (!hasAnyByokKey(watcher.account_id)) {
-                reportInvocationCost(watcher.account_id, CHAT_FLAT_RATE).catch(() => {});
+            // Bill actual LLM cost + 5% margin for chat. BYOK users are free.
+            if (!hasAnyByokKey(watcher.account_id) && totalCost > 0) {
+                const MARGIN = 0.05;
+                const billable = totalCost * (1 + MARGIN);
+                reportInvocationCost(watcher.account_id, billable).catch(() => {});
             }
 
             return {
@@ -406,11 +407,10 @@ export async function invokeAgent(
         contextTokens = result.inputTokens + result.outputTokens;
         // Pricing: marked-up token cost + platform fee per invocation
         const rates = MODEL_CATALOG[model]?.pricing ?? { input: 0.0004, output: 0.0016 };
-        const PLATFORM_FEE_PER_INVOCATION = 0.005; // $0.005 per agent invocation
         costUsd =
             (result.inputTokens / 1000) * rates.input +
             (result.outputTokens / 1000) * rates.output +
-            PLATFORM_FEE_PER_INVOCATION;
+            0;
     } catch (err) {
         // Retry once on LLM failure
         logger.warn("LLM call failed, retrying once", { watcherId, err: String(err), model });
@@ -422,7 +422,7 @@ export async function invokeAgent(
             costUsd =
                 (retry.inputTokens / 1000) * rates.input +
                 (retry.outputTokens / 1000) * rates.output +
-                PLATFORM_FEE_PER_INVOCATION;
+                0;
             logger.info("LLM retry succeeded", { watcherId, model });
         } catch (retryErr) {
             logger.error("LLM retry also failed", { watcherId, err: String(retryErr), model });
@@ -584,10 +584,11 @@ export async function invokeAgent(
         durationMs: Date.now() - startMs,
     });
 
-    // Bill $0.01 per email processed. Ticks are overhead (not billed). Chat billed separately above.
-    if (trigger.type === "email_received") {
-        const FLAT_RATE_PER_EMAIL = 0.005;
-        reportInvocationCost(watcher.account_id, FLAT_RATE_PER_EMAIL).catch((err) =>
+    // Bill actual LLM cost + 5% margin. BYOK users are free. Ticks are overhead (not billed).
+    if (trigger.type === "email_received" && !hasAnyByokKey(watcher.account_id) && costUsd > 0) {
+        const MARGIN = 0.05;
+        const billable = costUsd * (1 + MARGIN);
+        reportInvocationCost(watcher.account_id, billable).catch((err) =>
             logger.error("Failed to report invocation cost", { watcherId, err })
         );
     }
