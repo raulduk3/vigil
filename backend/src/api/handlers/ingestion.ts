@@ -11,6 +11,7 @@ import { queryOne, run } from "../../db/client";
 import { ingestEmail } from "../../ingestion/orchestrator";
 import { logger } from "../../logger";
 import { canProcessEmail, incrementTrialUsage } from "../../billing/usage";
+import { checkTrialNotifications, sendTrialBlockedNotice } from "../../billing/notifications";
 
 // ============================================================================
 // Forwarding Confirmation Detection
@@ -44,6 +45,24 @@ const CONFIRMATION_PATTERNS = [
 
 // Rate limit map: token → last relay timestamp
 const confirmationRelayTimes = new Map<string, number>();
+
+
+/**
+ * Extract confirmation code from a forwarding confirmation email body.
+ * Gmail: "Confirmation code: 123456789"
+ * Outlook: typically a link, not a code
+ */
+function extractConfirmationCode(body: string, from: string): { code: string; provider: string } | null {
+    // Gmail confirmation code
+    const gmailMatch = body.match(/[Cc]onfirmation\s+[Cc]ode[:\s]+([0-9]{6,12})/);
+    if (gmailMatch) return { code: gmailMatch[1], provider: "gmail" };
+
+    // Generic numeric code pattern (6-12 digits on their own line or after "code")
+    const genericMatch = body.match(/(?:code|verify|confirm)[^0-9]*([0-9]{6,12})/i);
+    if (genericMatch) return { code: genericMatch[1], provider: "unknown" };
+
+    return null;
+}
 
 function isForwardingConfirmation(from: string, subject: string): boolean {
     return CONFIRMATION_PATTERNS.some(
@@ -269,12 +288,23 @@ export const ingestionHandlers = {
                     );
 
                     if (account) {
+                        // Extract and store confirmation code for Chrome extension retrieval
+                        const codeInfo = extractConfirmationCode(emailBody, from);
+                        if (codeInfo) {
+                            run(
+                                `INSERT OR REPLACE INTO confirmation_codes (id, watcher_id, provider, code) VALUES (?, ?, ?, ?)`,
+                                [crypto.randomUUID(), watcherForRelay.id, codeInfo.provider, codeInfo.code]
+                            );
+                            logger.info("Stored confirmation code for extension", { watcherId: watcherForRelay.id, provider: codeInfo.provider });
+                        }
+
                         const relayed = await relayConfirmationEmail(
                             account.email, from, subject, emailBody, watcherForRelay.name
                         );
                         return c.json({
                             success: true,
                             confirmation_relayed: relayed,
+                            confirmation_code: codeInfo?.code ?? null,
                             message: relayed
                                 ? "Forwarding confirmation relayed to account owner"
                                 : "Confirmation detected but relay failed",
@@ -305,6 +335,7 @@ export const ingestionHandlers = {
             const allowed = await canProcessEmail(watcher.account_id);
             if (!allowed) {
                 logger.warn("Email rejected: trial exhausted, no payment method", { accountId: watcher.account_id });
+                sendTrialBlockedNotice(watcher.account_id).catch(() => {});
                 return c.json(
                     { error: "Free trial limit reached. Add a payment method to continue.", payment_required: true },
                     402
@@ -318,6 +349,7 @@ export const ingestionHandlers = {
             );
             if (billingRow && !billingRow.has_payment_method) {
                 incrementTrialUsage(watcher.account_id);
+                checkTrialNotifications(watcher.account_id).catch(() => {});
             }
 
             const result = await ingestEmail({
@@ -374,6 +406,7 @@ export const ingestionHandlers = {
             // Billing gate
             const allowed = await canProcessEmail(watcher.account_id);
             if (!allowed) {
+                sendTrialBlockedNotice(watcher.account_id).catch(() => {});
                 return c.json(
                     { error: "Free trial limit reached. Add a payment method to continue.", payment_required: true },
                     402
@@ -385,6 +418,7 @@ export const ingestionHandlers = {
             );
             if (billingRow2 && !billingRow2.has_payment_method) {
                 incrementTrialUsage(watcher.account_id);
+                checkTrialNotifications(watcher.account_id).catch(() => {});
             }
 
             const messageId =

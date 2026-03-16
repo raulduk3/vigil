@@ -386,6 +386,38 @@ export const watcherHandlers = {
         return c.json({ deleted: true });
     },
 
+
+    async flush(c: Context) {
+        const user = c.get("user");
+        const id = c.req.param("id") ?? "";
+
+        const watcher = queryOne<WatcherRow>(
+            `SELECT * FROM watchers WHERE id = ? AND account_id = ? AND status != 'deleted'`,
+            [id, user.account_id]
+        );
+        if (!watcher) return c.json({ error: "Watcher not found" }, 404);
+
+        // Delete all watcher data (order matters for FK constraints)
+        const emailCount = queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM emails WHERE watcher_id = ?`, [id]);
+        const threadCount = queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM threads WHERE watcher_id = ?`, [id]);
+        const memoryCount = queryOne<{ count: number }>(`SELECT COUNT(*) as count FROM memories WHERE watcher_id = ?`, [id]);
+
+        run(`DELETE FROM actions WHERE watcher_id = ?`, [id]);
+        run(`DELETE FROM memories WHERE watcher_id = ?`, [id]);
+        run(`DELETE FROM emails WHERE watcher_id = ?`, [id]);
+        run(`DELETE FROM threads WHERE watcher_id = ?`, [id]);
+
+        return c.json({
+            flushed: true,
+            watcher_id: id,
+            deleted: {
+                emails: emailCount?.count ?? 0,
+                threads: threadCount?.count ?? 0,
+                memories: memoryCount?.count ?? 0,
+            },
+        });
+    },
+
     async getActions(c: Context) {
         const user = c.get("user");
         const id = c.req.param("id") ?? "";

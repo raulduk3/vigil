@@ -47,6 +47,7 @@ export async function initializeDatabase(): Promise<void> {
         `ALTER TABLE accounts ADD COLUMN stripe_subscription_id TEXT`,
         `ALTER TABLE accounts ADD COLUMN has_payment_method BOOLEAN DEFAULT FALSE`,
         `ALTER TABLE accounts ADD COLUMN trial_emails_used INTEGER DEFAULT 0`,
+        `ALTER TABLE accounts ADD COLUMN trial_notified_at TIMESTAMP`,
     ];
     for (const sql of billingMigrations) {
         try { database.exec(sql); } catch { /* column already exists */ }
