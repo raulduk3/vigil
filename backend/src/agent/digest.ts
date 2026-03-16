@@ -6,6 +6,7 @@
  */
 
 import { queryMany, queryOne, run } from "../db/client";
+import { reportInvocationCost } from "../billing/usage";
 // Memory functions available if needed for future enrichment
 import { logger } from "../logger";
 import type { ThreadRow, WatcherRow } from "./schema";
@@ -241,10 +242,12 @@ export function buildDigestHtml(data: DigestData, focusParagraph: string, period
 export async function sendDigest(watcherId: string, periodDays: number = 7): Promise<boolean> {
     const data = collectDigestData(watcherId, periodDays);
 
-    // Get a short LLM "focus" paragraph
+    // Get a short LLM "focus" paragraph (skip for BYOK users to avoid platform cost)
     let focusParagraph = "";
+    const acctRow = queryOne<{ openai_api_key_enc: string | null }>(`SELECT openai_api_key_enc FROM accounts WHERE id = ?`, [data.watcher.account_id]);
+    const isByok = !!acctRow?.openai_api_key_enc;
     try {
-        focusParagraph = await generateFocusParagraph(data);
+        if (!isByok) focusParagraph = await generateFocusParagraph(data);
     } catch (err) {
         logger.warn("Failed to generate focus paragraph, sending digest without it", { err });
     }
@@ -337,7 +340,17 @@ Write 2-3 sentences about what the user should focus on this week. Be specific a
     });
 
     if (!resp.ok) return "";
-    const result = (await resp.json()) as { choices: Array<{ message: { content: string } }> };
+    const result = (await resp.json()) as { choices: Array<{ message: { content: string } }>; usage?: { prompt_tokens: number; completion_tokens: number } };
+    
+    // Bill the digest focus paragraph LLM cost
+    const usage = result.usage;
+    if (usage && data.watcher.account_id) {
+        // gpt-4.1-mini rates: /bin/zsh.0004/1K input, /bin/zsh.0016/1K output
+        const digestCost = (usage.prompt_tokens / 1000) * 0.0004 + (usage.completion_tokens / 1000) * 0.0016;
+        const MARGIN = 0.05;
+        reportInvocationCost(data.watcher.account_id, digestCost * (1 + MARGIN)).catch(() => {});
+    }
+
     return result.choices?.[0]?.message?.content?.trim() ?? "";
 }
 

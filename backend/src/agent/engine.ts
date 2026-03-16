@@ -583,10 +583,19 @@ export async function invokeAgent(
         durationMs: Date.now() - startMs,
     });
 
-    // Bill all usage at actual LLM cost + 5%. Ticks run on nano so they cost less naturally.
-    if (!hasAnyByokKey(watcher.account_id) && costUsd > 0) {
+    // Calculate total cost including tool costs (e.g. alert delivery)
+    let totalToolCost = 0;
+    if (agentResponse?.actions) {
+        for (const action of agentResponse.actions) {
+            if (action.result?.cost) totalToolCost += action.result.cost;
+        }
+    }
+    const totalCostAll = costUsd + totalToolCost;
+
+    // Bill all usage at actual cost + 5%. LLM + tools. BYOK skips LLM billing but tools still cost.
+    if (!hasAnyByokKey(watcher.account_id) && totalCostAll > 0) {
         const MARGIN = 0.05;
-        const billable = costUsd * (1 + MARGIN);
+        const billable = totalCostAll * (1 + MARGIN);
         reportInvocationCost(watcher.account_id, billable).catch((err) =>
             logger.error("Failed to report invocation cost", { watcherId, err })
         );
