@@ -262,7 +262,6 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
   const buildExportData = () => ({
     name,
     system_prompt: systemPrompt,
-    model: normalizeModelId(model),
     reactivity,
     memory_sensitivity: memorySensitivity,
     silence_hours: silenceHours,
@@ -283,7 +282,6 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
 
   const exportMarkdown = () => {
     const data = buildExportData();
-    const modelInfo = MODEL_OPTIONS.find(m => m.id === data.model);
     const md = [
       `# ${data.name}`,
       '',
@@ -291,7 +289,6 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
       '',
       `| Setting | Value |`,
       `| --- | --- |`,
-      `| Model | ${modelInfo?.label ?? data.model} (${modelInfo?.costPerEmail ?? '?'}/email) |`,
       `| Reactivity | ${data.reactivity}/5 |`,
       `| Memory Sensitivity | ${data.memory_sensitivity}/5 |`,
       `| Silence Threshold | ${data.silence_hours} hours |`,
