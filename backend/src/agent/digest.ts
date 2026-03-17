@@ -337,7 +337,7 @@ Write 2-3 sentences about what the user should focus on this week. Be specific a
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
-            model: "gpt-4.1-mini",
+            model: "gpt-4.1",
             messages: [{ role: "user", content: prompt }],
             max_tokens: 150,
             temperature: 0.7,

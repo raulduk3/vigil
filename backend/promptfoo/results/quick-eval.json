@@ -1,8 +1,8 @@
 {
-  "evalId": "eval-uQ3-2026-03-16T23:44:52",
+  "evalId": "eval-tNX-2026-03-17T00:01:00",
   "results": {
     "version": 3,
-    "timestamp": "2026-03-16T23:44:52.431Z",
+    "timestamp": "2026-03-17T00:01:00.603Z",
     "prompts": [
       {
         "id": "387c530a3f04cc1fb0088d275ca1067bb489cfebc93a67654b6f346a9259bb89",
@@ -16,7 +16,7 @@
           "testErrorCount": 0,
           "assertPassCount": 26,
           "assertFailCount": 1,
-          "totalLatencyMs": 26051,
+          "totalLatencyMs": 25073,
           "tokenUsage": {
             "prompt": 0,
             "completion": 0,
@@ -52,13 +52,13 @@
         "label": "{{trigger_type}}",
         "provider": "mini",
         "metrics": {
-          "score": 7.083333333333334,
-          "testPassCount": 5,
-          "testFailCount": 3,
+          "score": 7.416666666666667,
+          "testPassCount": 6,
+          "testFailCount": 2,
           "testErrorCount": 0,
-          "assertPassCount": 24,
-          "assertFailCount": 3,
-          "totalLatencyMs": 37293,
+          "assertPassCount": 25,
+          "assertFailCount": 2,
+          "totalLatencyMs": 53911,
           "tokenUsage": {
             "prompt": 0,
             "completion": 0,
@@ -122,8 +122,8 @@
             }
           ]
         },
-        "id": "fdfa85ce-df79-4cd4-8fde-f36d5f3973c0",
-        "latencyMs": 4119,
+        "id": "edaf0562-ab3c-40dd-ab98-e941f59255cd",
+        "latencyMs": 3628,
         "namedScores": {},
         "prompt": {
           "raw": "email_received",
@@ -137,7 +137,7 @@
           "label": "nano"
         },
         "response": {
-          "output": "{\n  \"actions\": [\n    {\n      \"tool\": \"update_thread\",\n      \"params\": {\n        \"thread_id\": \"thread-receipt-001\",\n        \"status\": \"resolved\",\n        \"summary\": \"Amazon order #114-7382910 has shipped for Anker USB-C Hub, expected delivery March 20.\"\n      },\n      \"reasoning\": \"This is a delivery confirmation with details about the item and estimated delivery date. No immediate action is required.\"\n    }\n  ],\n  \"memory_append\": [\n    {\n      \"content\": \"Order #114-7382910 for Anker USB-C Hub, $34.99, shipped via UPS, tracking 1Z999AA10123456784, expected delivery March 20, 2025.\",\n      \"importance\": 3,\n      \"source_quote\": \"Your order has shipped. Order #114-7382910. Items: Anker USB-C Hub — $34.99. Tracking: 1Z999AA10123456784 via UPS. Expected delivery: Friday, March 20.\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-receipt-001\",\n      \"status\": \"resolved\",\n      \"summary\": \"Amazon order #114-7382910 has shipped for Anker USB-C Hub, expected delivery March 20.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Delivery confirmation for an Amazon order shipping info with tracking and expected delivery date.\",\n    \"intent\": \"Inform the user that their order has shipped and to expect delivery by March 20.\",\n    \"urgency\": \"low\",\n    \"entities\": [\"Order #114-7382910\", \"Anker USB-C Hub\", \"$34.99\", \"1Z999AA10123456784\", \"Friday, March 20\"],\n    \"reasoning\": \"This is an informational email confirming shipment. No action or alert is necessary, and the details are stored for future reference.\"\n  }\n}"
+          "output": "{\n  \"actions\": [],\n  \"memory_append\": [\n    {\n      \"content\": \"Order #114-7382910 for Anker USB-C Hub, $34.99, shipped via UPS, tracking number 1Z999AA10123456784, expected delivery on Friday, March 20, 2025.\",\n      \"importance\": 3,\n      \"source_quote\": \"Your order has shipped. Order #114-7382910. Items: Anker USB-C Hub — $34.99. Tracking: 1Z999AA10123456784 via UPS. Expected delivery: Friday, March 20.\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-receipt-001\",\n      \"status\": \"resolved\",\n      \"summary\": \"Shipping confirmation received for order #114-7382910, delivery expected on March 20, 2025.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Amazon shipped an order, with an estimated delivery date of March 20, 2025.\",\n    \"intent\": \"Inform the user about shipment and delivery estimate.\",\n    \"urgency\": \"low\",\n    \"entities\": [\"Order #114-7382910\", \"Anker USB-C Hub\", \"$34.99\", \"UPS\", \"tracking number 1Z999AA10123456784\", \"March 20\"],\n    \"reasoning\": \"This is a routine shipment notification well in the past date; no action needed. The delivery date is noted but no immediate concern as it was expected, and the email is informational.\"\n  }\n}"
         },
         "score": 1,
         "success": true,
@@ -214,8 +214,8 @@
             }
           ]
         },
-        "id": "8bb473ea-3a90-4bf8-bdba-acb8ee32afb5",
-        "latencyMs": 4546,
+        "id": "abd1a9fa-e64b-4629-9d02-d0051fef86a8",
+        "latencyMs": 7902,
         "namedScores": {},
         "prompt": {
           "raw": "email_received",
@@ -229,7 +229,7 @@
           "label": "mini"
         },
         "response": {
-          "output": "{\n  \"actions\": [],\n  \"memory_append\": [],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-receipt-001\",\n      \"status\": \"resolved\",\n      \"summary\": \"Amazon order #114-7382910 for Anker USB-C Hub ($34.99) shipped with UPS tracking 1Z999AA10123456784, expected delivery March 20, 2025.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Amazon shipping confirmation for order #114-7382910 with delivery expected on March 20, 2025.\",\n    \"intent\": \"Inform user that their purchase has shipped and provide tracking and delivery info.\",\n    \"urgency\": \"low\",\n    \"entities\": [\n      \"Order #114-7382910\",\n      \"Anker USB-C Hub — $34.99\",\n      \"Tracking: 1Z999AA10123456784\",\n      \"via UPS\",\n      \"Expected delivery: Friday, March 20\"\n    ],\n    \"reasoning\": \"This is a routine shipping notification for an order placed a year ago. There is no immediate action required or deadline at risk. The delivery date has long passed, so the email is treated as resolved and no alert is necessary.\"\n  }\n}"
+          "output": "{\n  \"actions\": [],\n  \"memory_append\": [],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-receipt-001\",\n      \"status\": \"resolved\",\n      \"summary\": \"Amazon order #114-7382910 for Anker USB-C Hub ($34.99) shipped via UPS with expected delivery on March 20, 2025.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Amazon shipped an order for a USB-C hub with delivery expected March 20, 2025.\",\n    \"intent\": \"Inform user of shipment and tracking details\",\n    \"urgency\": \"low\",\n    \"entities\": [\"Order #114-7382910\", \"Anker USB-C Hub — $34.99\", \"Tracking: 1Z999AA10123456784\", \"Friday, March 20\"],\n    \"reasoning\": \"This is a shipment confirmation email for an order placed in March 2025, which is historical relative to the current date in 2026. The delivery date and event are long past, so no action or alert is needed. The thread is marked resolved as it is informational and outdated.\"\n  }\n}"
         },
         "score": 1,
         "success": true,
@@ -312,8 +312,8 @@
             }
           ]
         },
-        "id": "3f7d1746-700f-4d47-9c29-66616e67c83c",
-        "latencyMs": 5394,
+        "id": "6eecaab6-6a6e-4938-af42-95e5ce51b953",
+        "latencyMs": 5827,
         "namedScores": {},
         "prompt": {
           "raw": "email_received",
@@ -327,7 +327,7 @@
           "label": "mini"
         },
         "response": {
-          "output": "{\n  \"actions\": [],\n  \"memory_append\": [\n    {\n      \"content\": \"User was requested to approve the Q1 budget proposal of $240,000 with $80,000 for new engineering hires by March 18, 2025 (EOD Wednesday before board meeting on March 19).\",\n      \"importance\": 5,\n      \"source_quote\": \"I need your sign-off on the Q1 budget proposal before the board meeting on Thursday, March 19. Can you review and approve by EOD Wednesday?\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-action-001\",\n      \"status\": \"resolved\",\n      \"summary\": \"Request for approval on Q1 budget proposal by March 18, 2025, now past due.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Request for approval on Q1 budget proposal with a deadline on March 18, 2025, now passed.\",\n    \"intent\": \"Request user to review and approve Q1 budget proposal before March 19 board meeting.\",\n    \"urgency\": \"low\",\n    \"entities\": [\"$240,000 total budget\", \"$80,000 for new engineering hires\", \"March 19\", \"EOD Wednesday\"],\n    \"reasoning\": \"The deadline for action was March 18, 2025, which is more than a year ago, so no current action is needed. The email is important for record but outdated. Therefore, the thread is marked resolved and the key facts are stored for context.\"\n  }\n}"
+          "output": "{\n  \"actions\": [],\n  \"memory_append\": [\n    {\n      \"content\": \"Approval needed on Q1 budget proposal by Wednesday, March 18, 2025 end of day with total budget $240,000 and $80,000 allocated for new engineering hires\",\n      \"importance\": 5,\n      \"source_quote\": \"Can you review and approve by EOD Wednesday? Thanks, Sarah\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-action-001\",\n      \"status\": \"resolved\",\n      \"summary\": \"Request for Q1 budget approval by March 18, 2025, now past due.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Sarah requests approval on the Q1 budget by the end of Wednesday, March 18, to proceed before the board meeting.\",\n    \"intent\": \"Request approval of the Q1 budget proposal.\",\n    \"urgency\": \"low\",\n    \"entities\": [\"$240,000 total budget\", \"$80,000 for new engineering hires\", \"board meeting on Thursday, March 19\", \"EOD Wednesday\"],\n    \"reasoning\": \"This email requests a budget approval with a deadline of March 18, 2025, which has passed almost a year ago in reference to the current date, making it no longer urgent or actionable. The thread is therefore marked resolved, and the key facts are remembered for context in case of future related communications.\"\n  }\n}"
         },
         "score": 0.75,
         "success": false,
@@ -413,8 +413,8 @@
             }
           ]
         },
-        "id": "06eb046d-5b33-4f47-8336-18f4f4178dc2",
-        "latencyMs": 4714,
+        "id": "c77a35e3-0cfa-4d19-bb2d-df6ff86ebfb5",
+        "latencyMs": 3006,
         "namedScores": {},
         "prompt": {
           "raw": "email_received",
@@ -428,7 +428,7 @@
           "label": "nano"
         },
         "response": {
-          "output": "{\n  \"actions\": [\n    {\n      \"tool\": \"update_thread\",\n      \"params\": {\n        \"thread_id\": \"thread-action-001\",\n        \"status\": \"active\",\n        \"summary\": \"Awaiting user's review and approval of Q1 budget proposal, deadline is end of March 17.\"\n      },\n      \"reasoning\": \"The email has an urgent deadline (EOD March 17) for approval needed before the board meeting on March 19, so I set the thread as active and note the deadline.\"\n    }\n  ],\n  \"memory_append\": [\n    {\n      \"content\": \"Q1 budget proposal total amount is $240,000, with $80,000 allocated for new engineering hires.\",\n      \"importance\": 3,\n      \"source_quote\": \"Key numbers: $240,000 total budget, with $80,000 for new engineering hires.\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-action-001\",\n      \"status\": \"active\",\n      \"summary\": \"Awaiting user's review and approval of Q1 budget proposal, deadline is end of March 17.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Sarah Kim from the finance team requests the user's approval on the Q1 budget before March 17.\",\n    \"intent\": \"Request the user's review and approval for the Q1 budget proposal.\",\n    \"urgency\": \"high\",\n    \"entities\": [\"$240,000\", \"$80,000\", \"March 19\", \"March 17\"],\n    \"reasoning\": \"The approval deadline is March 17, which is imminent and within 48 hours, warranting a high-urgency alert. The information about the budget amounts is relevant for context. The email is a direct request requiring the user's action.\"\n  }\n}"
+          "output": "{\n  \"actions\": [],\n  \"memory_append\": [\n    {\n      \"content\": \"$240,000 total budget, with $80,000 for new engineering hires for Q1\",\n      \"importance\": 3,\n      \"source_quote\": \"Key numbers: $240,000 total budget, with $80,000 for new engineering hires.\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-action-001\",\n      \"status\": \"active\",\n      \"summary\": \"Sarah requested user approval on the Q1 budget of $240,000, specifically $80,000 for engineering, with a deadline of March 19.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Sarah needs the user's approval on the Q1 budget proposal before March 19.\",\n    \"intent\": \"Request approval to proceed with the budget\",\n    \"urgency\": \"high\",\n    \"entities\": [\"$240,000\", \"$80,000\", \"Q1\", \"March 19\"],\n    \"reasoning\": \"The deadline is March 19, which is in 2 days, and the approval is necessary for proceeding. Since the deadline is imminent, I will alert the user to review and approve promptly.\"\n  }\n}"
         },
         "score": 1,
         "success": true,
@@ -514,8 +514,8 @@
             }
           ]
         },
-        "id": "6b3bd500-5570-43d9-ac63-0b37642f45c5",
-        "latencyMs": 2201,
+        "id": "9754a514-9025-4c42-a12d-0da23ad95355",
+        "latencyMs": 2382,
         "namedScores": {},
         "prompt": {
           "raw": "email_received",
@@ -529,7 +529,7 @@
           "label": "nano"
         },
         "response": {
-          "output": "{\n  \"actions\": [],\n  \"memory_append\": [],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-spam-001\",\n      \"status\": \"ignored\",\n      \"summary\": \"Spam prize notification from winner@prize-claim.co, unrelated to user, no action needed.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Spam email claiming a prize, highly suspicious and likely malicious.\",\n    \"intent\": \"Attempt to trick user into providing bank details.\",\n    \"urgency\": \"low\",\n    \"entities\": [\"$1,000,000\", \"winner@prize-claim.co\"],\n    \"reasoning\": \"This is a common spam scam. No action is needed, and it is marked as noise. It is ignored to prevent clutter.\"\n  }\n}"
+          "output": "{\n  \"actions\": [],\n  \"memory_append\": [],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-spam-001\",\n      \"status\": \"ignored\",\n      \"summary\": \"Spam prize notification from winner@prize-claim.co, deemed irrelevant and malicious.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Spam email claiming the user won $1,000,000, with a deadline of 24 hours, likely malicious.\",\n    \"intent\": \"Deceive or scam the recipient into providing bank details.\",\n    \"urgency\": \"low\",\n    \"entities\": [\"$1,000,000\", \"winner@prize-claim.co\"],\n    \"reasoning\": \"The email is clearly spam and a scam, so it will be ignored. The deadline has long passed, and there's no meaningful action needed.\"\n  }\n}"
         },
         "score": 1,
         "success": true,
@@ -615,8 +615,8 @@
             }
           ]
         },
-        "id": "069d81f0-2f25-4607-a3d5-40366338db76",
-        "latencyMs": 4957,
+        "id": "14624ae0-3c8e-4409-915d-e667faa5b08b",
+        "latencyMs": 6186,
         "namedScores": {},
         "prompt": {
           "raw": "email_received",
@@ -630,7 +630,7 @@
           "label": "mini"
         },
         "response": {
-          "output": "{\n  \"actions\": [\n    {\n      \"tool\": \"ignore_thread\",\n      \"params\": {\n        \"thread_id\": \"thread-spam-001\",\n        \"reason\": \"Spam/phishing email promising $1,000,000 prize with urgent claim request; no valid business context\"\n      },\n      \"reasoning\": \"The email is a clear scam with an urgent prize claim request that is not credible. It is 1 year old and no action by user is expected or needed.\"\n    }\n  ],\n  \"memory_append\": [],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-spam-001\",\n      \"status\": \"ignored\",\n      \"summary\": \"Spam email claiming user won $1,000,000 prize with 24-hour claim deadline, clearly fraudulent.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Spam email claiming user won $1,000,000 prize with 24-hour claim deadline from 2025.\",\n    \"intent\": \"Scam to get user to provide bank details for supposed $1,000,000 prize\",\n    \"urgency\": \"low\",\n    \"entities\": [\"$1,000,000\", \"24 hours\"],\n    \"reasoning\": \"The email is unsolicited and fit common scam patterns. The 24-hour deadline was relative to 2025-03-16 which is long past, so no current urgency. The user should not engage with this. Treated as noise and ignored.\"\n  }\n}"
+          "output": "{\n  \"actions\": [\n    {\n      \"tool\": \"ignore_thread\",\n      \"params\": {\n        \"thread_id\": \"thread-spam-001\",\n        \"reason\": \"Spam prize scam offering $1,000,000 with urgent 24-hour deadline, clearly fraudulent.\"\n      },\n      \"reasoning\": \"The email is a classic lottery scam with a false urgent deadline that expired long ago. It poses no legitimate action for the user.\"\n    }\n  ],\n  \"memory_append\": [],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-spam-001\",\n      \"status\": \"ignored\",\n      \"summary\": \"Spam email claiming user won $1,000,000 with fake urgency expired over a year ago.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Spam email claiming user won $1,000,000 with a 24-hour claim deadline expired long ago.\",\n    \"intent\": \"Scam lure to get user to disclose bank details under false prize claim urgency.\",\n    \"urgency\": \"low\",\n    \"entities\": [\n      \"$1,000,000\",\n      \"24 hours\",\n      \"2025-03-16T08:00:00.000Z\"\n    ],\n    \"reasoning\": \"The 24-hour deadline mentioned was from 2025-03-16T08:00:00Z, over a year ago, so no immediate action is needed. The sender is not a legitimate contact but a scammer, so this is best ignored.\"\n  }\n}"
         },
         "score": 1,
         "success": true,
@@ -711,8 +711,8 @@
             }
           ]
         },
-        "id": "ff3ac41b-7abe-48ce-8074-82927116bc92",
-        "latencyMs": 2686,
+        "id": "789095bc-84cf-473d-a4ca-d59b9dd525a9",
+        "latencyMs": 3331,
         "namedScores": {},
         "prompt": {
           "raw": "email_received",
@@ -726,7 +726,7 @@
           "label": "nano"
         },
         "response": {
-          "output": "{\n  \"actions\": [],\n  \"memory_append\": [\n    {\n      \"content\": \"Charge of $127.43 on Chase card ending in 4821 at Whole Foods Market on March 16, 2026\",\n      \"importance\": 3,\n      \"source_quote\": \"A charge of $127.43 was made on your Chase Freedom card ending in 4821. Merchant: Whole Foods Market. Date: March 16, 2026. Amount: $127.43.\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-fin-001\",\n      \"status\": \"active\",\n      \"summary\": \"Alerted to recent Chase card charge of $127.43 at Whole Foods on March 16, 2026\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"A charge on the user's Chase card was made at Whole Foods Market on March 16, 2026.\",\n    \"intent\": \"Inform the user about the transaction, prompting them to check its validity.\",\n    \"urgency\": \"normal\",\n    \"entities\": [\"$127.43\", \"Chase Freedom card ending in 4821\", \"Whole Foods Market\", \"March 16, 2026\"],\n    \"reasoning\": \"This is a recent transaction that may require user verification if unrecognized. The alert reactivity is set to a moderate level, so I am leaving it as active without immediate alert, given it does not indicate suspicious activity or immediate fraud. The stored facts will help identify or verify future related communications.\"\n  }\n}"
+          "output": "{\n  \"actions\": [\n    {\n      \"tool\": \"update_thread\",\n      \"params\": {\n        \"thread_id\": \"thread-fin-001\",\n        \"status\": \"active\",\n        \"summary\": \"Received a transaction alert from Chase for a $127.43 charge at Whole Foods on March 16, 2026.\"\n      },\n      \"reasoning\": \"This is a potentially important security alert involving a recent transaction on the user's credit card. Immediate attention or verification is warranted since the date is recent and the amount is significant.\"\n    }\n  ],\n  \"memory_append\": [\n    {\n      \"content\": \"Charge of $127.43 on Chase card ending in 4821 at Whole Foods on March 16, 2026\",\n      \"importance\": 4,\n      \"source_quote\": \"A charge of $127.43 was made on your Chase Freedom card ending in 4821. Merchant: Whole Foods Market. Date: March 16, 2026.\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-fin-001\",\n      \"status\": \"active\",\n      \"summary\": \"Received a transaction alert from Chase for a $127.43 charge at Whole Foods on March 16, 2026.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Alert about a Chase transaction at Whole Foods on March 16, 2026.\",\n    \"intent\": \"Notify the user of the recent transaction to verify if it's authorized.\",\n    \"urgency\": \"high\",\n    \"entities\": [\"$127.43\", \"Whole Foods Market\", \"March 16, 2026\", \"Chase Freedom card ending in 4821\"],\n    \"reasoning\": \"The email reports a recent charge with a suspicious timestamp and significant amount, warranting immediate verification. The user should confirm if they recognize this transaction to prevent potential fraud.\"\n  }\n}"
         },
         "score": 1,
         "success": true,
@@ -803,8 +803,8 @@
             }
           ]
         },
-        "id": "d8aba32b-8145-4f02-98a5-d28861c8a76c",
-        "latencyMs": 4358,
+        "id": "0a31046b-5f2a-40a9-8250-72134ec02c33",
+        "latencyMs": 6990,
         "namedScores": {},
         "prompt": {
           "raw": "email_received",
@@ -818,7 +818,7 @@
           "label": "mini"
         },
         "response": {
-          "output": "{\n  \"actions\": [],\n  \"memory_append\": [\n    {\n      \"content\": \"A charge of $127.43 was made on Chase Freedom card ending in 4821 at Whole Foods Market on March 16, 2026\",\n      \"importance\": 3,\n      \"source_quote\": \"A charge of $127.43 was made on your Chase Freedom card ending in 4821. Merchant: Whole Foods Market. Date: March 16, 2026. Amount: $127.43.\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-fin-001\",\n      \"status\": \"resolved\",\n      \"summary\": \"Notification of a $127.43 charge on Chase Freedom card ending 4821 at Whole Foods Market on March 16, 2026.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Notification of a $127.43 charge on Chase Freedom card ending 4821 from Whole Foods Market on March 16, 2026.\",\n    \"intent\": \"Inform user of a transaction on their credit card\",\n    \"urgency\": \"low\",\n    \"entities\": [\"$127.43\", \"Chase Freedom card ending in 4821\", \"Whole Foods Market\", \"March 16, 2026\"],\n    \"reasoning\": \"This is a routine transaction alert confirming a purchase. There is no indication the user disputes or questions the charge. It does not require immediate action or alert. The charge fact is useful to remember for future possible fraud detection or spending summaries.\"\n  }\n}"
+          "output": "{\n  \"actions\": [],\n  \"memory_append\": [\n    {\n      \"content\": \"A charge of $127.43 was made on Chase Freedom card ending in 4821 at Whole Foods Market on March 16, 2026\",\n      \"importance\": 3,\n      \"source_quote\": \"A charge of $127.43 was made on your Chase Freedom card ending in 4821. Merchant: Whole Foods Market. Date: March 16, 2026. Amount: $127.43.\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-fin-001\",\n      \"status\": \"watching\",\n      \"summary\": \"Notification of a $127.43 charge at Whole Foods Market on March 16, 2026, on Chase Freedom card ending 4821.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Informational alert of a $127.43 charge at Whole Foods Market on March 16, 2026, on user's Chase card.\",\n    \"intent\": \"Inform user of a transaction on their card for awareness and to report unauthorized charges if needed.\",\n    \"urgency\": \"low\",\n    \"entities\": [\"$127.43\", \"Chase Freedom card ending in 4821\", \"Whole Foods Market\", \"March 16, 2026\"],\n    \"reasoning\": \"This is a routine transaction alert without any indication that the user has questioned or disputed the charge. The user is not explicitly requested to take immediate action. The charge is above the low balance risk threshold but not suspicious or fraudulent on its own. The email is tracked as watching to keep transaction information accessible but does not require alerting.\"\n  }\n}"
         },
         "score": 1,
         "success": true,
@@ -901,8 +901,8 @@
             }
           ]
         },
-        "id": "ad94c0c5-4e65-4045-8bcf-2c6952ddb710",
-        "latencyMs": 2760,
+        "id": "da4f8218-37d0-4bac-9c6c-356fd28d0e50",
+        "latencyMs": 3490,
         "namedScores": {},
         "prompt": {
           "raw": "email_received",
@@ -916,7 +916,7 @@
           "label": "nano"
         },
         "response": {
-          "output": "{\n  \"actions\": [],\n  \"memory_append\": [\n    {\n      \"content\": \"AI startups raised $14.2B in Q1 2026\",\n      \"importance\": 3,\n      \"source_quote\": \"AI startups raised $14.2B in Q1 2026\",\n      \"confidence\": 5\n    },\n    {\n      \"content\": \"OpenAI is reportedly in talks for a new funding round\",\n      \"importance\": 3,\n      \"source_quote\": \"OpenAI is reportedly in talks for a new funding round\",\n      \"confidence\": 4\n    },\n    {\n      \"content\": \"Apple unveiled its latest ML framework\",\n      \"importance\": 2,\n      \"source_quote\": \"Apple unveiled its latest ML framework\",\n      \"confidence\": 4\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-news-001\",\n      \"status\": \"active\",\n      \"summary\": \"Received a daily tech news newsletter highlighting AI funding, OpenAI funding talks, and Apple's new ML framework.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Daily news update with headlines about AI funding, OpenAI, and Apple.\",\n    \"intent\": \"To inform the user about recent developments in tech and AI.\",\n    \"urgency\": \"low\",\n    \"entities\": [\n      \"AI startups\",\n      \"$14.2B\",\n      \"Q1 2026\",\n      \"OpenAI\",\n      \"Apple\",\n      \"latest ML framework\"\n    ],\n    \"reasoning\": \"This is a routine newsletter providing informational updates; no immediate action is required. The facts are non-urgent and informational, fitting the low reactivity threshold.\"\n  }\n}"
+          "output": "{\n  \"actions\": [],\n  \"memory_append\": [\n    {\n      \"content\": \"$14.2B in AI funding in Q1 2026\",\n      \"importance\": 3,\n      \"source_quote\": \"AI startups raised $14.2B in Q1 2026\",\n      \"confidence\": 5\n    },\n    {\n      \"content\": \"OpenAI is in talks for a new funding round\",\n      \"importance\": 2,\n      \"source_quote\": \"OpenAI is reportedly in talks for a new funding round\",\n      \"confidence\": 4\n    },\n    {\n      \"content\": \"Apple unveiled its latest ML framework\",\n      \"importance\": 2,\n      \"source_quote\": \"Apple unveiled its latest ML framework\",\n      \"confidence\": 4\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-news-001\",\n      \"status\": \"active\",\n      \"summary\": \"Received a news digest about AI funding, OpenAI funding talks, and Apple's ML framework unveiling.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"A news newsletter with updates on AI funding, OpenAI, and Apple.\",\n    \"intent\": \"Informational, no action required.\",\n    \"urgency\": \"low\",\n    \"entities\": [\n      \"$14.2B in Q1 2026\",\n      \"OpenAI\",\n      \"Apple\"\n    ],\n    \"reasoning\": \"This is a routine news digest, typical newsletter content, with no immediate action needed. The facts are stored for future reference if related threads appear.\"\n  }\n}"
         },
         "score": 0.75,
         "success": false,
@@ -1002,8 +1002,8 @@
             }
           ]
         },
-        "id": "0b956a47-83a8-4cb9-b1f6-82524a369757",
-        "latencyMs": 3269,
+        "id": "dc2e229d-b964-4b91-9435-cdaff1d44f98",
+        "latencyMs": 5256,
         "namedScores": {},
         "prompt": {
           "raw": "email_received",
@@ -1017,7 +1017,7 @@
           "label": "mini"
         },
         "response": {
-          "output": "{\n  \"actions\": [],\n  \"memory_append\": [],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-news-001\",\n      \"status\": \"ignored\",\n      \"summary\": \"TechCrunch newsletter from 2025-03-16 with news on AI funding and Apple ML framework.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Received a tech news newsletter about AI funding hitting $14.2B in Q1 2026 and Apple unveiling a new ML framework.\",\n    \"intent\": \"Inform user about current tech news and trends.\",\n    \"urgency\": \"low\",\n    \"entities\": [\"$14.2B\", \"Q1 2026\", \"34%\", \"OpenAI\", \"Apple\", \"latest ML framework\"],\n    \"reasoning\": \"This is a routine newsletter with no action required or deadlines. The information is informative about technology trends and funding but not relevant to user's obligations or urgent matters. Marked thread as ignored to prevent notification noise.\"\n  }\n}"
+          "output": "{\n  \"actions\": [],\n  \"memory_append\": [],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-news-001\",\n      \"status\": \"ignored\",\n      \"summary\": \"Newsletter about AI funding raising $14.2B in Q1 2026 and new ML developments; purely informational.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"TechCrunch newsletter sharing AI funding news and tech updates.\",\n    \"intent\": \"Provide informational update about technology industry news.\",\n    \"urgency\": \"low\",\n    \"entities\": [\"$14.2B\", \"Q1 2026\", \"34%\", \"OpenAI\", \"Apple\", \"ML framework\"],\n    \"reasoning\": \"This is a routine newsletter with no action requested and no immediate deadlines or risks. Although it contains interesting tech funding data, it is for information only and does not require user alert or memory storage.\"\n  }\n}"
         },
         "score": 1,
         "success": true,
@@ -1068,11 +1068,10 @@
       },
       {
         "cost": 0,
-        "error": "Security alert must not be low urgency",
         "gradingResult": {
-          "pass": false,
-          "score": 0.6666666666666666,
-          "reason": "Security alert must not be low urgency",
+          "pass": true,
+          "score": 1,
+          "reason": "All assertions passed",
           "namedScores": {},
           "tokensUsed": {
             "total": 0,
@@ -1093,14 +1092,14 @@
               "reason": "All required fields present"
             },
             {
-              "pass": false,
-              "score": 0,
-              "reason": "Security alert must not be low urgency"
+              "pass": true,
+              "score": 1,
+              "reason": "Urgency correct"
             }
           ]
         },
-        "id": "47b8f9f5-4438-4b1f-8168-6af25af34bda",
-        "latencyMs": 4398,
+        "id": "63d27d82-11e1-42c8-9632-f81272f6b2a7",
+        "latencyMs": 4399,
         "namedScores": {},
         "prompt": {
           "raw": "email_received",
@@ -1108,16 +1107,16 @@
           "config": {}
         },
         "promptId": "387c530a3f04cc1fb0088d275ca1067bb489cfebc93a67654b6f346a9259bb89",
-        "promptIdx": 1,
+        "promptIdx": 0,
         "provider": {
-          "id": "vigil:gpt-4.1-mini",
-          "label": "mini"
+          "id": "vigil:gpt-4.1-nano",
+          "label": "nano"
         },
         "response": {
-          "output": "{\n  \"actions\": [\n    {\n      \"tool\": \"update_thread\",\n      \"params\": {\n        \"thread_id\": \"thread-sec-001\",\n        \"status\": \"ignored\",\n        \"summary\": \"Old security alert about new sign-in from unknown device in Baltimore on 2025-03-16.\"\n      },\n      \"reasoning\": \"The security alert is very old (over a year ago), so it is no longer relevant or actionable.\"\n    }\n  ],\n  \"memory_append\": [],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-sec-001\",\n      \"status\": \"ignored\",\n      \"summary\": \"Old Google security alert for new sign-in from unknown Windows device in Baltimore, dated 2025-03-16.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Security alert from Google for a new sign-in from an unknown device on 2025-03-16, now obsolete.\",\n    \"intent\": \"Inform the user about a security alert for account sign-in from a new device.\",\n    \"urgency\": \"low\",\n    \"entities\": [\"Google Account rawalvarez731@gmail.com\", \"new Windows device\", \"Baltimore, MD\", \"2025-03-16\"],\n    \"reasoning\": \"The email informs about a potential security threat but the event date is over a year old, making immediate action unnecessary. No alert is triggered since the security incident is outdated and not current.\"\n  }\n}"
+          "output": "{\n  \"actions\": [\n    {\n      \"tool\": \"update_thread\",\n      \"params\": {\n        \"thread_id\": \"thread-sec-001\",\n        \"status\": \"active\",\n        \"summary\": \"Received security alert about a new sign-in from an unknown device in Baltimore, MD, on your Google account.\"\n      },\n      \"reasoning\": \"The email reports a potentially unauthorized login, which is urgent and warrants alerting the user due to security risk.\"\n    },\n    {\n      \"tool\": \"send_alert\",\n      \"params\": {\n        \"thread_id\": \"thread-sec-001\",\n        \"message\": \"Security alert: review your Google account sign-in activity immediately.\",\n        \"urgency\": \"high\"\n      },\n      \"reasoning\": \"The email indicates a suspicious login from an unknown device in Baltimore, MD, and the alert is within 48 hours of receipt, requiring immediate action.\"\n    }\n  ],\n  \"memory_append\": [\n    {\n      \"content\": \"user@vigil.run has a Google account (rawalvarez731@gmail.com) that received a security alert on 2025-03-16 about a sign-in from a new Windows device in Baltimore, MD.\",\n      \"importance\": 3,\n      \"source_quote\": \"Someone just signed in to your Google Account rawalvarez731@gmail.com from a new Windows device in Baltimore, MD.\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-sec-001\",\n      \"status\": \"active\",\n      \"summary\": \"Received security alert about a new sign-in from an unknown device in Baltimore, MD, on your Google account.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Google sent a security alert about an unknown sign-in activity.\",\n    \"intent\": \"Notify the user of potential account compromise and prompt for review.\",\n    \"urgency\": \"high\",\n    \"entities\": [\"rawalvarez731@gmail.com\", \"Baltimore, MD\"],\n    \"reasoning\": \"The email reports a potentially unauthorized login in Baltimore, MD, which is critical security information, and the alert is within the 48-hour window, justifying high urgency.\"\n  }\n}"
         },
-        "score": 0.6666666666666666,
-        "success": false,
+        "score": 1,
+        "success": true,
         "testCase": {
           "description": "Security — high urgency, should alert",
           "vars": {
@@ -1157,7 +1156,7 @@
         "metadata": {
           "_promptfooFileMetadata": {}
         },
-        "failureReason": 1
+        "failureReason": 0
       },
       {
         "cost": 0,
@@ -1191,8 +1190,8 @@
             }
           ]
         },
-        "id": "22b143e9-78a6-4323-b7fd-a05de1adb6af",
-        "latencyMs": 3169,
+        "id": "33e6bbd3-2a66-4941-b410-f9e58c78ee38",
+        "latencyMs": 7377,
         "namedScores": {},
         "prompt": {
           "raw": "email_received",
@@ -1200,13 +1199,13 @@
           "config": {}
         },
         "promptId": "387c530a3f04cc1fb0088d275ca1067bb489cfebc93a67654b6f346a9259bb89",
-        "promptIdx": 0,
+        "promptIdx": 1,
         "provider": {
-          "id": "vigil:gpt-4.1-nano",
-          "label": "nano"
+          "id": "vigil:gpt-4.1-mini",
+          "label": "mini"
         },
         "response": {
-          "output": "{\n  \"actions\": [],\n  \"memory_append\": [\n    {\n      \"content\": \"A new sign-in from an unknown device detected on March 16, 2025, at 08:00 UTC for account rawalvarez731@gmail.com from Baltimore, MD on a Windows device.\",\n      \"importance\": 4,\n      \"source_quote\": \"Someone just signed in to your Google Account rawalvarez731@gmail.com from a new Windows device in Baltimore, MD.\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-sec-001\",\n      \"status\": \"active\",\n      \"summary\": \"Security alert regarding a new sign-in on March 16, 2025, from Baltimore, MD; urgent review recommended.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Google detected a new sign-in from an unknown device, possibly unauthorized.\",\n    \"intent\": \"Notify user of potential account compromise and advise them to review activity immediately.\",\n    \"urgency\": \"high\",\n    \"entities\": [\"rawalvarez731@gmail.com\", \"Baltimore, MD\", \"Windows device\"],\n    \"reasoning\": \"Since this email reports a suspicious sign-in from over a year ago, it is outdated. No immediate action is needed now, but I will monitor for any subsequent alerts or similar activities. No alert was necessary at receipt because it is old information, but the thread was updated to active for record.\"\n  }\n}"
+          "output": "{\n  \"actions\": [\n    {\n      \"tool\": \"send_alert\",\n      \"params\": {\n        \"thread_id\": \"thread-sec-001\",\n        \"message\": \"New sign-in from unknown device in Baltimore, MD on your Google Account; verify immediately.\",\n        \"urgency\": \"high\"\n      },\n      \"reasoning\": \"This is a security alert about an unknown device sign-in, which could indicate account compromise and requires urgent user action.\"\n    }\n  ],\n  \"memory_append\": [\n    {\n      \"content\": \"New sign-in to Google Account rawalvarez731@gmail.com from a Windows device in Baltimore, MD detected on 2025-03-16 at 08:00:00 UTC\",\n      \"importance\": 5,\n      \"source_quote\": \"Someone just signed in to your Google Account rawalvarez731@gmail.com from a new Windows device in Baltimore, MD.\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-sec-001\",\n      \"status\": \"active\",\n      \"summary\": \"Security alert for new sign-in from unknown Windows device in Baltimore, MD on Google Account rawalvarez731@gmail.com.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Security alert for new sign-in from unknown Windows device in Baltimore, MD on Google Account rawalvarez731@gmail.com.\",\n    \"intent\": \"Inform user of potentially unauthorized access and prompt to review account activity.\",\n    \"urgency\": \"high\",\n    \"entities\": [\n      \"rawalvarez731@gmail.com\",\n      \"new Windows device\",\n      \"Baltimore, MD\",\n      \"2025-03-16T08:00:00.000Z\"\n    ],\n    \"reasoning\": \"The email notifies the user of a sign-in from an unknown device, which could indicate account compromise. The timing is past but the risk is ongoing until user confirmation, warranting a high urgency alert. The email content is clear and factual, so a memory is stored for future reference.\"\n  }\n}"
         },
         "score": 1,
         "success": true,
@@ -1283,8 +1282,8 @@
             }
           ]
         },
-        "id": "a1ef3d3b-5961-4cdc-babc-cc523e4c91b3",
-        "latencyMs": 2628,
+        "id": "fa5f74a7-c877-4b3d-8d72-53d1ea160e3e",
+        "latencyMs": 1957,
         "namedScores": {},
         "prompt": {
           "raw": "email_received",
@@ -1298,7 +1297,7 @@
           "label": "nano"
         },
         "response": {
-          "output": "{\n  \"actions\": [],\n  \"memory_append\": [\n    {\n      \"content\": \"Next billing date for Vercel Pro subscription is April 16, 2026\",\n      \"importance\": 3,\n      \"source_quote\": \"Next billing date: April 16, 2026.\",\n      \"confidence\": 5\n    },\n    {\n      \"content\": \"Amount paid for Vercel Pro renewal: $20.00\",\n      \"importance\": 3,\n      \"source_quote\": \"Amount: $20.00.\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-sub-001\",\n      \"status\": \"resolved\",\n      \"summary\": \"Received payment receipt for Vercel Pro, next billing on April 16, 2026.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Payment confirmation for Vercel Pro renewal with upcoming billing date.\",\n    \"intent\": \"Inform the user of payment received and upcoming renewal date.\",\n    \"urgency\": \"low\",\n    \"entities\": [\"$20.00\", \"April 16, 2026\"],\n    \"reasoning\": \"This is an automated receipt confirming a payment already made. No immediate action needed, the information is stored for future reference. No alert is necessary.\"\n  }\n}"
+          "output": "{\n  \"actions\": [],\n  \"memory_append\": [\n    {\n      \"content\": \"Next billing date for Vercel Pro: April 16, 2026\",\n      \"importance\": 3,\n      \"source_quote\": \"Next billing date: April 16, 2026.\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-sub-001\",\n      \"status\": \"resolved\",\n      \"summary\": \"Received payment receipt for Vercel Pro, with next billing date on April 16, 2026.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Payment for Vercel Pro was received, renewing subscription.\",\n    \"intent\": \"Inform user of payment receipt and renewal.\",\n    \"urgency\": \"low\",\n    \"entities\": [\"$20.00\", \"April 16, 2026\"],\n    \"reasoning\": \"This is a routine payment confirmation and no immediate action or alert is needed. The next billing date is stored as a memory for future reference.\"\n  }\n}"
         },
         "score": 1,
         "success": true,
@@ -1375,8 +1374,8 @@
             }
           ]
         },
-        "id": "cdd5e7e5-8763-40d4-ba7c-f5453ad663ef",
-        "latencyMs": 4383,
+        "id": "ea071bc1-5ad4-4cc7-abbd-88b6ceb57f53",
+        "latencyMs": 5360,
         "namedScores": {},
         "prompt": {
           "raw": "email_received",
@@ -1390,7 +1389,7 @@
           "label": "mini"
         },
         "response": {
-          "output": "{\n  \"actions\": [],\n  \"memory_append\": [\n    {\n      \"content\": \"Vercel Pro subscription renewal payment amount $20.00 with next billing date April 16, 2026\",\n      \"importance\": 3,\n      \"source_quote\": \"Your Vercel Pro subscription has been renewed. Amount: $20.00. Next billing date: April 16, 2026.\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-sub-001\",\n      \"status\": \"resolved\",\n      \"summary\": \"Payment receipt for Vercel Pro subscription renewal of $20.00 with next billing date April 16, 2026.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Receipt for payment of Vercel Pro subscription renewal amounting to $20.00 with next billing scheduled for April 16, 2026.\",\n    \"intent\": \"Informative - confirm subscription payment and renewal date\",\n    \"urgency\": \"low\",\n    \"entities\": [\"$20.00\", \"April 16, 2026\", \"Vercel Pro subscription\"],\n    \"reasoning\": \"This is a routine payment receipt for a subscription renewal with a next billing date far in the future, no action is requested or required and no deadline is urgent. The fact about the subscription cost and renewal date is stored for future reference.\"\n  }\n}"
+          "output": "{\n  \"actions\": [],\n  \"memory_append\": [\n    {\n      \"content\": \"Vercel Pro subscription renewed with payment of $20.00; next billing date April 16, 2026\",\n      \"importance\": 3,\n      \"source_quote\": \"Thanks for your payment. Your Vercel Pro subscription has been renewed. Amount: $20.00. Next billing date: April 16, 2026.\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": null,\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-sub-001\",\n      \"status\": \"resolved\",\n      \"summary\": \"Payment receipt for Vercel Pro subscription renewal of $20.00; next billing April 16, 2026.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Payment receipt confirming Vercel Pro subscription renewal and next billing date.\",\n    \"intent\": \"Inform payment confirmation and subscription renewal.\",\n    \"urgency\": \"low\",\n    \"entities\": [\"Vercel Pro\", \"$20.00\", \"April 16, 2026\"],\n    \"reasoning\": \"This is a payment receipt confirming a renewal already completed, with a scheduled future billing date. No action or alert is needed. The next billing date is stored for future reference.\"\n  }\n}"
         },
         "score": 1,
         "success": true,
@@ -1468,8 +1467,8 @@
             }
           ]
         },
-        "id": "67fc8835-7f27-40ab-a199-8f90b95f91b1",
-        "latencyMs": 5988,
+        "id": "d6b8b193-9d3f-449e-a7b3-661ddc0645b3",
+        "latencyMs": 9013,
         "namedScores": {},
         "prompt": {
           "raw": "email_received",
@@ -1483,7 +1482,7 @@
           "label": "mini"
         },
         "response": {
-          "output": "{\n  \"actions\": [],\n  \"memory_append\": [\n    {\n      \"content\": \"Bulley & Andrews demo kickoff meeting moved up with a deadline by next Tuesday from 2025-03-16\",\n      \"importance\": 4,\n      \"source_quote\": \"can you have the Bulley & Andrews demo ready by next Tuesday? They moved the kickoff meeting up.\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-work-001\",\n      \"status\": \"resolved\",\n      \"summary\": \"Request from Cory to have Bulley & Andrews demo ready by next Tuesday from 2025-03-16 (deadline passed).\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Cory asks if Bulley & Andrews demo can be ready by next Tuesday with an earlier kickoff meeting date.\",\n    \"intent\": \"Request for confirmation if demo can be ready by a deadline.\",\n    \"urgency\": \"low\",\n    \"entities\": [\"Bulley & Andrews demo\", \"next Tuesday\", \"2025-03-16T08:00:00.000Z\"],\n    \"reasoning\": \"The email requests a demo readiness by next Tuesday relative to 2025-03-16, which was in the past compared to today (2026-03-16). The deadline has long passed, so no alert is needed. The thread is marked resolved as this is an old request. The deadline fact is stored for potential historical context but is no longer actionable.\"\n  }\n}"
+          "output": "{\n  \"actions\": [],\n  \"memory_append\": [\n    {\n      \"content\": \"Bulley & Andrews demo kickoff meeting moved up to Tuesday 2025-03-18\",\n      \"importance\": 4,\n      \"source_quote\": \"can you have the Bulley & Andrews demo ready by next Tuesday?\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-work-001\",\n      \"status\": \"resolved\",\n      \"summary\": \"Request to have Bulley & Andrews demo ready by Tuesday 2025-03-18 with kickoff meeting moved up; date passed with no further action.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Cory requests the Bulley & Andrews demo be ready by next Tuesday (2025-03-18).\",\n    \"intent\": \"Request confirmation about readiness of demo by a moved-up kickoff meeting date.\",\n    \"urgency\": \"low\",\n    \"entities\": [\"Bulley & Andrews\", \"next Tuesday\", \"kickoff meeting\"],\n    \"reasoning\": \"The email's deadline was for Tuesday, March 18, 2025, which is long past compared to today (March 16, 2026). Since the date is in the past, this no longer requires user action or an alert. Mark the thread as resolved. The fact about the moved-up meeting was stored for context but is now obsolete due to time elapsed.\"\n  }\n}"
         },
         "score": 0.6666666666666666,
         "success": false,
@@ -1560,8 +1559,8 @@
             }
           ]
         },
-        "id": "aaa441c9-2a57-4362-9678-ff643d996291",
-        "latencyMs": 3774,
+        "id": "e453c223-ba4d-4caa-9888-3f6a75d58038",
+        "latencyMs": 2880,
         "namedScores": {},
         "prompt": {
           "raw": "email_received",
@@ -1575,7 +1574,7 @@
           "label": "nano"
         },
         "response": {
-          "output": "{\n  \"actions\": [\n    {\n      \"tool\": \"update_thread\",\n      \"params\": {\n        \"thread_id\": \"thread-work-001\",\n        \"status\": \"active\",\n        \"summary\": \"Received inquiry from Cory about the feasibility of completing the Bulley & Andrews demo by next Tuesday due to an earlier kickoff.\"\n      },\n      \"reasoning\": \"The email contains a specific deadline (next Tuesday, 2025-03-18) which is within 48 hours, requiring potential action or a response. The thread is set to active to track any follow-up.\"\n    }\n  ],\n  \"memory_append\": [\n    {\n      \"content\": \"Cory asked if the Bulley & Andrews demo can be ready by 2025-03-18 due to an earlier meeting.\",\n      \"importance\": 3,\n      \"source_quote\": \"can you have the Bulley & Andrews demo ready by next Tuesday? They moved the kickoff meeting up.\",\n      \"confidence\": 4\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-work-001\",\n      \"status\": \"active\",\n      \"summary\": \"Received inquiry from Cory about the feasibility of completing the Bulley & Andrews demo by next Tuesday due to an earlier kickoff.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Cory inquires about the possibility of having a demo ready next Tuesday due to a schedule change.\",\n    \"intent\": \"Request for a status update or confirmation on demo readiness.\",\n    \"urgency\": \"high\",\n    \"entities\": [\"Cory\", \"Bulley & Andrews\", \"next Tuesday\"],\n    \"reasoning\": \"The email mentions a tight deadline (2025-03-18), which is within 48 hours, requiring prompt attention to determine if the task is feasible or if a reply is needed.\"\n  }\n}"
+          "output": "{\n  \"actions\": [\n    {\n      \"tool\": \"update_thread\",\n      \"params\": {\n        \"thread_id\": \"thread-work-001\",\n        \"status\": \"active\",\n        \"summary\": \"Cory requests to prepare the Bulley & Andrews demo by next Tuesday due to schedule change.\"\n      },\n      \"reasoning\": \"The email contains a new request with a specific deadline (next Tuesday), which is within 48 hours from the current date, indicating a need for a high urgency alert.\"\n    }\n  ],\n  \"memory_append\": [\n    {\n      \"content\": \"Cory asked if the Bulley & Andrews demo can be ready by next Tuesday.\",\n      \"importance\": 4,\n      \"source_quote\": \"can you have the Bulley & Andrews demo ready by next Tuesday?\",\n      \"confidence\": 5\n    }\n  ],\n  \"memory_obsolete\": [],\n  \"thread_updates\": [\n    {\n      \"thread_id\": \"thread-work-001\",\n      \"status\": \"active\",\n      \"summary\": \"Cory requests to prepare the Bulley & Andrews demo by next Tuesday due to schedule change.\"\n    }\n  ],\n  \"email_analysis\": {\n    \"summary\": \"Cory inquires whether the demo for Bulley & Andrews can be ready by next Tuesday due to an earlier schedule.\",\n    \"intent\": \"Request status update and confirm feasibility.\",\n    \"urgency\": \"high\",\n    \"entities\": [\n      \"Cory\",\n      \"Bulley & Andrews\",\n      \"next Tuesday\"\n    ],\n    \"reasoning\": \"The email requests a specific deliverable before a deadline that is within two days, which requires immediate attention. The request is explicit, and the deadline is clear, justifying a high urgency alert.\"\n  }\n}"
         },
         "score": 1,
         "success": true,
@@ -1622,8 +1621,8 @@
       }
     ],
     "stats": {
-      "successes": 12,
-      "failures": 4,
+      "successes": 13,
+      "failures": 3,
       "errors": 0,
       "tokenUsage": {
         "prompt": 0,
@@ -1649,8 +1648,8 @@
           }
         }
       },
-      "durationMs": 18424,
-      "evaluationDurationMs": 18424
+      "durationMs": 23849,
+      "evaluationDurationMs": 23849
     }
   },
   "config": {
@@ -1855,7 +1854,7 @@
     "nodeVersion": "v25.8.0",
     "platform": "darwin",
     "arch": "arm64",
-    "exportedAt": "2026-03-16T23:45:10.884Z",
-    "evaluationCreatedAt": "2026-03-16T23:44:52.431Z"
+    "exportedAt": "2026-03-17T00:01:24.482Z",
+    "evaluationCreatedAt": "2026-03-17T00:01:00.603Z"
   }
 }

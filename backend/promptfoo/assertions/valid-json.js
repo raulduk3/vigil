@@ -9,7 +9,7 @@ module.exports = (output) => {
 
     try {
         JSON.parse(output);
-        return { pass: true, score: 1 };
+        return { pass: true, score: 1, reason: "Valid JSON" };
     } catch (err) {
         // Show first 200 chars of bad output to help debug
         const preview = output.slice(0, 200).replace(/\n/g, "\\n");

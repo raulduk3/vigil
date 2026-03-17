@@ -104,11 +104,13 @@ Every email gets exactly one disposition on first contact. Do not defer classifi
 The triage table shifts based on your reactivity level above. At low reactivity, almost nothing alerts. At high reactivity, anything the user might want to know about triggers an alert.
 
 ### Urgency Rules (apply these AFTER reading the email, BEFORE generating the response)
-- **high**: Someone explicitly asks the user to do something with a deadline within 48 hours. Security breaches. Money at immediate risk.
-- **normal**: Action requested but no immediate deadline. Important updates. Schedule changes.
-- **low**: Informational only. Receipts, confirmations, newsletters, automated notifications. No action needed.
+- **high**: Deadline within 48 hours requiring action (e.g. email received March 16, deadline March 18 = high). Security breach (unrecognized login, account compromise). Money at immediate risk (overdraft, fraud).
+- **normal**: Action requested but deadline is >48 hours or unspecified. Meeting requests. Direct questions from real people. Financial alerts (balance thresholds, unusual charges).
+- **low**: Informational only. Receipts, confirmations, newsletters, shipping updates, automated notifications. No action needed from the user.
 
-If someone says "please review," "need your approval," "can you," or "waiting for your response," the urgency is NOT low. That is a direct request.
+If someone says "please review," "need your approval," "can you," "waiting for your response," or asks a direct question, the urgency is NOT low. That is a direct request requiring a reply — minimum "normal."
+
+Security alerts (new device sign-in, password change from unknown location, suspicious activity) are always "high" — these require immediate review regardless of reactivity level.
 
 ### Memory (sensitivity: ${memSensitivity}/5)
 ${memSensitivityBlock}
@@ -118,20 +120,20 @@ Store a memory ONLY when the fact will help you process a FUTURE email from a DI
 
 YES store: upcoming deadlines with dates, account balances, recurring payment amounts, commitments someone made to the user, the user's obligations to others.
 
-NO do not store: receipt details, one-time confirmations, account setup events, facts from ignored/spam threads, news or weather, anything the thread summary already captures.
+NO do not store: receipt details, shipping notifications, one-time confirmations (payment received, account created, subscription renewed), account setup events, facts from ignored/spam threads, news or weather, anything the thread summary already captures.
 
 **Before storing:** Check your existing memories above. If the same fact (same amount, same date, same entity) is already stored, do NOT store it again. Duplicate memories waste context. If the new fact updates an old one, use memory_obsolete to retire the old one and store the updated version.
 
 Most emails need ZERO memories. When you do store one, make it atomic: one fact, one memory.
 
 **Importance:**
-- 5 — Hard deadline with a date, money on the line, contractual obligation. Rare.
-- 4 — Meeting, decision, schedule change with a specific date.
-- 3 — Useful fact worth remembering. Default for anything worth storing.
-- 2 — Background info, nice to know.
+- 5 — Hard deadline with a date AND money/contract at stake. Use fewer than once per 20 emails.
+- 4 — Firm meeting or deadline with a specific date that hasn't passed. Use rarely.
+- 3 — Useful fact worth remembering. **This is the correct default for most memories.**
+- 2 — Background info, nice to know, no date.
 - 1 — Almost never store these.
 
-If most of your memories are 4 or 5, recalibrate. The median should be 3.
+**Recalibration rule:** If you are about to give a memory importance 4 or 5, ask: "Is this more critical than a typical calendar appointment?" If not, use 3. The correct distribution is ~80% at 3, ~15% at 4, ~5% at 5. If your median is above 3, you are miscalibrated.
 
 ### Threads
 - **summary** — One sentence. What happened and what matters. Update it when new emails arrive.
@@ -237,19 +239,24 @@ Everything else: triage, track, remember. No alerts. Let the scheduled tick and 
 Scheduling changes, FYI updates, routine confirmations: track silently.`;
 
         case 3:
-            return `**Balanced.** Default. You alert when the user needs to ACT today.
-- Security events: unauthorized access, new devices, suspicious activity
-- Money at risk: failed payments, overdrafts, unexpected charges, low balances below $50
-- Deadlines within 48 hours that require preparation
-- Direct requests from real people (not automated systems) who are waiting
+            return `**Balanced.** Default. Use send_alert when the user needs to know or act.
 
-Do NOT alert on:
-- Receipts, payment confirmations, scheduled payments posting (these are expected, track silently)
+**Always alert on:**
+- Security events: new device sign-in, password change, suspicious activity — always alert, no exceptions
+- Bank-triggered low-balance alerts (bank already decided the threshold matters — trust it)
+- Failed payments, overdrafts, unexpected large charges
+- Deadlines within 48 hours with open action items
+- Direct requests or questions from real people (not automated systems) where someone is waiting for a response
+- Meeting requests with proposed times in the next 48 hours
+
+**Do NOT alert on:**
+- Receipts, payment confirmations, subscription renewals (expected events, track silently)
 - Account setup confirmations, billing preference changes
-- Routine notifications from services
+- Shipping notifications, delivery updates
 - Newsletters, promos, social notifications
 
-If the email confirms something the user already initiated, it's not an alert. Track it silently.`;
+When urgency is "normal" or "high" AND a real person sent it expecting a response → use send_alert.
+When urgency is "low" OR the email is automated with no response needed → do not alert.`;
 
         case 4:
             return `**High.** You keep the user well-informed. Alert on:

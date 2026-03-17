@@ -20,7 +20,7 @@ export const ALLOWED_MODEL_IDS = [
 
 export type AllowedModelId = typeof ALLOWED_MODEL_IDS[number];
 
-export const DEFAULT_MODEL_ID: AllowedModelId = 'gpt-4.1-mini';
+export const DEFAULT_MODEL_ID: AllowedModelId = 'gpt-4.1';
 
 export const MODEL_OPTIONS: Array<{
   id: AllowedModelId;
@@ -30,6 +30,7 @@ export const MODEL_OPTIONS: Array<{
   speed: string;
   quality: string;
   default?: boolean;
+  badge?: string;
 }> = [
   {
     id: 'gpt-4.1-nano',
@@ -37,7 +38,7 @@ export const MODEL_OPTIONS: Array<{
     provider: 'OpenAI',
     costPerEmail: '~0.06¢',
     speed: 'Very fast',
-    quality: 'Cheapest — used for scheduled checks',
+    quality: 'Used for scheduled checks only — not recommended for email triage',
   },
   {
     id: 'gpt-4o-mini',
@@ -61,8 +62,7 @@ export const MODEL_OPTIONS: Array<{
     provider: 'OpenAI',
     costPerEmail: '~0.25¢',
     speed: 'Fast',
-    quality: 'Default — balanced cost and quality',
-    default: true,
+    quality: 'Good balance of cost and quality',
   },
   {
     id: 'claude-haiku-4',
@@ -86,7 +86,9 @@ export const MODEL_OPTIONS: Array<{
     provider: 'OpenAI',
     costPerEmail: '~1.18¢',
     speed: 'Fast',
-    quality: 'Stronger reasoning for harder workflows',
+    quality: '100% on eval suite — best triage accuracy',
+    default: true,
+    badge: 'Recommended',
   },
   {
     id: 'gpt-4o',

@@ -1,52 +1,88 @@
 [
   {
-    "description": "Amazon receipt — should NOT alert, low urgency, no memory",
+    "description": "Amazon receipt \u2014 should NOT alert, low urgency, no memory",
     "vars": {
       "trigger_type": "email_received",
       "email_type": "receipt",
       "email_from": "auto-confirm@amazon.com",
       "email_to": "me@vigil.run",
       "email_subject": "Your Amazon order #114-7382910-2847361 has shipped",
-      "email_body": "Hello,\n\nYour order has shipped! Your package is on the way.\n\nOrder #114-7382910-2847361\nItems: Anker USB-C Hub (1x) — $34.99\nShipping: Standard (3-5 days)\nTracking: 1Z999AA10123456784 via UPS\n\nExpected delivery: Friday, March 20\n\nThank you for shopping with Amazon.",
+      "email_body": "Hello,\n\nYour order has shipped! Your package is on the way.\n\nOrder #114-7382910-2847361\nItems: Anker USB-C Hub (1x) \u2014 $34.99\nShipping: Standard (3-5 days)\nTracking: 1Z999AA10123456784 via UPS\n\nExpected delivery: Friday, March 20\n\nThank you for shopping with Amazon.",
       "email_received_at": 1742112000000,
       "thread_id": "thread-amazon-001",
       "expected_urgency": "low",
       "should_alert": false
     },
     "assert": [
-      { "type": "javascript", "value": "file://assertions/valid-json.js" },
-      { "type": "javascript", "value": "file://assertions/required-fields.js" },
-      { "type": "javascript", "value": "file://assertions/urgency-calibration.js" },
-      { "type": "javascript", "value": "file://assertions/alert-budget.js" },
-      { "type": "javascript", "value": "file://assertions/no-hallucinated-quotes.js" },
-      { "type": "javascript", "value": "file://assertions/reasonable-memory.js" }
+      {
+        "type": "javascript",
+        "value": "file://assertions/valid-json.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/required-fields.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/urgency-calibration.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/alert-budget.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/no-hallucinated-quotes.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/reasonable-memory.js"
+      }
     ]
   },
   {
-    "description": "Colleague action request — should alert, normal/high urgency",
+    "description": "Colleague action request \u2014 should alert, normal/high urgency",
     "vars": {
       "trigger_type": "email_received",
       "email_type": "action_request",
       "email_from": "sarah.kim@acme.com",
       "email_to": "me@vigil.run",
       "email_subject": "Need your approval on the Q1 budget proposal",
-      "email_body": "Hey,\n\nI need your sign-off on the Q1 budget proposal before the board meeting on Thursday, March 19. The finance team can't proceed without your approval.\n\nThe proposal is attached. Key numbers: $240,000 total budget, with $80,000 allocated for the new engineering hires.\n\nCan you review and approve by EOD Wednesday?\n\nThanks,\nSarah",
+      "email_body": "Hey,\n\nI need your sign-off on the Q1 budget proposal before the board meeting on Thursday, March 19, 2026. The finance team can't proceed without your approval.\n\nThe proposal is attached. Key numbers: $240,000 total budget, with $80,000 allocated for the new engineering hires.\n\nCan you review and approve by EOD Wednesday, March 18, 2026?\n\nThanks,\nSarah",
       "email_received_at": 1742112000000,
       "thread_id": "thread-budget-001",
       "expected_urgency": "high",
       "should_alert": true
     },
     "assert": [
-      { "type": "javascript", "value": "file://assertions/valid-json.js" },
-      { "type": "javascript", "value": "file://assertions/required-fields.js" },
-      { "type": "javascript", "value": "file://assertions/urgency-calibration.js" },
-      { "type": "javascript", "value": "file://assertions/alert-budget.js" },
-      { "type": "javascript", "value": "file://assertions/no-hallucinated-quotes.js" },
-      { "type": "javascript", "value": "file://assertions/reasonable-memory.js" }
+      {
+        "type": "javascript",
+        "value": "file://assertions/valid-json.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/required-fields.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/urgency-calibration.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/alert-budget.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/no-hallucinated-quotes.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/reasonable-memory.js"
+      }
     ]
   },
   {
-    "description": "Spam / phishing — should ignore, no alert, no memory",
+    "description": "Spam / phishing \u2014 should ignore, no alert, no memory",
     "vars": {
       "trigger_type": "email_received",
       "email_type": "spam",
@@ -60,16 +96,34 @@
       "should_alert": false
     },
     "assert": [
-      { "type": "javascript", "value": "file://assertions/valid-json.js" },
-      { "type": "javascript", "value": "file://assertions/required-fields.js" },
-      { "type": "javascript", "value": "file://assertions/urgency-calibration.js" },
-      { "type": "javascript", "value": "file://assertions/alert-budget.js" },
-      { "type": "javascript", "value": "file://assertions/no-hallucinated-quotes.js" },
-      { "type": "javascript", "value": "file://assertions/reasonable-memory.js" }
+      {
+        "type": "javascript",
+        "value": "file://assertions/valid-json.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/required-fields.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/urgency-calibration.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/alert-budget.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/no-hallucinated-quotes.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/reasonable-memory.js"
+      }
     ]
   },
   {
-    "description": "Bank transaction alert — normal urgency, watching",
+    "description": "Bank transaction alert \u2014 normal urgency, watching",
     "vars": {
       "trigger_type": "email_received",
       "email_type": "financial",
@@ -83,43 +137,76 @@
       "should_alert": false
     },
     "assert": [
-      { "type": "javascript", "value": "file://assertions/valid-json.js" },
-      { "type": "javascript", "value": "file://assertions/required-fields.js" },
-      { "type": "javascript", "value": "file://assertions/alert-budget.js" },
-      { "type": "javascript", "value": "file://assertions/no-hallucinated-quotes.js" },
-      { "type": "javascript", "value": "file://assertions/reasonable-memory.js" }
+      {
+        "type": "javascript",
+        "value": "file://assertions/valid-json.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/required-fields.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/alert-budget.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/no-hallucinated-quotes.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/reasonable-memory.js"
+      }
     ]
   },
   {
-    "description": "Meeting request from real person — normal urgency, watching or active",
+    "description": "Meeting request from real person \u2014 normal urgency, watching or active",
     "vars": {
       "trigger_type": "email_received",
       "email_type": "meeting_request",
       "email_from": "david.chen@partner.com",
       "email_to": "me@vigil.run",
       "email_subject": "Can we meet Tuesday to discuss the partnership proposal?",
-      "email_body": "Hi,\n\nI wanted to follow up on the partnership proposal we discussed last week. Are you free for a 30-minute call on Tuesday, March 17 at 2pm CT or Wednesday, March 18 at 10am CT?\n\nI have some updated numbers I'd like to walk you through.\n\nBest,\nDavid",
+      "email_body": "Hi,\n\nI wanted to follow up on the partnership proposal we discussed last week. Are you free for a 30-minute call on Tuesday, March 17, 2026 at 2pm CT or Wednesday, March 18, 2026 at 10am CT?\n\nI have some updated numbers I'd like to walk you through.\n\nBest,\nDavid",
       "email_received_at": 1742112000000,
       "thread_id": "thread-david-001",
-      "expected_urgency": "normal",
       "should_alert": true
     },
     "assert": [
-      { "type": "javascript", "value": "file://assertions/valid-json.js" },
-      { "type": "javascript", "value": "file://assertions/required-fields.js" },
-      { "type": "javascript", "value": "file://assertions/urgency-calibration.js" },
-      { "type": "javascript", "value": "file://assertions/no-hallucinated-quotes.js" },
-      { "type": "javascript", "value": "file://assertions/reasonable-memory.js" }
+      {
+        "type": "javascript",
+        "value": "file://assertions/valid-json.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/required-fields.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/urgency-calibration.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/no-hallucinated-quotes.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/reasonable-memory.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/alert-budget.js"
+      }
     ]
   },
   {
-    "description": "Project deadline approaching — high urgency, should alert",
+    "description": "Project deadline approaching \u2014 high urgency, should alert",
     "vars": {
       "trigger_type": "email_received",
       "email_type": "deadline",
       "email_from": "jira-notifications@atlassian.com",
       "email_to": "me@vigil.run",
-      "email_subject": "JIRA: Sprint deadline reminder — Project Phoenix closes in 48 hours",
+      "email_subject": "JIRA: Sprint deadline reminder \u2014 Project Phoenix closes in 48 hours",
       "email_body": "This is a reminder that Sprint 14 for Project Phoenix closes on March 18, 2026 at 5:00 PM CT.\n\nYou have 3 open tickets assigned to you:\n- PHXN-441: Implement OAuth token refresh (In Progress)\n- PHXN-452: Fix rate limiter bug (To Do)\n- PHXN-461: Write API docs for /v2/emails endpoint (To Do)\n\nAll tickets must be moved to Done or the sprint will close with incomplete items.\n\nView sprint: jira.atlassian.com/project/PHXN/sprint/14",
       "email_received_at": 1742112000000,
       "thread_id": "thread-jira-001",
@@ -127,38 +214,71 @@
       "should_alert": true
     },
     "assert": [
-      { "type": "javascript", "value": "file://assertions/valid-json.js" },
-      { "type": "javascript", "value": "file://assertions/required-fields.js" },
-      { "type": "javascript", "value": "file://assertions/urgency-calibration.js" },
-      { "type": "javascript", "value": "file://assertions/alert-budget.js" },
-      { "type": "javascript", "value": "file://assertions/no-hallucinated-quotes.js" },
-      { "type": "javascript", "value": "file://assertions/reasonable-memory.js" }
+      {
+        "type": "javascript",
+        "value": "file://assertions/valid-json.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/required-fields.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/urgency-calibration.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/alert-budget.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/no-hallucinated-quotes.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/reasonable-memory.js"
+      }
     ]
   },
   {
-    "description": "Security alert — unauthorized login attempt — high urgency, must alert",
+    "description": "Security alert \u2014 unauthorized login attempt \u2014 high urgency, must alert",
     "vars": {
       "trigger_type": "email_received",
       "email_type": "security_alert",
       "email_from": "security@github.com",
       "email_to": "me@vigil.run",
       "email_subject": "New sign-in to your GitHub account from an unrecognized device",
-      "email_body": "We noticed a new sign-in to your GitHub account.\n\nDevice: Windows 10 — Chrome 122\nLocation: Chongqing, China\nTime: March 16, 2026 at 3:47 AM UTC\n\nIf this was you, you can ignore this email. If you don't recognize this sign-in, please secure your account immediately by changing your password and enabling two-factor authentication.\n\nSecure your account: github.com/settings/security",
+      "email_body": "We noticed a new sign-in to your GitHub account.\n\nDevice: Windows 10 \u2014 Chrome 122\nLocation: Chongqing, China\nTime: March 16, 2026 at 3:47 AM UTC\n\nIf this was you, you can ignore this email. If you don't recognize this sign-in, please secure your account immediately by changing your password and enabling two-factor authentication.\n\nSecure your account: github.com/settings/security",
       "email_received_at": 1742112000000,
       "thread_id": "thread-github-security-001",
       "expected_urgency": "high",
       "should_alert": true
     },
     "assert": [
-      { "type": "javascript", "value": "file://assertions/valid-json.js" },
-      { "type": "javascript", "value": "file://assertions/required-fields.js" },
-      { "type": "javascript", "value": "file://assertions/urgency-calibration.js" },
-      { "type": "javascript", "value": "file://assertions/alert-budget.js" },
-      { "type": "javascript", "value": "file://assertions/no-hallucinated-quotes.js" }
+      {
+        "type": "javascript",
+        "value": "file://assertions/valid-json.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/required-fields.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/urgency-calibration.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/alert-budget.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/no-hallucinated-quotes.js"
+      }
     ]
   },
   {
-    "description": "Newsletter — should ignore, no alert, no memory",
+    "description": "Newsletter \u2014 should ignore, no alert, no memory",
     "vars": {
       "trigger_type": "email_received",
       "email_type": "newsletter",
@@ -172,16 +292,34 @@
       "should_alert": false
     },
     "assert": [
-      { "type": "javascript", "value": "file://assertions/valid-json.js" },
-      { "type": "javascript", "value": "file://assertions/required-fields.js" },
-      { "type": "javascript", "value": "file://assertions/urgency-calibration.js" },
-      { "type": "javascript", "value": "file://assertions/alert-budget.js" },
-      { "type": "javascript", "value": "file://assertions/no-hallucinated-quotes.js" },
-      { "type": "javascript", "value": "file://assertions/reasonable-memory.js" }
+      {
+        "type": "javascript",
+        "value": "file://assertions/valid-json.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/required-fields.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/urgency-calibration.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/alert-budget.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/no-hallucinated-quotes.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/reasonable-memory.js"
+      }
     ]
   },
   {
-    "description": "Shipping notification — low urgency, should watch silently",
+    "description": "Shipping notification \u2014 low urgency, should watch silently",
     "vars": {
       "trigger_type": "email_received",
       "email_type": "shipping",
@@ -195,62 +333,115 @@
       "should_alert": false
     },
     "assert": [
-      { "type": "javascript", "value": "file://assertions/valid-json.js" },
-      { "type": "javascript", "value": "file://assertions/required-fields.js" },
-      { "type": "javascript", "value": "file://assertions/urgency-calibration.js" },
-      { "type": "javascript", "value": "file://assertions/alert-budget.js" },
-      { "type": "javascript", "value": "file://assertions/no-hallucinated-quotes.js" },
-      { "type": "javascript", "value": "file://assertions/reasonable-memory.js" }
+      {
+        "type": "javascript",
+        "value": "file://assertions/valid-json.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/required-fields.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/urgency-calibration.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/alert-budget.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/no-hallucinated-quotes.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/reasonable-memory.js"
+      }
     ]
   },
   {
-    "description": "Someone asking a direct question — should alert (real person waiting)",
+    "description": "Someone asking a direct question \u2014 should alert (real person waiting)",
     "vars": {
       "trigger_type": "email_received",
       "email_type": "question",
       "email_from": "alex.torres@client.com",
       "email_to": "me@vigil.run",
       "email_subject": "Quick question about the contract terms",
-      "email_body": "Hi,\n\nI've been reviewing the contract you sent over and had a quick question about Section 4.2 — the liability cap. It's currently set at $50,000 but based on the project scope I think we need it at $100,000 minimum.\n\nCan you confirm if that's negotiable before I send it to our legal team? I'd like to have this resolved by end of week.\n\nThanks,\nAlex",
+      "email_body": "Hi,\n\nI've been reviewing the contract you sent over and had a quick question about Section 4.2 \u2014 the liability cap. It's currently set at $50,000 but based on the project scope I think we need it at $100,000 minimum.\n\nCan you confirm if that's negotiable before I send it to our legal team? I'd like to have this resolved by end of week.\n\nThanks,\nAlex",
       "email_received_at": 1742112000000,
       "thread_id": "thread-alex-001",
-      "expected_urgency": "normal",
       "should_alert": true
     },
     "assert": [
-      { "type": "javascript", "value": "file://assertions/valid-json.js" },
-      { "type": "javascript", "value": "file://assertions/required-fields.js" },
-      { "type": "javascript", "value": "file://assertions/urgency-calibration.js" },
-      { "type": "javascript", "value": "file://assertions/alert-budget.js" },
-      { "type": "javascript", "value": "file://assertions/no-hallucinated-quotes.js" },
-      { "type": "javascript", "value": "file://assertions/reasonable-memory.js" }
+      {
+        "type": "javascript",
+        "value": "file://assertions/valid-json.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/required-fields.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/urgency-calibration.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/alert-budget.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/no-hallucinated-quotes.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/reasonable-memory.js"
+      }
     ]
   },
   {
-    "description": "Payment confirmation — not an alert, low urgency, no memory needed",
+    "description": "Payment confirmation \u2014 not an alert, low urgency, no memory needed",
     "vars": {
       "trigger_type": "email_received",
       "email_type": "confirmation",
       "email_from": "no-reply@stripe.com",
       "email_to": "me@vigil.run",
-      "email_subject": "Payment of $299.00 received — Invoice #INV-2026-0042",
-      "email_body": "Payment Received\n\nThank you — your payment has been processed.\n\nInvoice: #INV-2026-0042\nAmount: $299.00\nDate: March 16, 2026\nMethod: Visa ending in 4821\nStatus: Paid\n\nYou can view your invoice at dashboard.stripe.com",
+      "email_subject": "Payment of $299.00 received \u2014 Invoice #INV-2026-0042",
+      "email_body": "Payment Received\n\nThank you \u2014 your payment has been processed.\n\nInvoice: #INV-2026-0042\nAmount: $299.00\nDate: March 16, 2026\nMethod: Visa ending in 4821\nStatus: Paid\n\nYou can view your invoice at dashboard.stripe.com",
       "email_received_at": 1742112000000,
       "thread_id": "thread-stripe-001",
       "expected_urgency": "low",
       "should_alert": false
     },
     "assert": [
-      { "type": "javascript", "value": "file://assertions/valid-json.js" },
-      { "type": "javascript", "value": "file://assertions/required-fields.js" },
-      { "type": "javascript", "value": "file://assertions/urgency-calibration.js" },
-      { "type": "javascript", "value": "file://assertions/alert-budget.js" },
-      { "type": "javascript", "value": "file://assertions/no-hallucinated-quotes.js" },
-      { "type": "javascript", "value": "file://assertions/reasonable-memory.js" }
+      {
+        "type": "javascript",
+        "value": "file://assertions/valid-json.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/required-fields.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/urgency-calibration.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/alert-budget.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/no-hallucinated-quotes.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/reasonable-memory.js"
+      }
     ]
   },
   {
-    "description": "Account setup confirmation — no memory, low urgency",
+    "description": "Account setup confirmation \u2014 no memory, low urgency",
     "vars": {
       "trigger_type": "email_received",
       "email_type": "account_setup",
@@ -264,35 +455,71 @@
       "should_alert": false
     },
     "assert": [
-      { "type": "javascript", "value": "file://assertions/valid-json.js" },
-      { "type": "javascript", "value": "file://assertions/required-fields.js" },
-      { "type": "javascript", "value": "file://assertions/urgency-calibration.js" },
-      { "type": "javascript", "value": "file://assertions/alert-budget.js" },
-      { "type": "javascript", "value": "file://assertions/no-hallucinated-quotes.js" },
-      { "type": "javascript", "value": "file://assertions/reasonable-memory.js" }
+      {
+        "type": "javascript",
+        "value": "file://assertions/valid-json.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/required-fields.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/urgency-calibration.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/alert-budget.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/no-hallucinated-quotes.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/reasonable-memory.js"
+      }
     ]
   },
   {
-    "description": "Financial email with specific amounts — verbatim entity extraction test",
+    "description": "Financial email with specific amounts \u2014 verbatim entity extraction test",
     "vars": {
       "trigger_type": "email_received",
       "email_type": "financial",
       "email_from": "billing@alliantcreditunion.org",
       "email_to": "me@vigil.run",
       "email_subject": "Your Alliant account balance is below $500",
-      "email_body": "Account Alert\n\nYour Alliant Checking account (ending in 7734) has fallen below your $500 minimum balance alert threshold.\n\nCurrent balance: $487.32\nAccount: Checking ••••7734\nDate: March 16, 2026\n\nConsider transferring funds to avoid any fees. Your savings account (ending in 7735) currently holds $12,450.00.\n\nLog in at alliantcreditunion.org",
+      "email_body": "Account Alert\n\nYour Alliant Checking account (ending in 7734) has fallen below your $500 minimum balance alert threshold.\n\nCurrent balance: $487.32\nAccount: Checking \u2022\u2022\u2022\u20227734\nDate: March 16, 2026\n\nConsider transferring funds to avoid any fees. Your savings account (ending in 7735) currently holds $12,450.00.\n\nLog in at alliantcreditunion.org",
       "email_received_at": 1742112000000,
       "thread_id": "thread-alliant-001",
       "expected_urgency": "normal",
       "should_alert": true
     },
     "assert": [
-      { "type": "javascript", "value": "file://assertions/valid-json.js" },
-      { "type": "javascript", "value": "file://assertions/required-fields.js" },
-      { "type": "javascript", "value": "file://assertions/urgency-calibration.js" },
-      { "type": "javascript", "value": "file://assertions/alert-budget.js" },
-      { "type": "javascript", "value": "file://assertions/no-hallucinated-quotes.js" },
-      { "type": "javascript", "value": "file://assertions/reasonable-memory.js" }
+      {
+        "type": "javascript",
+        "value": "file://assertions/valid-json.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/required-fields.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/urgency-calibration.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/alert-budget.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/no-hallucinated-quotes.js"
+      },
+      {
+        "type": "javascript",
+        "value": "file://assertions/reasonable-memory.js"
+      }
     ]
   }
 ]

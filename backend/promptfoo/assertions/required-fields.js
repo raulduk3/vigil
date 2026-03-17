@@ -73,5 +73,5 @@ module.exports = (output, context) => {
         return { pass: false, score: 0, reason: errors.join("; ") };
     }
 
-    return { pass: true, score: 1 };
+    return { pass: true, score: 1, reason: "All required fields present" };
 };

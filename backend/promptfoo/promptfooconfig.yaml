@@ -19,15 +19,16 @@ providers:
       model: "gpt-4.1"
     label: "gpt-4.1"
 
-  - id: "file://providers/vigil-provider.ts"
-    config:
-      model: "claude-haiku-4"
-    label: "claude-haiku-4"
+  # Uncomment when API keys are available:
+  # - id: "file://providers/vigil-provider.ts"
+  #   config:
+  #     model: "claude-haiku-4"
+  #   label: "claude-haiku-4"
 
-  - id: "file://providers/vigil-provider.ts"
-    config:
-      model: "gemini-2.5-flash"
-    label: "gemini-2.5-flash"
+  # - id: "file://providers/vigil-provider.ts"
+  #   config:
+  #     model: "gemini-2.5-flash"
+  #   label: "gemini-2.5-flash"
 
 # ---------------------------------------------------------------------------
 # Prompt — a dummy passthrough; the provider builds real prompts from vars
@@ -36,11 +37,11 @@ prompts:
   - "{{trigger_type}}"
 
 # ---------------------------------------------------------------------------
-# Test datasets
+# Test datasets (inline assertions — file:// assertions break in ESM context)
 # ---------------------------------------------------------------------------
 tests:
-  - file://datasets/emails.json
-  - file://datasets/threads.json
+  - file://datasets/emails-inline.json
+  - file://datasets/threads-inline.json
 
 # ---------------------------------------------------------------------------
 # Output settings

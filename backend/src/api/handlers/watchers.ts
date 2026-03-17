@@ -61,7 +61,7 @@ export const watcherHandlers = {
 
         // Validate model
         const allowedModels = ["gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini"];
-        const selectedModel = allowedModels.includes(model) ? model : "gpt-4.1-mini";
+        const selectedModel = allowedModels.includes(model) ? model : "gpt-4.1";
 
         const id = crypto.randomUUID();
         const ingestToken = generateIngestToken();
@@ -516,7 +516,7 @@ function formatWatcher(row: WatcherRow) {
         tools,
         silence_hours: row.silence_hours,
         tick_interval: row.tick_interval,
-        model: row.model ?? "gpt-4.1-mini",
+        model: row.model ?? "gpt-4.1",
         status: row.status,
         reactivity: row.reactivity ?? 3,
         memory_sensitivity: row.memory_sensitivity ?? 3,

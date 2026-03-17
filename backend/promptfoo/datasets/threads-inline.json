@@ -1,0 +1,180 @@
+[
+  {
+    "description": "Scheduled tick \u2014 overdue active thread should trigger silence alert",
+    "vars": {
+      "trigger_type": "scheduled_tick",
+      "email_type": "tick",
+      "tick_timestamp": 1742284800000,
+      "silence_hours": 48,
+      "should_alert": true,
+      "active_threads": [
+        {
+          "id": "thread-overdue-001",
+          "watcher_id": "test-watcher-001",
+          "subject": "Q1 budget proposal approval needed",
+          "participants": "[\"sarah.kim@acme.com\"]",
+          "status": "active",
+          "first_seen": "2026-03-12T10:00:00Z",
+          "last_activity": "2026-03-12T10:00:00Z",
+          "email_count": 1,
+          "summary": "Sarah Kim requested approval on Q1 budget proposal ($240K) by EOD Wednesday. No response yet.",
+          "flags": null,
+          "created_at": "2026-03-12T10:00:00Z"
+        },
+        {
+          "id": "thread-watching-001",
+          "watcher_id": "test-watcher-001",
+          "subject": "FedEx package #783209438209 \u2014 out for delivery",
+          "participants": "[\"shipment-tracking@fedex.com\"]",
+          "status": "watching",
+          "first_seen": "2026-03-16T08:00:00Z",
+          "last_activity": "2026-03-16T08:00:00Z",
+          "email_count": 1,
+          "summary": "FedEx package out for delivery today.",
+          "flags": null,
+          "created_at": "2026-03-16T08:00:00Z"
+        }
+      ],
+      "memory_context": "[id:mem-001] Q1 budget proposal approval: Sarah Kim needs sign-off on $240,000 Q1 budget by EOD Wednesday March 18, board meeting on Thursday. (importance: 5)\n[id:mem-002] Alliant checking account \u2022\u2022\u2022\u20227734 balance as of March 16: $487.32. Savings \u2022\u2022\u2022\u20227735: $12,450.00. (importance: 3)"
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "if (!output || typeof output !== \"string\") {\n        return { pass: false, score: 0, reason: \"Output is empty or not a string\" };\n    }\n\n    try {\n        JSON.parse(output);\n        return { pass: true, score: 1, reason: \"Valid JSON\" };\n    } catch (err) {\n        \n        const preview = output.slice(0, 200).replace(/\\n/g, \"\\\\n\");\n        return {\n            pass: false,\n            score: 0,\n            reason: `Response is not valid JSON: ${err.message}. Preview: \"${preview}\"`,\n        };\n    }"
+      },
+      {
+        "type": "javascript",
+        "value": "let parsed;\n    try {\n        parsed = JSON.parse(output);\n    } catch {\n        return { pass: false, score: 0, reason: \"Not valid JSON \u2014 cannot check required fields\" };\n    }\n\n    const errors = [];\n\n    \n    if (!(\"actions\" in parsed)) {\n        errors.push(\"missing field: actions\");\n    } else if (!Array.isArray(parsed.actions)) {\n        errors.push(`actions must be an array, got ${typeof parsed.actions}`);\n    }\n\n    \n    if (!(\"thread_updates\" in parsed)) {\n        errors.push(\"missing field: thread_updates\");\n    } else if (parsed.thread_updates !== null && !Array.isArray(parsed.thread_updates)) {\n        errors.push(`thread_updates must be an array or null, got ${typeof parsed.thread_updates}`);\n    }\n\n    \n    const triggerType = context?.vars?.trigger_type ?? \"email_received\";\n    if (triggerType === \"email_received\") {\n        if (!(\"email_analysis\" in parsed)) {\n            errors.push(\"missing field: email_analysis (required for email_received trigger)\");\n        } else if (parsed.email_analysis !== null && typeof parsed.email_analysis !== \"object\") {\n            errors.push(`email_analysis must be an object or null, got ${typeof parsed.email_analysis}`);\n        }\n\n        \n        if (parsed.email_analysis && typeof parsed.email_analysis === \"object\") {\n            const analysis = parsed.email_analysis;\n            const requiredAnalysisFields = [\"summary\", \"intent\", \"urgency\", \"entities\"];\n            const missingAnalysis = requiredAnalysisFields.filter(f => !(f in analysis));\n            if (missingAnalysis.length > 0) {\n                errors.push(`email_analysis missing fields: ${missingAnalysis.join(\", \")}`);\n            }\n\n            const validUrgencies = [\"low\", \"normal\", \"high\"];\n            if (analysis.urgency && !validUrgencies.includes(analysis.urgency)) {\n                errors.push(`email_analysis.urgency must be low|normal|high, got \"${analysis.urgency}\"`);\n            }\n\n            if (\"entities\" in analysis && !Array.isArray(analysis.entities)) {\n                errors.push(`email_analysis.entities must be an array, got ${typeof analysis.entities}`);\n            }\n        }\n    }\n\n    \n    if (Array.isArray(parsed.actions)) {\n        for (let i = 0; i < parsed.actions.length; i++) {\n            const action = parsed.actions[i];\n            if (!action.tool) errors.push(`actions[${i}] missing tool`);\n            if (!action.params || typeof action.params !== \"object\") {\n                errors.push(`actions[${i}] missing or invalid params`);\n            }\n        }\n    }\n\n    if (errors.length > 0) {\n        return { pass: false, score: 0, reason: errors.join(\"; \") };\n    }\n\n    return { pass: true, score: 1, reason: \"All required fields present\" };"
+      },
+      {
+        "type": "javascript",
+        "value": "let parsed;\n    try {\n        parsed = JSON.parse(output);\n    } catch {\n        return { pass: false, score: 0, reason: \"Not valid JSON\" };\n    }\n\n    const actions = parsed.actions ?? [];\n    const alertActions = actions.filter(a => a.tool === \"send_alert\");\n    const hasAlert = alertActions.length > 0;\n\n    const emailType = (context?.vars?.email_type ?? \"\").toLowerCase();\n    const shouldAlert = context?.vars?.should_alert;\n\n    \n    const noAlertTypes = [\"receipt\", \"newsletter\", \"spam\", \"shipping\", \"confirmation\", \"account_setup\"];\n\n    if (noAlertTypes.includes(emailType) && hasAlert) {\n        const alertMessages = alertActions.map(a =>\n            `tool=${a.tool} message=\"${String(a.params?.message ?? \"\").slice(0, 80)}\"`\n        ).join(\"; \");\n        return {\n            pass: false,\n            score: 0,\n            reason: `${emailType} emails must not trigger send_alert. Got: [${alertMessages}]`,\n        };\n    }\n\n    \n    if (shouldAlert === false && hasAlert) {\n        const alertMessages = alertActions.map(a =>\n            `\"${String(a.params?.message ?? \"\").slice(0, 80)}\"`\n        ).join(\"; \");\n        return {\n            pass: false,\n            score: 0,\n            reason: `Test expects no alert, but send_alert was triggered: ${alertMessages}`,\n        };\n    }\n\n    \n    \n    if (shouldAlert === true && !hasAlert) {\n        return {\n            pass: false,\n            score: 0.4,\n            reason: `Test expects an alert (should_alert=true) but no send_alert action was found. Other actions: ${JSON.stringify(actions.map(a => a.tool))}`,\n        };\n    }\n\n    \n    if (emailType === \"tick\" && hasAlert) {\n        const shouldAlertOnTick = context?.vars?.should_alert;\n        if (shouldAlertOnTick === false) {\n            return {\n                pass: false,\n                score: 0,\n                reason: `Tick test expects no alert but send_alert was fired. Only overdue active threads should trigger silence alerts.`,\n            };\n        }\n    }\n\n    return { pass: true, score: 1, reason: \"Alert check passed\" };"
+      }
+    ]
+  },
+  {
+    "description": "Scheduled tick \u2014 all threads healthy, no alerts needed",
+    "vars": {
+      "trigger_type": "scheduled_tick",
+      "email_type": "tick",
+      "tick_timestamp": 1742112000000,
+      "silence_hours": 48,
+      "should_alert": false,
+      "active_threads": [
+        {
+          "id": "thread-watching-002",
+          "watcher_id": "test-watcher-001",
+          "subject": "Partnership proposal \u2014 David Chen",
+          "participants": "[\"david.chen@partner.com\"]",
+          "status": "watching",
+          "first_seen": "2026-03-15T14:00:00Z",
+          "last_activity": "2026-03-16T09:00:00Z",
+          "email_count": 2,
+          "summary": "David Chen proposed meeting Tuesday or Wednesday to discuss updated partnership numbers. Watching for response.",
+          "flags": null,
+          "created_at": "2026-03-15T14:00:00Z"
+        }
+      ],
+      "memory_context": "No memories stored yet."
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "if (!output || typeof output !== \"string\") {\n        return { pass: false, score: 0, reason: \"Output is empty or not a string\" };\n    }\n\n    try {\n        JSON.parse(output);\n        return { pass: true, score: 1, reason: \"Valid JSON\" };\n    } catch (err) {\n        \n        const preview = output.slice(0, 200).replace(/\\n/g, \"\\\\n\");\n        return {\n            pass: false,\n            score: 0,\n            reason: `Response is not valid JSON: ${err.message}. Preview: \"${preview}\"`,\n        };\n    }"
+      },
+      {
+        "type": "javascript",
+        "value": "let parsed;\n    try {\n        parsed = JSON.parse(output);\n    } catch {\n        return { pass: false, score: 0, reason: \"Not valid JSON \u2014 cannot check required fields\" };\n    }\n\n    const errors = [];\n\n    \n    if (!(\"actions\" in parsed)) {\n        errors.push(\"missing field: actions\");\n    } else if (!Array.isArray(parsed.actions)) {\n        errors.push(`actions must be an array, got ${typeof parsed.actions}`);\n    }\n\n    \n    if (!(\"thread_updates\" in parsed)) {\n        errors.push(\"missing field: thread_updates\");\n    } else if (parsed.thread_updates !== null && !Array.isArray(parsed.thread_updates)) {\n        errors.push(`thread_updates must be an array or null, got ${typeof parsed.thread_updates}`);\n    }\n\n    \n    const triggerType = context?.vars?.trigger_type ?? \"email_received\";\n    if (triggerType === \"email_received\") {\n        if (!(\"email_analysis\" in parsed)) {\n            errors.push(\"missing field: email_analysis (required for email_received trigger)\");\n        } else if (parsed.email_analysis !== null && typeof parsed.email_analysis !== \"object\") {\n            errors.push(`email_analysis must be an object or null, got ${typeof parsed.email_analysis}`);\n        }\n\n        \n        if (parsed.email_analysis && typeof parsed.email_analysis === \"object\") {\n            const analysis = parsed.email_analysis;\n            const requiredAnalysisFields = [\"summary\", \"intent\", \"urgency\", \"entities\"];\n            const missingAnalysis = requiredAnalysisFields.filter(f => !(f in analysis));\n            if (missingAnalysis.length > 0) {\n                errors.push(`email_analysis missing fields: ${missingAnalysis.join(\", \")}`);\n            }\n\n            const validUrgencies = [\"low\", \"normal\", \"high\"];\n            if (analysis.urgency && !validUrgencies.includes(analysis.urgency)) {\n                errors.push(`email_analysis.urgency must be low|normal|high, got \"${analysis.urgency}\"`);\n            }\n\n            if (\"entities\" in analysis && !Array.isArray(analysis.entities)) {\n                errors.push(`email_analysis.entities must be an array, got ${typeof analysis.entities}`);\n            }\n        }\n    }\n\n    \n    if (Array.isArray(parsed.actions)) {\n        for (let i = 0; i < parsed.actions.length; i++) {\n            const action = parsed.actions[i];\n            if (!action.tool) errors.push(`actions[${i}] missing tool`);\n            if (!action.params || typeof action.params !== \"object\") {\n                errors.push(`actions[${i}] missing or invalid params`);\n            }\n        }\n    }\n\n    if (errors.length > 0) {\n        return { pass: false, score: 0, reason: errors.join(\"; \") };\n    }\n\n    return { pass: true, score: 1, reason: \"All required fields present\" };"
+      }
+    ]
+  },
+  {
+    "description": "Scheduled tick \u2014 deadline from memory approaching within 48 hours",
+    "vars": {
+      "trigger_type": "scheduled_tick",
+      "email_type": "tick",
+      "tick_timestamp": 1742284800000,
+      "silence_hours": 72,
+      "should_alert": true,
+      "active_threads": [
+        {
+          "id": "thread-sprint-001",
+          "watcher_id": "test-watcher-001",
+          "subject": "JIRA Sprint 14 closes March 18 \u2014 3 open tickets",
+          "participants": "[\"jira-notifications@atlassian.com\"]",
+          "status": "active",
+          "first_seen": "2026-03-16T10:00:00Z",
+          "last_activity": "2026-03-16T10:00:00Z",
+          "email_count": 1,
+          "summary": "Sprint 14 closes March 18 5:00 PM CT. 3 open tickets assigned: PHXN-441 (in progress), PHXN-452, PHXN-461 (to do).",
+          "flags": null,
+          "created_at": "2026-03-16T10:00:00Z"
+        }
+      ],
+      "memory_context": "[id:mem-003] Sprint 14 (Project Phoenix) closes March 18, 2026 at 5:00 PM CT. 3 tickets open. (importance: 5)\n[id:mem-004] Q1 budget sign-off needed by EOD Wednesday March 18 \u2014 board meeting Thursday March 19. (importance: 5)"
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "if (!output || typeof output !== \"string\") {\n        return { pass: false, score: 0, reason: \"Output is empty or not a string\" };\n    }\n\n    try {\n        JSON.parse(output);\n        return { pass: true, score: 1, reason: \"Valid JSON\" };\n    } catch (err) {\n        \n        const preview = output.slice(0, 200).replace(/\\n/g, \"\\\\n\");\n        return {\n            pass: false,\n            score: 0,\n            reason: `Response is not valid JSON: ${err.message}. Preview: \"${preview}\"`,\n        };\n    }"
+      },
+      {
+        "type": "javascript",
+        "value": "let parsed;\n    try {\n        parsed = JSON.parse(output);\n    } catch {\n        return { pass: false, score: 0, reason: \"Not valid JSON \u2014 cannot check required fields\" };\n    }\n\n    const errors = [];\n\n    \n    if (!(\"actions\" in parsed)) {\n        errors.push(\"missing field: actions\");\n    } else if (!Array.isArray(parsed.actions)) {\n        errors.push(`actions must be an array, got ${typeof parsed.actions}`);\n    }\n\n    \n    if (!(\"thread_updates\" in parsed)) {\n        errors.push(\"missing field: thread_updates\");\n    } else if (parsed.thread_updates !== null && !Array.isArray(parsed.thread_updates)) {\n        errors.push(`thread_updates must be an array or null, got ${typeof parsed.thread_updates}`);\n    }\n\n    \n    const triggerType = context?.vars?.trigger_type ?? \"email_received\";\n    if (triggerType === \"email_received\") {\n        if (!(\"email_analysis\" in parsed)) {\n            errors.push(\"missing field: email_analysis (required for email_received trigger)\");\n        } else if (parsed.email_analysis !== null && typeof parsed.email_analysis !== \"object\") {\n            errors.push(`email_analysis must be an object or null, got ${typeof parsed.email_analysis}`);\n        }\n\n        \n        if (parsed.email_analysis && typeof parsed.email_analysis === \"object\") {\n            const analysis = parsed.email_analysis;\n            const requiredAnalysisFields = [\"summary\", \"intent\", \"urgency\", \"entities\"];\n            const missingAnalysis = requiredAnalysisFields.filter(f => !(f in analysis));\n            if (missingAnalysis.length > 0) {\n                errors.push(`email_analysis missing fields: ${missingAnalysis.join(\", \")}`);\n            }\n\n            const validUrgencies = [\"low\", \"normal\", \"high\"];\n            if (analysis.urgency && !validUrgencies.includes(analysis.urgency)) {\n                errors.push(`email_analysis.urgency must be low|normal|high, got \"${analysis.urgency}\"`);\n            }\n\n            if (\"entities\" in analysis && !Array.isArray(analysis.entities)) {\n                errors.push(`email_analysis.entities must be an array, got ${typeof analysis.entities}`);\n            }\n        }\n    }\n\n    \n    if (Array.isArray(parsed.actions)) {\n        for (let i = 0; i < parsed.actions.length; i++) {\n            const action = parsed.actions[i];\n            if (!action.tool) errors.push(`actions[${i}] missing tool`);\n            if (!action.params || typeof action.params !== \"object\") {\n                errors.push(`actions[${i}] missing or invalid params`);\n            }\n        }\n    }\n\n    if (errors.length > 0) {\n        return { pass: false, score: 0, reason: errors.join(\"; \") };\n    }\n\n    return { pass: true, score: 1, reason: \"All required fields present\" };"
+      },
+      {
+        "type": "javascript",
+        "value": "let parsed;\n    try {\n        parsed = JSON.parse(output);\n    } catch {\n        return { pass: false, score: 0, reason: \"Not valid JSON\" };\n    }\n\n    const actions = parsed.actions ?? [];\n    const alertActions = actions.filter(a => a.tool === \"send_alert\");\n    const hasAlert = alertActions.length > 0;\n\n    const emailType = (context?.vars?.email_type ?? \"\").toLowerCase();\n    const shouldAlert = context?.vars?.should_alert;\n\n    \n    const noAlertTypes = [\"receipt\", \"newsletter\", \"spam\", \"shipping\", \"confirmation\", \"account_setup\"];\n\n    if (noAlertTypes.includes(emailType) && hasAlert) {\n        const alertMessages = alertActions.map(a =>\n            `tool=${a.tool} message=\"${String(a.params?.message ?? \"\").slice(0, 80)}\"`\n        ).join(\"; \");\n        return {\n            pass: false,\n            score: 0,\n            reason: `${emailType} emails must not trigger send_alert. Got: [${alertMessages}]`,\n        };\n    }\n\n    \n    if (shouldAlert === false && hasAlert) {\n        const alertMessages = alertActions.map(a =>\n            `\"${String(a.params?.message ?? \"\").slice(0, 80)}\"`\n        ).join(\"; \");\n        return {\n            pass: false,\n            score: 0,\n            reason: `Test expects no alert, but send_alert was triggered: ${alertMessages}`,\n        };\n    }\n\n    \n    \n    if (shouldAlert === true && !hasAlert) {\n        return {\n            pass: false,\n            score: 0.4,\n            reason: `Test expects an alert (should_alert=true) but no send_alert action was found. Other actions: ${JSON.stringify(actions.map(a => a.tool))}`,\n        };\n    }\n\n    \n    if (emailType === \"tick\" && hasAlert) {\n        const shouldAlertOnTick = context?.vars?.should_alert;\n        if (shouldAlertOnTick === false) {\n            return {\n                pass: false,\n                score: 0,\n                reason: `Tick test expects no alert but send_alert was fired. Only overdue active threads should trigger silence alerts.`,\n            };\n        }\n    }\n\n    return { pass: true, score: 1, reason: \"Alert check passed\" };"
+      }
+    ]
+  },
+  {
+    "description": "Scheduled tick \u2014 stale resolved/ignored threads should be pruned",
+    "vars": {
+      "trigger_type": "scheduled_tick",
+      "email_type": "tick",
+      "tick_timestamp": 1742284800000,
+      "silence_hours": 48,
+      "should_alert": false,
+      "active_threads": [
+        {
+          "id": "thread-stale-001",
+          "watcher_id": "test-watcher-001",
+          "subject": "Your Notion account is ready",
+          "participants": "[\"welcome@notion.so\"]",
+          "status": "watching",
+          "first_seen": "2026-03-01T08:00:00Z",
+          "last_activity": "2026-03-01T08:00:00Z",
+          "email_count": 1,
+          "summary": "Notion account setup confirmation \u2014 no action needed.",
+          "flags": null,
+          "created_at": "2026-03-01T08:00:00Z"
+        },
+        {
+          "id": "thread-stale-002",
+          "watcher_id": "test-watcher-001",
+          "subject": "TechCrunch Daily newsletter",
+          "participants": "[\"newsletter@techcrunch.com\"]",
+          "status": "watching",
+          "first_seen": "2026-03-10T07:00:00Z",
+          "last_activity": "2026-03-10T07:00:00Z",
+          "email_count": 5,
+          "summary": "Recurring TechCrunch newsletter \u2014 no action needed.",
+          "flags": null,
+          "created_at": "2026-03-10T07:00:00Z"
+        }
+      ],
+      "memory_context": "No memories stored yet."
+    },
+    "assert": [
+      {
+        "type": "javascript",
+        "value": "if (!output || typeof output !== \"string\") {\n        return { pass: false, score: 0, reason: \"Output is empty or not a string\" };\n    }\n\n    try {\n        JSON.parse(output);\n        return { pass: true, score: 1, reason: \"Valid JSON\" };\n    } catch (err) {\n        \n        const preview = output.slice(0, 200).replace(/\\n/g, \"\\\\n\");\n        return {\n            pass: false,\n            score: 0,\n            reason: `Response is not valid JSON: ${err.message}. Preview: \"${preview}\"`,\n        };\n    }"
+      },
+      {
+        "type": "javascript",
+        "value": "let parsed;\n    try {\n        parsed = JSON.parse(output);\n    } catch {\n        return { pass: false, score: 0, reason: \"Not valid JSON \u2014 cannot check required fields\" };\n    }\n\n    const errors = [];\n\n    \n    if (!(\"actions\" in parsed)) {\n        errors.push(\"missing field: actions\");\n    } else if (!Array.isArray(parsed.actions)) {\n        errors.push(`actions must be an array, got ${typeof parsed.actions}`);\n    }\n\n    \n    if (!(\"thread_updates\" in parsed)) {\n        errors.push(\"missing field: thread_updates\");\n    } else if (parsed.thread_updates !== null && !Array.isArray(parsed.thread_updates)) {\n        errors.push(`thread_updates must be an array or null, got ${typeof parsed.thread_updates}`);\n    }\n\n    \n    const triggerType = context?.vars?.trigger_type ?? \"email_received\";\n    if (triggerType === \"email_received\") {\n        if (!(\"email_analysis\" in parsed)) {\n            errors.push(\"missing field: email_analysis (required for email_received trigger)\");\n        } else if (parsed.email_analysis !== null && typeof parsed.email_analysis !== \"object\") {\n            errors.push(`email_analysis must be an object or null, got ${typeof parsed.email_analysis}`);\n        }\n\n        \n        if (parsed.email_analysis && typeof parsed.email_analysis === \"object\") {\n            const analysis = parsed.email_analysis;\n            const requiredAnalysisFields = [\"summary\", \"intent\", \"urgency\", \"entities\"];\n            const missingAnalysis = requiredAnalysisFields.filter(f => !(f in analysis));\n            if (missingAnalysis.length > 0) {\n                errors.push(`email_analysis missing fields: ${missingAnalysis.join(\", \")}`);\n            }\n\n            const validUrgencies = [\"low\", \"normal\", \"high\"];\n            if (analysis.urgency && !validUrgencies.includes(analysis.urgency)) {\n                errors.push(`email_analysis.urgency must be low|normal|high, got \"${analysis.urgency}\"`);\n            }\n\n            if (\"entities\" in analysis && !Array.isArray(analysis.entities)) {\n                errors.push(`email_analysis.entities must be an array, got ${typeof analysis.entities}`);\n            }\n        }\n    }\n\n    \n    if (Array.isArray(parsed.actions)) {\n        for (let i = 0; i < parsed.actions.length; i++) {\n            const action = parsed.actions[i];\n            if (!action.tool) errors.push(`actions[${i}] missing tool`);\n            if (!action.params || typeof action.params !== \"object\") {\n                errors.push(`actions[${i}] missing or invalid params`);\n            }\n        }\n    }\n\n    if (errors.length > 0) {\n        return { pass: false, score: 0, reason: errors.join(\"; \") };\n    }\n\n    return { pass: true, score: 1, reason: \"All required fields present\" };"
+      }
+    ]
+  }
+]

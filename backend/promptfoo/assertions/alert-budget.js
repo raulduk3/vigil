@@ -71,5 +71,5 @@ module.exports = (output, context) => {
         }
     }
 
-    return { pass: true, score: 1 };
+    return { pass: true, score: 1, reason: "Alert check passed" };
 };

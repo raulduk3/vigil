@@ -399,7 +399,7 @@ export async function invokeAgent(
     // Ticks use nano (cheapest model, absorbed by platform). Emails/chat use watcher's model.
     const model = trigger.type === "scheduled_tick"
         ? "gpt-4.1-nano"
-        : (watcher.model || process.env.VIGIL_MODEL || "gpt-4.1-mini");
+        : (watcher.model || process.env.VIGIL_MODEL || "gpt-4.1");
 
     try {
         const result = await callLLM(systemPrompt, userPrompt, model, watcher.account_id);
