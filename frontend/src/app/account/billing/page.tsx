@@ -364,13 +364,13 @@ export default function BillingPage() {
           />
         </div>
 
-        {detailed?.spend_cap !== null && detailed?.spend_cap_pct !== null && (
+        {detailed && detailed.spend_cap !== null && detailed.spend_cap_pct !== null && (
           <div className="px-5 py-4">
             <div className="flex justify-between text-xs text-gray-500 mb-1.5">
               <span>{formatUsd(detailed.total_billed)} used</span>
-              <span>{formatUsd(detailed.spend_cap!)} cap</span>
+              <span>{formatUsd(detailed.spend_cap)} cap</span>
             </div>
-            <CostBar value={detailed.total_billed} max={detailed.spend_cap!} color={capColor} />
+            <CostBar value={detailed.total_billed} max={detailed.spend_cap} color={capColor} />
           </div>
         )}
 

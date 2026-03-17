@@ -505,6 +505,7 @@ export const api = {
     current_month_cost: number;
     stripe_customer_id: string | null;
     stripe_subscription_id: string | null;
+    monthly_spend_cap: number | null;
   }}> {
     return request('/api/billing');
   },
