@@ -178,14 +178,14 @@ function DailyChart({ days, spendCap }: { days: DetailedUsage['by_day']; spendCa
   const dailyCap = spendCap !== null ? spendCap / 30 : null;
 
   return (
-    <div className="flex items-end gap-px h-32">
+    <div className="flex items-end gap-px" style={{ height: '128px' }}>
       {days.slice(0, 30).reverse().map((day) => {
         const heightPct = Math.max(2, (day.billed_cost / maxCost) * 100);
         const isOverDailyCap = dailyCap !== null && day.billed_cost > dailyCap;
         return (
           <div
             key={day.date}
-            className="flex-1 group relative"
+            className="flex-1 group relative h-full flex items-end"
             style={{ minWidth: '4px' }}
           >
             <div
