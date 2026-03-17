@@ -256,12 +256,12 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
     catch { /* ignore */ } finally { setTestingToolId(null); }
   };
 
-  const tabs: { value: Tab; label: string; icon: string }[] = [
-    { value: 'watcher', label: 'Watcher', icon: '⚙' },
-    { value: 'agent', label: 'Agent', icon: '🤖' },
-    { value: 'prompt', label: 'Prompt', icon: '✏️' },
-    { value: 'channels', label: 'Channels', icon: '📡' },
-    { value: 'tools', label: 'Tools', icon: '🔧' },
+  const tabs: { value: Tab; label: string }[] = [
+    { value: 'watcher', label: 'Watcher' },
+    { value: 'agent', label: 'Agent' },
+    { value: 'prompt', label: 'Prompt' },
+    { value: 'channels', label: 'Channels' },
+    { value: 'tools', label: 'Tools' },
   ];
 
   const selectedModel = MODEL_OPTIONS.find(m => m.id === model);
@@ -291,13 +291,12 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
         <div className="flex border-b border-gray-200 px-5 gap-1">
           {tabs.map((t) => (
             <button key={t.value} onClick={() => setTab(t.value)}
-              className={`px-3 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px flex items-center gap-1.5 ${
+              className={`px-3 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
                 tab === t.value
                   ? 'border-vigil-900 text-vigil-900'
                   : 'border-transparent text-gray-500 hover:text-gray-700'
               }`}
             >
-              <span className="text-xs">{t.icon}</span>
               {t.label}
             </button>
           ))}
