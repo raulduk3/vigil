@@ -534,4 +534,46 @@ export const api = {
   }}> {
     return request('/api/usage');
   },
+
+  async getDetailedUsage(offset: number = 0): Promise<{
+    period: string;
+    total_billed: number;
+    total_raw: number;
+    total_events: number;
+    spend_cap: number | null;
+    spend_cap_pct: number | null;
+    by_model: Array<{
+      model: string;
+      input_tokens: number;
+      output_tokens: number;
+      raw_cost: number;
+      billed_cost: number;
+      events: number;
+    }>;
+    by_event_type: Array<{
+      type: string;
+      count: number;
+      billed_cost: number;
+    }>;
+    by_day: Array<{
+      date: string;
+      billed_cost: number;
+      events: number;
+    }>;
+    by_watcher: Array<{
+      watcher_id: string;
+      watcher_name: string;
+      billed_cost: number;
+      events: number;
+    }>;
+  }> {
+    return request(`/api/usage/detailed?offset=${offset}`);
+  },
+
+  async updateSpendCap(cap: number | null): Promise<{ monthly_spend_cap: number | null }> {
+    return request('/api/account/spend-cap', {
+      method: 'PATCH',
+      body: JSON.stringify({ monthly_spend_cap: cap }),
+    });
+  },
 };
