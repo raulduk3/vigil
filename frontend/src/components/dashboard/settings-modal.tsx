@@ -256,6 +256,114 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
     catch { /* ignore */ } finally { setTestingToolId(null); }
   };
 
+  // --- Export / Import ---
+  const [importError, setImportError] = useState<string | null>(null);
+
+  const buildExportData = () => ({
+    name,
+    system_prompt: systemPrompt,
+    model: normalizeModelId(model),
+    reactivity,
+    memory_sensitivity: memorySensitivity,
+    silence_hours: silenceHours,
+    tick_interval: tickInterval,
+    tools,
+  });
+
+  const exportJSON = () => {
+    const data = buildExportData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${name.toLowerCase().replace(/\s+/g, '-')}-watcher.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportMarkdown = () => {
+    const data = buildExportData();
+    const modelInfo = MODEL_OPTIONS.find(m => m.id === data.model);
+    const md = [
+      `# ${data.name}`,
+      '',
+      '## Configuration',
+      '',
+      `| Setting | Value |`,
+      `| --- | --- |`,
+      `| Model | ${modelInfo?.label ?? data.model} (${modelInfo?.costPerEmail ?? '?'}/email) |`,
+      `| Reactivity | ${data.reactivity}/5 |`,
+      `| Memory Sensitivity | ${data.memory_sensitivity}/5 |`,
+      `| Silence Threshold | ${data.silence_hours} hours |`,
+      `| Tick Interval | ${data.tick_interval} minutes |`,
+      `| Tools | ${data.tools.join(', ') || 'none'} |`,
+      '',
+      '## System Prompt',
+      '',
+      '```',
+      data.system_prompt || '(empty)',
+      '```',
+      '',
+      '---',
+      '',
+      `*Exported from Vigil on ${new Date().toISOString().slice(0, 10)}*`,
+      '',
+      '<details>',
+      '<summary>Raw JSON (for import)</summary>',
+      '',
+      '```json',
+      JSON.stringify(data, null, 2),
+      '```',
+      '',
+      '</details>',
+    ].join('\n');
+
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${name.toLowerCase().replace(/\s+/g, '-')}-watcher.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImport = (file: File) => {
+    setImportError(null);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        let text = e.target?.result as string;
+
+        // If markdown, extract JSON from code fence
+        if (file.name.endsWith('.md')) {
+          const jsonMatch = text.match(/```json\s*\n([\s\S]*?)\n```/);
+          if (jsonMatch) {
+            text = jsonMatch[1];
+          } else {
+            setImportError('No JSON block found in markdown file.');
+            return;
+          }
+        }
+
+        const data = JSON.parse(text);
+
+        if (data.name && typeof data.name === 'string') setName(data.name);
+        if (data.system_prompt != null) setSystemPrompt(data.system_prompt);
+        if (data.model) setModel(normalizeModelId(data.model));
+        if (typeof data.reactivity === 'number') setReactivity(Math.max(1, Math.min(5, data.reactivity)));
+        if (typeof data.memory_sensitivity === 'number') setMemorySensitivity(Math.max(1, Math.min(5, data.memory_sensitivity)));
+        if (typeof data.silence_hours === 'number') setSilenceHours(Math.max(1, data.silence_hours));
+        if (typeof data.tick_interval === 'number') setTickInterval(Math.max(60, data.tick_interval));
+        if (Array.isArray(data.tools)) setTools(data.tools.filter((t: unknown) => typeof t === 'string'));
+
+        showSavedFlash();
+      } catch {
+        setImportError('Invalid file. Expected JSON or Markdown with a JSON block.');
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const tabs: { value: Tab; label: string }[] = [
     { value: 'watcher', label: 'Watcher' },
     { value: 'agent', label: 'Agent' },
@@ -344,6 +452,22 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
               <button onClick={handleSave} disabled={saving} className="btn btn-primary btn-sm w-full">
                 {saving ? <span className="spinner-sm" /> : 'Save Watcher Settings'}
               </button>
+
+              {/* Export / Import */}
+              <div className="border border-gray-200 rounded-md p-4 space-y-3">
+                <h4 className="text-sm font-medium text-gray-700">Export / Import</h4>
+                <p className="text-xs text-gray-500">Export this watcher's configuration to share or back up. Import from a previously exported file.</p>
+                <div className="flex gap-2 flex-wrap">
+                  <button onClick={exportJSON} className="btn btn-secondary btn-sm">Export JSON</button>
+                  <button onClick={exportMarkdown} className="btn btn-secondary btn-sm">Export Markdown</button>
+                  <label className="btn btn-secondary btn-sm cursor-pointer">
+                    Import
+                    <input type="file" accept=".json,.md" className="sr-only"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImport(f); e.target.value = ''; }} />
+                  </label>
+                </div>
+                {importError && <p className="text-xs text-red-600">{importError}</p>}
+              </div>
 
               {/* Danger zone */}
               <div className="border border-red-200 rounded-md p-4 space-y-3 mt-4">
