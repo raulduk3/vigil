@@ -240,6 +240,50 @@ chmod +x ~/.openclaw/skills/vigil/scripts/vigil.sh</code></pre>
 <p><a href="https://vigil.run">Give your agent email awareness →</a></p>
 `,
   },
+  'microsoft-copilot-email-agents-and-what-they-miss': {
+    title: 'Microsoft Is Building Email Agents. They\u2019re Missing the Point.',
+    date: 'March 17, 2026',
+    tag: 'industry',
+    content: `
+<p>Microsoft just rolled out autonomous email triage in Copilot for Outlook. You can now tell Copilot to flag, archive, categorize, and draft responses to emails using natural language. It reads your entire inbox, cross-references your calendar and SharePoint files, and proposes next steps. It's impressive engineering. It's also exactly the wrong architecture for most people who need email help.</p>
+
+<h2>The Enterprise Play</h2>
+<p>Copilot's email agents are built for large organizations. They require Microsoft 365 licenses (starting at $30/user/month for Copilot access), Copilot Studio for customization, and IT teams to define triggers, knowledge sources, and business logic. The agents live inside the Microsoft ecosystem: they need full OAuth access to your inbox, calendar, OneDrive, and SharePoint to function.</p>
+
+<p>For a 500-person company with a security team and an IT department, this makes sense. For a freelancer juggling three clients? For a two-person agency managing project emails? It's like hiring a full catering company to make your morning coffee.</p>
+
+<h2>The Access Problem Nobody Mentions</h2>
+<p>To do any of this, Copilot needs to see everything. Every email you've ever received. Every draft. Every attachment. Every calendar entry. That's the deal with OAuth-based email tools: they work by having complete access, and you trust Microsoft's infrastructure to keep it safe.</p>
+
+<p>Microsoft's infrastructure is good. But "trust us, we're big" is a policy decision, not an architectural one. When the next breach hits (and breaches always hit), the blast radius is your entire digital life.</p>
+
+<p>There's a simpler question most people should ask: does the tool that watches my email actually need to see all of it?</p>
+
+<h2>What Freelancers and Small Teams Actually Need</h2>
+<p>If you're not running enterprise workflows through SharePoint, you don't need an enterprise email agent. You need something that answers three questions:</p>
+<ul>
+<li>Who's waiting on me right now?</li>
+<li>What did I forget to follow up on?</li>
+<li>What deadlines are approaching that I haven't acted on?</li>
+</ul>
+
+<p>That's obligation tracking. It doesn't require reading your entire inbox. It requires watching the threads that matter and remembering what happened in them over time.</p>
+
+<h2>A Different Model</h2>
+<p>Vigil works through email forwarding. You set a rule in Gmail or Outlook: forward client emails, or project threads, or everything from certain senders. Vigil receives those forwarded copies, extracts obligations and deadlines, builds memory across conversations, and discards the email body. It physically cannot access your inbox because no such connection exists.</p>
+
+<p>When a thread goes quiet and someone's waiting on you, Vigil alerts you. When a deadline mentioned three emails ago is two days away, Vigil catches it. When everything is fine, it stays silent.</p>
+
+<p>It costs about a penny per email processed. No monthly subscription required. Bring your own API key and it's free.</p>
+
+<h2>The Right Tool for the Right Scale</h2>
+<p>Microsoft building autonomous email agents validates the entire category. Email has been the last manual channel in knowledge work, and the biggest players are finally treating it as an automation problem rather than a UI problem. That's good for everyone.</p>
+
+<p>But "autonomous email agent" doesn't have to mean "hand over your entire inbox to a platform that costs $30/month per seat." For the millions of independent workers, small teams, and privacy-conscious professionals who just need to stop dropping threads, there's a lighter path.</p>
+
+<p><a href="https://vigil.run">Try Vigil free with your own API key →</a></p>
+`,
+  },
   'pay-per-use': {
     title: 'Why Pay-Per-Use Beats Subscriptions for Email Tools',
     date: 'March 14, 2026',
