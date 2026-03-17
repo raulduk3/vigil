@@ -5,15 +5,15 @@
  * BYOK users are free (they pay their own provider directly).
  *
  * Real costs per invocation (from MODEL_CATALOG in engine.ts):
- *   Email (gpt-4.1-mini, ~4K in + ~400 out): ~$0.00224 raw → ~$0.00235 billed
+ *   Email (gpt-4.1, ~4K in + ~400 out): ~$0.01120 raw → ~$0.01176 billed
  *   Tick (gpt-4.1-nano, ~5K in + ~300 out):  ~$0.00062 raw → ~$0.00065 billed
- *   Chat (gpt-4.1-mini, ~6K in + ~200 out):  ~$0.00272 raw → ~$0.00286 billed
+ *   Chat (gpt-4.1, ~6K in + ~200 out):  ~$0.01020 raw → ~$0.01071 billed
  */
 
-// Average cost estimates (gpt-4.1-mini default, with 5% margin)
-export const AVG_COST_PER_EMAIL = 0.0025;   // ~0.25¢ per email
+// Average cost estimates (gpt-4.1 default, with 5% margin)
+export const AVG_COST_PER_EMAIL = 0.012;    // ~1.2¢ per email
 export const AVG_COST_PER_TICK = 0.00065;   // ~0.065¢ per tick (nano)
-export const AVG_COST_PER_CHAT = 0.003;     // ~0.3¢ per chat message
+export const AVG_COST_PER_CHAT = 0.011;     // ~1.1¢ per chat message
 export const MARGIN = 0.05;
 
 export function estimateMonthly(

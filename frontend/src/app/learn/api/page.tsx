@@ -84,7 +84,7 @@ export default function ApiReferencePage() {
               { name: 'tools', type: 'string[]', required: false, desc: 'Enabled tools. Default: ["send_alert"]' },
               { name: 'silence_hours', type: 'number', required: false, desc: 'Hours before silence alert. Default: 48' },
               { name: 'tick_interval', type: 'number', required: false, desc: 'Scheduled check interval in minutes. Default: 60' },
-              { name: 'model', type: 'string', required: false, desc: 'LLM model. Default: "gpt-4.1-mini"' },
+              { name: 'model', type: 'string', required: false, desc: 'LLM model. Default: "gpt-4.1"' },
               { name: 'template_id', type: 'string', required: false, desc: 'Watcher template to use' },
             ]} />
             <Response status={201}>{`{ "watcher": { "id": "w_123", "name": "Work Email", ... } }`}</Response>

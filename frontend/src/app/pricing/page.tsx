@@ -93,7 +93,7 @@ export default function PricingPage() {
           {/* Estimates */}
           <div className="mb-14">
             <h2 className="text-xl font-display font-semibold text-gray-900 mb-1">Typical monthly costs</h2>
-            <p className="text-sm text-gray-500 mb-4">Estimates based on GPT-4.1-mini for emails, Nano for checks. Smart checks skip when nothing changed (~80% savings). Actual costs vary by email length and model.</p>
+            <p className="text-sm text-gray-500 mb-4">Estimates based on GPT-4.1 (default) for emails, Nano for checks. Smart checks skip when nothing changed (~80% savings). Actual costs vary by email length and model.</p>
             <div className="grid grid-cols-2 gap-4">
               {scenarios.map((s) => {
                 const emailCost = s.emails * AVG_COST_PER_EMAIL;
@@ -126,23 +126,23 @@ export default function PricingPage() {
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   {[
+                    ['GPT-4.1 ★', '~1.2¢'],
+                    ['GPT-4.1 Mini', '~0.25¢'],
                     ['GPT-4.1 Nano', '~0.06¢'],
+                    ['GPT-4o', '~1.5¢'],
                     ['GPT-4o Mini', '~0.09¢'],
-                    ['Gemini Flash', '~0.09¢'],
-                    ['GPT-4.1 Mini ★', '~0.25¢'],
+                    ['Claude Sonnet', '~1.9¢'],
                     ['Claude Haiku', '~0.50¢'],
                     ['Gemini Pro', '~0.95¢'],
-                    ['GPT-4.1', '~1.2¢'],
-                    ['GPT-4o', '~1.5¢'],
-                    ['Claude Sonnet', '~1.9¢'],
+                    ['Gemini Flash', '~0.09¢'],
                   ].map(([model, cost]) => (
-                    <div key={model} className="flex justify-between items-center rounded bg-gray-50 px-2 py-1.5">
+                    <div key={model} className={`flex justify-between items-center rounded px-2 py-1.5 ${model.includes('★') ? 'bg-green-50 ring-1 ring-green-200' : 'bg-gray-50'}`}>
                       <span className="text-gray-600">{model}</span>
                       <span className="font-mono text-gray-900 font-medium">{cost}</span>
                     </div>
                   ))}
                 </div>
-                <p className="text-[11px] text-gray-400 mt-2">★ Default. Cost = actual LLM tokens (input + output) + 5%. ~4K input, ~400 output per email.</p>
+                <p className="text-[11px] text-gray-400 mt-2">★ Default — 100% accuracy on our eval suite. Cheaper models may miss alerts or hallucinate. Cost = actual LLM tokens + 5%.</p>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-gray-100">
                 <span className="text-gray-600">Scheduled checks (always Nano)</span>
@@ -166,8 +166,8 @@ export default function PricingPage() {
                 { q: 'How is my bill calculated?', a: 'Every time Vigil calls an AI model on your behalf, the token cost is recorded. At the end of the month, you pay the sum of those costs plus 5%. Your dashboard shows every call, its cost, and the running total in real time.' },
                 { q: 'What does BYOK mean?', a: 'Bring Your Own Key. Add your OpenAI, Anthropic, or Google API key in account settings. Vigil uses your key for all LLM calls. You pay your provider directly. Vigil charges nothing.' },
                 { q: 'Is there a free tier?', a: '50 emails free to start, no credit card required. After that, add billing or bring your own API key.' },
-                { q: 'What model do you use?', a: 'GPT-4.1-mini by default. You can switch models per watcher. Costs vary by model. The dashboard shows exact costs per call.' },
-                { q: 'Can costs spike unexpectedly?', a: 'Costs scale linearly with usage. A typical watcher processing 500 emails/month with hourly checks costs about $1.70. Your dashboard shows real-time usage so there are no surprises.' },
+                { q: 'What model do you use?', a: 'GPT-4.1 by default — it scores 100% on our 17-scenario eval suite covering receipts, deadlines, security alerts, spam, and more. You can switch to cheaper models per watcher, but weaker models may miss alerts or hallucinate facts. We recommend GPT-4.1 for reliable triage.' },
+                { q: 'Can costs spike unexpectedly?', a: 'Costs scale linearly with email volume. A typical watcher processing 500 emails/month costs about $6.15 on GPT-4.1. Your dashboard shows real-time usage per call so there are no surprises.' },
                 { q: 'Do I pay for scheduled checks?', a: 'Yes, but they run on the cheapest model (GPT-4.1 Nano) at about 0.07¢ each. Smart scheduling skips checks when nothing has changed, so most hours cost nothing. A typical watcher runs about $0.15/month in checks.' },
               ].map((faq) => (
                 <div key={faq.q} className="panel p-5">

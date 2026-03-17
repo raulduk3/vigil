@@ -70,7 +70,7 @@ export default function RootLayout({
               operatingSystem: 'Web',
               offers: {
                 '@type': 'Offer',
-                price: '0.0025',
+                price: '0.012',
                 priceCurrency: 'USD',
                 description: 'Actual AI cost + 5% margin. BYOK is free. 50 free emails to start.',
               },

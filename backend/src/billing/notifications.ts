@@ -86,7 +86,7 @@ async function sendTrialWarning(to: string, used: number, total: number): Promis
         </p>
         <p style="font-size:15px;color:#111827;line-height:1.6;">
             Add a payment method to keep your watchers running. It takes 30 seconds and 
-            billing is pure usage-based: <strong>~0.25¢ per email</strong> on the default model (actual AI cost + 5%). No subscriptions. No tiers.
+            billing is pure usage-based: <strong>~1.2¢ per email</strong> on the default model (actual AI cost + 5%). No subscriptions. No tiers.
         </p>
         <div style="text-align:center;margin:28px 0;">
             <a href="${APP_URL}/account/billing" 
@@ -112,7 +112,7 @@ async function sendTrialExpired(to: string, total: number): Promise<void> {
             Your watchers are now <strong>paused</strong> and incoming emails are not being processed.
         </p>
         <p style="font-size:15px;color:#111827;line-height:1.6;">
-            Add a payment method to resume. Billing is usage-based: <strong>~0.25¢ per email</strong> on the default model 
+            Add a payment method to resume. Billing is usage-based: <strong>~1.2¢ per email</strong> on the default model 
             (actual AI cost + 5%). No minimums, no commitments. Cancel anytime.
         </p>
         <div style="text-align:center;margin:28px 0;">
