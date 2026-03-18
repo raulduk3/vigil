@@ -284,6 +284,42 @@ chmod +x ~/.openclaw/skills/vigil/scripts/vigil.sh</code></pre>
 <p><a href="https://vigil.run">Try Vigil free with your own API key →</a></p>
 `,
   },
+  'salesforce-agentforce-email-and-the-rest-of-us': {
+    title: 'Salesforce Agentforce Now Does Email. What About the Rest of Us?',
+    date: 'March 18, 2026',
+    tag: 'industry',
+    content: `
+<p>Salesforce just expanded Agentforce across its Free, Starter, and Pro Suites. The headline feature: AI agents that draft email replies, automate Email-to-Case workflows, and triage inbound messages using your CRM data. For enterprise teams already deep in the Salesforce ecosystem, it's a meaningful upgrade. For everyone else, it's a reminder that the big platforms are solving email automation exclusively for their own customers.</p>
+
+<h2>The Enterprise Assumption</h2>
+<p>Agentforce is built around Salesforce data. It pulls from past cases, knowledge articles, customer records, and CRM history to generate responses and suggest next actions. That's powerful if your business runs on Salesforce. But the implicit assumption is that your email problem is a customer service problem, and that your email lives inside a ticketing pipeline.</p>
+
+<p>Most people's email doesn't work that way. A freelance designer gets a message from a client asking for revisions by Friday. A small agency owner gets a vendor quote that needs a response before the pricing expires. A consultant gets three threads going with three different stakeholders, each with different deadlines. None of this fits neatly into Email-to-Case. None of it needs a CRM.</p>
+
+<p>What it needs is someone paying attention.</p>
+
+<h2>The Real Problem Isn't Drafting Replies</h2>
+<p>Agentforce, like most AI email tools, focuses on the response side: read the email, draft something, send it faster. That's useful. But the harder problem isn't writing the reply. It's remembering that you need to reply at all.</p>
+
+<p>Think about the emails that actually cause damage when they're missed. A client waiting on a deliverable. An invoice that needs follow-up. A partnership proposal that goes stale because nobody responded within the window. The cost isn't in slow responses. It's in forgotten ones.</p>
+
+<p>Obligation tracking, knowing who owes what to whom and when threads go quiet, requires persistent memory across conversations, temporal reasoning about deadlines, and proactive alerting when something falls through. CRM agents don't do this because they're designed around records, not relationships over time.</p>
+
+<h2>You Shouldn't Need a Platform to Watch Your Email</h2>
+<p>The Agentforce expansion is part of a pattern. Microsoft has Copilot for Outlook. Google has Gemini in Gmail. Salesforce has Agentforce in Service Cloud. Each one locks email intelligence inside a platform that costs $20 to $50 per user per month and requires full access to your data.</p>
+
+<p>Vigil takes a different approach. You set up a forwarding rule in Gmail or Outlook. Emails matching your criteria get sent to your Vigil watcher address. The agent processes each one, extracts obligations and deadlines, remembers context across threads, and discards the email body. No OAuth. No inbox access. No platform lock-in.</p>
+
+<p>When a thread goes quiet and someone's waiting on you, Vigil tells you. When a deadline mentioned four emails ago is approaching, it catches it. When everything's fine, you hear nothing. It costs about a penny per email, or nothing at all if you bring your own API key.</p>
+
+<h2>Who This Is Actually For</h2>
+<p>If you're running a 200-person sales team on Salesforce, Agentforce is probably what you want. But if you're a freelancer, a small team, or anyone who just needs to stop dropping threads without buying into a platform, the enterprise tools aren't built for you. They never were.</p>
+
+<p>Vigil was built for the people the platforms ignore. The ones whose email obligations live in plain inboxes, not CRM pipelines. The ones who need an agent watching their back, not a suite watching their wallet.</p>
+
+<p><a href="https://vigil.run">Start watching your email with Vigil →</a></p>
+`,
+  },
   'pay-per-use': {
     title: 'Why Pay-Per-Use Beats Subscriptions for Email Tools',
     date: 'March 14, 2026',

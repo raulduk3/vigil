@@ -5,6 +5,20 @@ import { PublicHeader, Footer } from '@/components/layout';
 
 const posts = [
   {
+    slug: 'salesforce-agentforce-email-and-the-rest-of-us',
+    title: 'Salesforce Agentforce Now Does Email. What About the Rest of Us?',
+    date: 'March 18, 2026',
+    excerpt: 'Salesforce expanded Agentforce email automation to its free and starter tiers. Great for enterprise. But freelancers and small teams need obligation tracking, not CRM pipelines.',
+    tag: 'industry',
+  },
+  {
+    slug: 'microsoft-copilot-email-agents-and-what-they-miss',
+    title: 'Microsoft Is Building Email Agents. They\u2019re Missing the Point.',
+    date: 'March 17, 2026',
+    excerpt: 'Microsoft launched autonomous email triage in Copilot for Outlook. It\u2019s impressive engineering built on exactly the wrong architecture for most people who need email help.',
+    tag: 'industry',
+  },
+  {
     slug: 'your-ai-agent-cant-read-email',
     title: 'Your AI Agent Can\'t Read Email. That\'s a Problem.',
     date: 'March 16, 2026',
