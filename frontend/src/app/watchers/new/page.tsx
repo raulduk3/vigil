@@ -10,46 +10,13 @@ import { DEFAULT_MODEL_ID, MODEL_OPTIONS, normalizeModelId } from '@/lib/models'
 
 const NAME_SUGGESTIONS = ['Work', 'Personal', 'Freelance', 'Bills', 'Newsletters', 'Support'];
 
-const TOOLS = [
-  { id: 'send_alert', label: 'Send Alert', description: 'Email you when something needs attention' },
-  { id: 'update_thread', label: 'Update Thread', description: 'Track thread status and summaries' },
-  { id: 'ignore_thread', label: 'Ignore Thread', description: 'Mark noise threads to skip in future' },
-];
-
-const REACTIVITY_LABELS: Record<number, { label: string; description: string }> = {
-  1: { label: 'Minimal', description: 'Only the most urgent issues' },
-  2: { label: 'Quiet', description: 'Important items only, low noise' },
-  3: { label: 'Balanced', description: 'Alerts when it matters' },
-  4: { label: 'Attentive', description: 'More proactive, some extra alerts' },
-  5: { label: 'Vigilant', description: 'Alert on anything worth knowing' },
+const REACTIVITY_LABELS: Record<number, { label: string; desc: string }> = {
+  1: { label: 'Minimal', desc: 'Only the most urgent' },
+  2: { label: 'Quiet', desc: 'Important items only' },
+  3: { label: 'Balanced', desc: 'Alerts when it matters' },
+  4: { label: 'Attentive', desc: 'More proactive' },
+  5: { label: 'Vigilant', desc: 'Everything worth knowing' },
 };
-
-type Step = 1 | 2 | 3 | 4;
-
-function StepIndicator({ current, total }: { current: Step; total: number }) {
-  return (
-    <div className="flex items-center gap-2 mb-8">
-      {Array.from({ length: total }, (_, i) => i + 1).map((step) => (
-        <React.Fragment key={step}>
-          <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-colors ${
-            step < current ? 'bg-vigil-600 text-white' :
-            step === current ? 'bg-vigil-900 text-white' :
-            'bg-gray-100 text-gray-400'
-          }`}>
-            {step < current ? (
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-              </svg>
-            ) : step}
-          </div>
-          {step < total && (
-            <div className={`flex-1 h-0.5 transition-colors ${step < current ? 'bg-vigil-600' : 'bg-gray-200'}`} />
-          )}
-        </React.Fragment>
-      ))}
-    </div>
-  );
-}
 
 interface CreatedWatcher {
   id: string;
@@ -74,8 +41,8 @@ function SuccessView({ watcher }: { watcher: CreatedWatcher }) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
       </div>
-      <h2 className="text-xl font-display font-semibold text-gray-900 mb-1">{watcher.name} created</h2>
-      <p className="text-sm text-gray-500 mb-8">Forward emails to this address to start watching.</p>
+      <h2 className="text-xl font-display font-semibold text-gray-900 mb-1">{watcher.name} is ready</h2>
+      <p className="text-sm text-gray-500 mb-8">Forward emails to this address and Vigil starts watching immediately.</p>
 
       <div className="panel p-5 text-left mb-6">
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Your forwarding address</p>
@@ -91,7 +58,7 @@ function SuccessView({ watcher }: { watcher: CreatedWatcher }) {
 
       <div className="panel p-5 text-left mb-6">
         <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Fastest: Chrome extension</p>
-        <p className="text-sm text-gray-600 mb-3">The extension walks you through Gmail or Outlook forwarding in 30 seconds.</p>
+        <p className="text-sm text-gray-600 mb-3">Walks you through Gmail or Outlook forwarding in 30 seconds.</p>
         <a href="/extension" target="_blank" className="btn btn-primary w-full text-center block">Get the Chrome extension</a>
       </div>
 
@@ -105,70 +72,50 @@ function SuccessView({ watcher }: { watcher: CreatedWatcher }) {
             <span className="font-medium text-gray-800">Outlook:</span> Settings → Mail → Forwarding → Forward to
           </div>
           <div>
-            <span className="font-medium text-gray-800">Quick test:</span> Forward or BCC a single email manually to see it work.
+            <span className="font-medium text-gray-800">Quick test:</span> Forward one email manually to see it work.
           </div>
         </div>
       </div>
 
-      <button onClick={() => router.push(`/watchers/${watcher.id}`)} className="btn btn-primary btn-lg">
-        Go to watcher dashboard
+      <button onClick={() => router.push(`/dashboard?watcher=${watcher.id}`)} className="btn btn-primary btn-lg">
+        Go to dashboard
       </button>
     </div>
   );
 }
 
 function NewWatcherContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const intentParam = searchParams.get('intent');
 
-  const [step, setStep] = useState<Step>(1);
   const [name, setName] = useState('');
   const [systemPrompt, setSystemPrompt] = useState('');
+  const [reactivity, setReactivity] = useState(3);
+  const [model, setModel] = useState(DEFAULT_MODEL_ID);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [created, setCreated] = useState<CreatedWatcher | null>(null);
 
   // Pre-fill from onboarding intent
   useEffect(() => {
     if (intentParam) {
       const intent = decodeURIComponent(intentParam);
       setSystemPrompt(`Monitor and track: ${intent}. Alert me when something needs my attention, when someone is waiting for a response, or when a deadline is approaching.`);
-      // Try to generate a name from the intent
       const words = intent.split(/\s+/).slice(0, 2).map(w => w.charAt(0).toUpperCase() + w.slice(1));
       if (words.length > 0) setName(words.join(' '));
     }
   }, [intentParam]);
-  const [reactivity, setReactivity] = useState(3);
-  const [model, setModel] = useState(DEFAULT_MODEL_ID);
-  const [tools, setTools] = useState(['send_alert', 'update_thread', 'ignore_thread']);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [created, setCreated] = useState<CreatedWatcher | null>(null);
-
-  const toggleTool = (toolId: string) => {
-    setTools((prev) => prev.includes(toolId) ? prev.filter((t) => t !== toolId) : [...prev, toolId]);
-  };
-
-  const canProceed = () => {
-    if (step === 1) return name.trim().length > 0;
-    if (step === 2) return systemPrompt.trim().length > 0;
-    return true;
-  };
-
-  const handleNext = () => {
-    if (step < 4) setStep((s) => (s + 1) as Step);
-  };
-
-  const handleBack = () => {
-    if (step > 1) setStep((s) => (s - 1) as Step);
-  };
 
   const handleSubmit = async () => {
+    if (!name.trim()) return;
     setIsSubmitting(true);
     setError(null);
     try {
       const result = await api.createWatcher({
         name: name.trim(),
-        system_prompt: systemPrompt.trim(),
-        tools,
+        system_prompt: systemPrompt.trim() || `Watch my ${name.trim().toLowerCase()} emails. Alert me when something needs my attention, when someone is waiting for a response, or when a deadline is approaching. Stay quiet on newsletters, marketing, and automated notifications.`,
+        tools: ['send_alert', 'update_thread', 'ignore_thread'],
         reactivity,
         model: normalizeModelId(model),
         silence_hours: 48,
@@ -186,8 +133,6 @@ function NewWatcherContent() {
     }
   };
 
-  const selectedModel = MODEL_OPTIONS.find((m) => m.id === model) ?? MODEL_OPTIONS[0];
-
   if (created) {
     return (
       <div className="min-h-screen bg-surface-page">
@@ -199,227 +144,153 @@ function NewWatcherContent() {
     );
   }
 
+  const selectedModel = MODEL_OPTIONS.find((m) => m.id === model) ?? MODEL_OPTIONS[0];
+
   return (
     <div className="min-h-screen bg-surface-page">
       <AppHeader />
-      <main className="max-w-2xl mx-auto px-6 py-8">
+      <main className="max-w-xl mx-auto px-6 py-8">
         <div className="flex items-center gap-2 text-sm text-gray-500 mb-6">
           <Link href="/dashboard" className="hover:text-gray-700">Dashboard</Link>
           <span>→</span>
           <span className="text-gray-900">New Watcher</span>
         </div>
 
-        <StepIndicator current={step} total={4} />
-
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
         )}
 
-        {/* Step 1: Name */}
-        {step === 1 && (
-          <div className="panel p-6 space-y-5">
-            <div>
-              <h2 className="text-lg font-display font-semibold text-gray-900 mb-1">Name your watcher</h2>
-              <p className="text-sm text-gray-500 mb-4">Give it a name that describes what emails it will watch.</p>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && canProceed() && handleNext()}
-                placeholder="e.g., Work, Personal, Freelance"
-                className="input w-full text-base"
-                autoFocus
-              />
-            </div>
-            <div>
-              <p className="text-xs text-gray-400 mb-2">Suggestions</p>
-              <div className="flex flex-wrap gap-2">
-                {NAME_SUGGESTIONS.map((s) => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => setName(s)}
-                    className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
-                      name === s
-                        ? 'border-vigil-500 bg-vigil-50 text-vigil-700'
-                        : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:text-gray-800'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
+        <div className="panel p-6 space-y-6">
+          <div>
+            <h2 className="text-lg font-display font-semibold text-gray-900 mb-1">Create a watcher</h2>
+            <p className="text-sm text-gray-500">Name it, optionally describe what to watch, and you're done.</p>
           </div>
-        )}
 
-        {/* Step 2: Prompt */}
-        {step === 2 && (
-          <div className="panel p-6">
-            <h2 className="text-lg font-display font-semibold text-gray-900 mb-1">Describe what to watch</h2>
-            <p className="text-sm text-gray-500 mb-4">Tell the agent what kinds of emails need attention and what to ignore.</p>
-            <textarea
-              value={systemPrompt}
-              onChange={(e) => setSystemPrompt(e.target.value)}
-              rows={7}
-              className="input w-full resize-y text-sm"
-              placeholder="Monitor my work emails. Alert me when deadlines are approaching or when someone is waiting for my response. Stay quiet on newsletters, order confirmations, and marketing emails."
+          {/* Name */}
+          <div>
+            <label htmlFor="watcher-name" className="form-label">Name</label>
+            <input
+              id="watcher-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && name.trim() && handleSubmit()}
+              placeholder="e.g., Work, Personal, Freelance"
+              className="input w-full text-base"
               autoFocus
             />
-            <p className="text-xs text-gray-400 mt-2">Be specific about what deserves an alert vs. what should be silently tracked.</p>
-          </div>
-        )}
-
-        {/* Step 3: Reactivity */}
-        {step === 3 && (
-          <div className="panel p-6 space-y-5">
-            <div>
-              <h2 className="text-lg font-display font-semibold text-gray-900 mb-1">Choose reactivity</h2>
-              <p className="text-sm text-gray-500 mb-6">How sensitive should the agent be? Higher = more alerts.</p>
-            </div>
-
-            <div className="space-y-2">
-              {[1, 2, 3, 4, 5].map((level) => {
-                const info = REACTIVITY_LABELS[level];
-                return (
-                  <button
-                    key={level}
-                    type="button"
-                    onClick={() => setReactivity(level)}
-                    className={`w-full flex items-center gap-4 px-4 py-3 rounded-lg border text-left transition-colors ${
-                      reactivity === level
-                        ? 'border-vigil-500 bg-vigil-50'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
-                      reactivity === level ? 'bg-vigil-600 text-white' : 'bg-gray-100 text-gray-500'
-                    }`}>
-                      {level}
-                    </div>
-                    <div>
-                      <div className={`text-sm font-medium ${reactivity === level ? 'text-vigil-800' : 'text-gray-700'}`}>
-                        {info.label}
-                      </div>
-                      <div className="text-xs text-gray-500">{info.description}</div>
-                    </div>
-                    {level === 3 && (
-                      <span className="ml-auto text-xs text-vigil-600 font-medium">recommended</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Tools */}
-            <div className="pt-2 border-t border-gray-100">
-              <p className="text-xs font-medium text-gray-600 mb-2">Agent capabilities</p>
-              <div className="flex flex-wrap gap-2">
-                {TOOLS.map((tool) => {
-                  const active = tools.includes(tool.id);
-                  return (
-                    <button
-                      key={tool.id}
-                      type="button"
-                      onClick={() => toggleTool(tool.id)}
-                      title={tool.description}
-                      className={`px-3 py-1.5 text-xs rounded-full border transition-colors ${
-                        active
-                          ? 'bg-vigil-900 border-vigil-900 text-white'
-                          : 'border-gray-200 text-gray-500 hover:border-gray-300'
-                      }`}
-                    >
-                      {tool.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: Model */}
-        {step === 4 && (
-          <div className="panel p-6 space-y-4">
-            <div>
-              <h2 className="text-lg font-display font-semibold text-gray-900 mb-1">Choose model</h2>
-              <p className="text-sm text-gray-500 mb-4">The AI model used to read and analyze emails. You can change this later.</p>
-            </div>
-
-            <select
-              value={model}
-              onChange={(e) => setModel(normalizeModelId(e.target.value))}
-              className="input w-full text-sm"
-            >
-              {MODEL_OPTIONS.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label} — {m.costPerEmail}/email{m.default ? ' ★ default' : ''}
-                </option>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {NAME_SUGGESTIONS.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => setName(s)}
+                  className={`px-3 py-1 text-xs rounded-full border transition-colors ${
+                    name === s
+                      ? 'border-vigil-500 bg-vigil-50 text-vigil-700'
+                      : 'border-gray-200 text-gray-500 hover:border-gray-300'
+                  }`}
+                >
+                  {s}
+                </button>
               ))}
-            </select>
+            </div>
+          </div>
 
-            {selectedModel && (
-              <div className="panel-inset px-4 py-3 text-sm text-gray-600 space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-gray-800">{selectedModel.label}</span>
-                  <span className="font-mono text-xs">{selectedModel.costPerEmail}/email + 5%</span>
+          {/* Prompt — optional, collapsed by default unless intent was passed */}
+          <div>
+            <label htmlFor="watcher-prompt" className="form-label">
+              Instructions <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <textarea
+              id="watcher-prompt"
+              value={systemPrompt}
+              onChange={(e) => setSystemPrompt(e.target.value)}
+              rows={3}
+              className="input w-full resize-y text-sm"
+              placeholder="Alert me when a client hasn't responded in 48 hours. Ignore newsletters and marketing."
+            />
+            <p className="text-xs text-gray-400 mt-1">Leave blank for smart defaults. You can refine this anytime.</p>
+          </div>
+
+          {/* Advanced — collapsed */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+              className="text-xs text-gray-500 hover:text-gray-700 font-medium flex items-center gap-1"
+            >
+              <svg className={`w-3 h-3 transition-transform ${showAdvanced ? 'rotate-90' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+              Advanced options
+            </button>
+
+            {showAdvanced && (
+              <div className="mt-4 space-y-4 pl-4 border-l-2 border-gray-100">
+                {/* Reactivity */}
+                <div>
+                  <label className="form-label">Reactivity</label>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map((level) => (
+                      <button
+                        key={level}
+                        type="button"
+                        onClick={() => setReactivity(level)}
+                        title={`${REACTIVITY_LABELS[level].label}: ${REACTIVITY_LABELS[level].desc}`}
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-semibold transition-colors ${
+                          reactivity === level
+                            ? 'bg-vigil-900 text-white'
+                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}
+                      >
+                        {level}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {REACTIVITY_LABELS[reactivity].label} — {REACTIVITY_LABELS[reactivity].desc}
+                  </p>
                 </div>
-                <div className="text-xs text-gray-500">{selectedModel.quality} · {selectedModel.speed}</div>
+
+                {/* Model */}
+                <div>
+                  <label className="form-label">Model</label>
+                  <select
+                    value={model}
+                    onChange={(e) => setModel(normalizeModelId(e.target.value))}
+                    className="input w-full text-sm"
+                  >
+                    {MODEL_OPTIONS.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label} — {m.costPerEmail}/email{m.default ? ' ★' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {selectedModel.label}: {selectedModel.quality} · {selectedModel.speed}
+                  </p>
+                </div>
               </div>
             )}
-
-            {/* Summary */}
-            <div className="border-t border-gray-100 pt-4 space-y-2 text-sm text-gray-600">
-              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">Summary</p>
-              <div className="flex justify-between">
-                <span>Name</span>
-                <span className="font-medium text-gray-800">{name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Reactivity</span>
-                <span className="font-medium text-gray-800">{REACTIVITY_LABELS[reactivity].label}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Model</span>
-                <span className="font-medium text-gray-800">{selectedModel?.label}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>Tools</span>
-                <span className="font-medium text-gray-800">{tools.length} enabled</span>
-              </div>
-            </div>
           </div>
-        )}
 
-        {/* Navigation */}
-        <div className="flex items-center justify-between mt-6">
-          {step > 1 ? (
-            <button type="button" onClick={handleBack} className="btn btn-secondary">
-              Back
-            </button>
-          ) : (
-            <Link href="/dashboard" className="btn btn-secondary">Cancel</Link>
-          )}
-
-          {step < 4 ? (
-            <button
-              type="button"
-              onClick={handleNext}
-              disabled={!canProceed()}
-              className="btn btn-primary"
-            >
-              Continue
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={isSubmitting}
-              className="btn btn-primary"
-            >
-              {isSubmitting ? 'Creating…' : 'Create Watcher'}
-            </button>
-          )}
+          {/* Submit */}
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={isSubmitting || !name.trim()}
+            className="w-full btn btn-primary btn-lg"
+          >
+            {isSubmitting ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="spinner" />
+                Creating...
+              </span>
+            ) : (
+              'Create watcher'
+            )}
+          </button>
         </div>
       </main>
     </div>
