@@ -1,16 +1,19 @@
 export default function EmailIngestionPage() {
   return (
-    <div className="prose">
-      <p className="text-sm font-medium text-vigil-700 uppercase tracking-wider mb-3">Documentation</p>
-      <h1>Email Forwarding</h1>
-      <div className="panel not-prose p-5 mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-vigil-700 mb-3">Fastest successful setup</p>
-        <div className="grid gap-3 md:grid-cols-3">
-          <LinkCard href="/auth/register" label="1. Create account" copy="Start with one watcher and get your forwarding address." />
-          <LinkCard href="/extension" label="2. Use the extension" copy="Fastest path for Gmail and Outlook forwarding." />
-          <LinkCard href="/pricing" label="Need the math?" copy="Actual AI cost + 5%. BYOK is free. 50 free emails to start." />
+    <div>
+      <div className="mb-8">
+        <p className="text-sm font-medium text-vigil-700 uppercase tracking-wider mb-3">Documentation</p>
+        <h1 className="text-4xl font-display font-semibold text-gray-900 tracking-tight mb-4">Email Forwarding</h1>
+        <div className="panel p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-vigil-700 mb-3">Fastest successful setup</p>
+          <div className="grid gap-3 md:grid-cols-3">
+            <LinkCard href="/auth/register" label="1. Create account" copy="Start with one watcher and get your forwarding address." />
+            <LinkCard href="/extension" label="2. Use the extension" copy="Fastest path for Gmail and Outlook forwarding." />
+            <LinkCard href="/pricing" label="Need the math?" copy="Actual AI cost + 5%. BYOK is free. 50 free emails to start." />
+          </div>
         </div>
       </div>
+      <div className="prose">
       <p>Vigil's entire design is built around a single constraint: it never connects to your inbox. There are no passwords to share, no OAuth permissions to grant, no read access to your email account.</p>
       <ul>
         <li>You decide exactly which emails Vigil sees by setting up forwarding rules in your email provider</li>
@@ -56,6 +59,7 @@ export default function EmailIngestionPage() {
         <li><strong>Subject line similarity</strong> — a fallback for cases where headers aren't present</li>
       </ul>
       <p>This means a conversation that started three weeks ago will be recognized as the same thread when a new reply arrives today. Thread detection happens before the agent reads the email content — by the time the agent begins its analysis, it already knows whether it's looking at the beginning of a new situation or the latest development in an ongoing one.</p>
+      </div>
     </div>
   );
 }
