@@ -24,9 +24,10 @@ GET  /usage                       — cost + usage
 
 ## Files
 
-- https://vigil.run/SKILL.md      — agent skill definition
-- https://vigil.run/vigil.sh      — CLI wrapper script
-- https://vigil.run/llms.txt      — this file
+- https://vigil.run/agent-setup.md — agent integration guide
+- https://vigil.run/SKILL.md       — agent skill definition
+- https://vigil.run/vigil.sh       — CLI wrapper script
+- https://vigil.run/llms.txt       — this file
 
 ## Docs
 
