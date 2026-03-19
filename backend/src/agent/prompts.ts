@@ -329,6 +329,62 @@ const TOOL_PROMPT_DESCRIPTIONS: Record<string, string> = {
 // Trigger Prompts
 // ============================================================================
 
+/**
+ * Max characters of email body to send to the model.
+ * ~3,000 tokens ≈ 12,000 chars. Keeps the worst-case input under 6K tokens.
+ * Emails exceeding this get head + tail truncation with a marker.
+ */
+const BODY_MAX_CHARS = 12_000;
+const BODY_TAIL_CHARS = 2_000;
+
+/**
+ * Prepare email body for the model:
+ * 1. Strip HTML tags if present (fallback bodies from postal-mime)
+ * 2. Collapse whitespace runs
+ * 3. Remove tracking URLs (long encoded query strings)
+ * 4. Truncate with head + tail preservation
+ */
+export function prepareBody(raw: string): string {
+    let body = raw;
+
+    // Strip HTML tags (handles fallback when parsed.text was empty)
+    if (/<[a-z][\s\S]*>/i.test(body)) {
+        body = body
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")    // remove style blocks
+            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")   // remove script blocks
+            .replace(/<!--[\s\S]*?-->/g, "")                     // remove HTML comments
+            .replace(/<br\s*\/?>/gi, "\n")                       // br → newline
+            .replace(/<\/?(p|div|tr|li|h[1-6])[^>]*>/gi, "\n")  // block elements → newline
+            .replace(/<[^>]+>/g, "")                              // strip remaining tags
+            .replace(/&nbsp;/gi, " ")
+            .replace(/&amp;/gi, "&")
+            .replace(/&lt;/gi, "<")
+            .replace(/&gt;/gi, ">")
+            .replace(/&quot;/gi, '"')
+            .replace(/&#39;/gi, "'");
+    }
+
+    // Collapse whitespace: multiple blank lines → single, trailing spaces removed
+    body = body
+        .replace(/[ \t]+/g, " ")           // horizontal whitespace runs → single space
+        .replace(/\n\s*\n\s*\n/g, "\n\n")  // 3+ newlines → 2
+        .replace(/^ +| +$/gm, "")          // trim each line
+        .trim();
+
+    // Remove long tracking URLs (>120 chars, usually contain utm_ or encoded params)
+    body = body.replace(/https?:\/\/\S{120,}/g, "[link removed]");
+
+    // Truncate: keep first (BODY_MAX_CHARS - BODY_TAIL_CHARS) + last BODY_TAIL_CHARS
+    if (body.length > BODY_MAX_CHARS) {
+        const headLen = BODY_MAX_CHARS - BODY_TAIL_CHARS;
+        const head = body.slice(0, headLen);
+        const tail = body.slice(-BODY_TAIL_CHARS);
+        body = `${head}\n\n[... ${body.length - BODY_MAX_CHARS} characters truncated ...]\n\n${tail}`;
+    }
+
+    return body;
+}
+
 export function buildEmailTriggerPrompt(
     email: {
         from: string;
@@ -357,6 +413,8 @@ export function buildEmailTriggerPrompt(
           }).join("\n")
         : "";
 
+    const body = prepareBody(email.body);
+
     return `## Incoming Email
 
 **Thread:** ${threadId}
@@ -366,7 +424,7 @@ export function buildEmailTriggerPrompt(
 **Received:** ${receivedStr} (${ageLabel})
 
 ---
-${email.body}
+${body}
 ---
 ${historySection}
 
