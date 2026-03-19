@@ -320,6 +320,42 @@ chmod +x ~/.openclaw/skills/vigil/scripts/vigil.sh</code></pre>
 <p><a href="https://vigil.run">Start watching your email with Vigil →</a></p>
 `,
   },
+  'email-ai-agents-pointed-wrong-direction': {
+    title: 'Email AI Agents Are Everywhere Now. They\u2019re All Pointed the Wrong Direction.',
+    date: 'March 19, 2026',
+    tag: 'industry',
+    content: `
+<p>Gartner now projects that 40% of enterprise applications will incorporate task-specific AI agents by the end of 2026, up from less than 5% in 2025. ActiveCampaign just launched what they call "agent-to-user AI," where the system proactively surfaces insights and recommendations instead of waiting for you to ask. The email AI agent market is projected to hit $200 billion by 2034. Every platform, from Salesforce to HubSpot to Mailchimp, is racing to embed autonomous agents into their email tools.</p>
+
+<p>There's one problem. Almost every one of these agents is pointed outward.</p>
+
+<h2>The Outbound Obsession</h2>
+<p>Look at what these email AI agents actually do. They optimize subject lines (AI-optimized lines produce 50% higher open rates, we're told). They personalize marketing content based on browsing behavior. They predict the best send times. They segment audiences dynamically. They A/B test copy variations autonomously.</p>
+
+<p>All of this is about sending better emails to other people. It's email as a weapon. The agent helps you land in inboxes, get clicks, convert leads. That's valuable if you're running campaigns. But it has nothing to do with the actual email problem most people face.</p>
+
+<h2>The Inbound Problem Nobody's Building For</h2>
+<p>The email problem that costs you money isn't about what you send. It's about what you receive and forget.</p>
+
+<p>A client asked for updated deliverables last Tuesday. A vendor promised pricing by end of week. Your accountant needs a signed form before filing. A prospect said "let me think about it" nine days ago and you never followed up. These obligations accumulate silently in your inbox. No marketing AI catches them because they're not marketing problems. They're operational ones.</p>
+
+<p>The 64% of marketers now using AI in their email programs are getting better at outbound. The freelancer who just lost a client because they forgot to reply to a time-sensitive request? Nobody's building for them.</p>
+
+<h2>Why the Market Skews This Way</h2>
+<p>It's simple economics. Email marketing tools charge per contact, per seat, or per send volume. The more email you send, the more they earn. Building agents that help you send more email, faster and better targeted, directly grows their revenue.</p>
+
+<p>Building an agent that watches your inbound email and tracks obligations? That's a different business entirely. It doesn't scale with send volume. It doesn't upsell into a CRM. It doesn't fit neatly into the martech stack. So nobody with a marketing platform is going to build it.</p>
+
+<h2>Watching Instead of Sending</h2>
+<p>Vigil is built for the inbound side. It doesn't help you send emails. It watches the ones you receive, tracks the obligations buried in them, and alerts you when something needs attention. Who's waiting on you. What deadlines are approaching. Which threads went quiet when they shouldn't have.</p>
+
+<p>It works through forwarding, not inbox access. You choose exactly what it sees. It processes each email, extracts what matters, and discards the body. No OAuth tokens. No stored credentials. About a penny per email, or free if you bring your own API key.</p>
+
+<p>While the rest of the industry builds better megaphones, Vigil builds a better ear.</p>
+
+<p><a href="https://vigil.run">Start watching your email with Vigil →</a></p>
+`,
+  },
   'pay-per-use': {
     title: 'Why Pay-Per-Use Beats Subscriptions for Email Tools',
     date: 'March 14, 2026',
