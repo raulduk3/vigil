@@ -97,7 +97,7 @@ export default function ExtensionPage() {
               <div className="mt-5 flex flex-wrap items-center justify-center gap-2.5 text-xs sm:text-sm text-gray-500">
                 <span className="badge badge-ok">Gmail</span>
                 <span className="badge badge-ok">Outlook</span>
-                <span className="badge">Manifest V3</span>
+                <span className="badge">Chrome compatible</span>
                 <span className="badge">Zero inbox access</span>
               </div>
             </div>
