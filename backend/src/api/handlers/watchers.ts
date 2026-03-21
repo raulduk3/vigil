@@ -169,16 +169,6 @@ export const watcherHandlers = {
         );
         if (!watcher) return c.json({ error: "Watcher not found" }, 404);
 
-        // Billing gate: chat and queries require active trial or payment
-        const { canProcessEmail } = await import("../../billing/usage");
-        const allowed = await canProcessEmail(user.account_id);
-        if (!allowed) {
-            return c.json(
-                { error: "Free trial limit reached. Add a payment method or API key to continue.", payment_required: true },
-                402
-            );
-        }
-
         const { invokeAgent } = await import("../../agent/engine");
 
         // Chat mode: body.message triggers conversational response

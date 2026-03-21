@@ -16,7 +16,6 @@ import { queryOne, queryMany, run } from "../db/client";
 import { logger } from "../logger";
 import { decrypt } from "../auth/encryption";
 import { executeSkill, SKILL_CATALOG } from "../skills/registry";
-import { reportInvocationCost } from "../billing/usage";
 import {
     buildSystemPrompt,
     buildClassificationSystemPrompt,
@@ -100,15 +99,6 @@ function getByokKey(account_id: string, provider: "openai" | "anthropic" | "goog
         logger.warn("Failed to decrypt BYOK key", { account_id, provider, err: String(err) });
         return null;
     }
-}
-
-/** Check if account has any BYOK key configured (skip billing for these users) */
-function hasAnyByokKey(account_id: string): boolean {
-    const row = queryOne<{ has_key: number }>(
-        `SELECT (CASE WHEN openai_api_key_enc IS NOT NULL OR anthropic_api_key_enc IS NOT NULL OR google_api_key_enc IS NOT NULL THEN 1 ELSE 0 END) AS has_key FROM accounts WHERE id = ?`,
-        [account_id]
-    );
-    return !!row?.has_key;
 }
 
 
@@ -301,14 +291,6 @@ export async function invokeAgent(
                 tokens: result.inputTokens + result.outputTokens,
                 cost: totalCost, actionsExecuted,
             });
-
-            // Report flat rate to Stripe
-            // Bill actual LLM cost + 5% margin for chat. BYOK users are free.
-            if (!hasAnyByokKey(watcher.account_id) && totalCost > 0) {
-                const MARGIN = 0.05;
-                const billable = totalCost * (1 + MARGIN);
-                reportInvocationCost(watcher.account_id, billable).catch(() => {});
-            }
 
             return {
                 actions: [],
@@ -688,15 +670,6 @@ export async function invokeAgent(
     }
     const totalCostAll = costUsd + totalToolCost;
 
-    // Bill all usage at actual cost + 5%. LLM + tools. BYOK skips LLM billing but tools still cost.
-    if (!hasAnyByokKey(watcher.account_id) && totalCostAll > 0) {
-        const MARGIN = 0.05;
-        const billable = totalCostAll * (1 + MARGIN);
-        reportInvocationCost(watcher.account_id, billable).catch((err) =>
-            logger.error("Failed to report invocation cost", { watcherId, err })
-        );
-    }
-
     return agentResponse;
 }
 
@@ -715,8 +688,7 @@ export const MODEL_CATALOG: Record<string, {
     pricing: { input: number; output: number };
     maxTokens: number;
 }> = {
-    // OpenAI
-    // Pricing: actual provider rates (no markup — margin applied at billing time)
+    // OpenAI — pricing at direct API rates
     "gpt-4.1-nano": {
         provider: "openai", label: "GPT-4.1 Nano", tier: "nano",
         pricing: { input: 0.0001, output: 0.0004 }, maxTokens: 1024,

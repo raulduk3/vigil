@@ -41,18 +41,6 @@ export async function initializeDatabase(): Promise<void> {
     const schema = readFileSync(schemaPath, "utf-8");
     database.exec(schema);
 
-    // Migrate: add billing columns to accounts table if not present (existing DBs)
-    const billingMigrations = [
-        `ALTER TABLE accounts ADD COLUMN stripe_customer_id TEXT`,
-        `ALTER TABLE accounts ADD COLUMN stripe_subscription_id TEXT`,
-        `ALTER TABLE accounts ADD COLUMN has_payment_method BOOLEAN DEFAULT FALSE`,
-        `ALTER TABLE accounts ADD COLUMN trial_emails_used INTEGER DEFAULT 0`,
-        `ALTER TABLE accounts ADD COLUMN trial_notified_at TIMESTAMP`,
-    ];
-    for (const sql of billingMigrations) {
-        try { database.exec(sql); } catch { /* column already exists */ }
-    }
-
     // Migrate: add BYOK encrypted API key columns to accounts table
     const byokMigrations = [
         `ALTER TABLE accounts ADD COLUMN openai_api_key_enc TEXT`,

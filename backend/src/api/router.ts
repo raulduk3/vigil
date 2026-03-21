@@ -15,7 +15,6 @@ import { threadActionHandlers } from "./handlers/thread-actions";
 import { customToolHandlers } from "./handlers/custom-tools";
 import { apiKeyHandlers } from "./handlers/api-keys";
 import { accountKeyHandlers } from "./handlers/account-keys";
-import { billingHandlers } from "./handlers/billing";
 import { forwardingHandlers } from "./handlers/forwarding";
 import { skillHandlers } from "./handlers/skills";
 
@@ -42,9 +41,6 @@ export function createRouter(): Hono {
 
     // Templates (public — so the frontend can show them before auth)
     api.get("/templates", templateHandlers.list);
-
-    // Stripe webhook (public — Stripe signs it, no JWT)
-    api.post("/billing/webhook", billingHandlers.stripeWebhook);
 
     // Skills catalog (public — no auth needed for browsing available providers)
     api.get("/skills/catalog", skillHandlers.catalog);
@@ -124,103 +120,6 @@ export function createRouter(): Hono {
     protected_.get("/forwarding/confirm-code/:watcherId", forwardingHandlers.confirmCode);
     protected_.get("/forwarding/status/:watcherId", forwardingHandlers.status);
 
-    // Billing
-    protected_.get("/billing", billingHandlers.getBilling);
-    protected_.post("/billing/setup", billingHandlers.setup);
-    protected_.post("/billing/portal", billingHandlers.portal);
-
-    // Usage/billing endpoint
-    protected_.get("/usage", async (c) => {
-        const user = c.get("user");
-        const { queryOne, queryMany } = await import("../db/client");
-
-        const { getUsageSummary } = await import("../billing/usage");
-
-        // Get ALL watchers for this account (including deleted — costs persist)
-        const allWatchers = queryMany<{ id: string; name: string; status: string }>(
-            `SELECT id, name, status FROM watchers WHERE account_id = ?`,
-            [user.account_id]
-        );
-        const activeWatchers = allWatchers.filter(w => w.status !== 'deleted');
-        const allWatcherIds = allWatchers.map(w => w.id);
-
-        if (allWatcherIds.length === 0) {
-            // Fall back to account-level usage from getUsageSummary
-            const summary = await getUsageSummary(user.account_id);
-            return c.json({ usage: {
-                total_cost: summary.current_month_cost,
-                invocations: 0, alerts: 0, emails_processed: 0,
-                current_month: { cost: summary.current_month_cost, invocations: 0 },
-                watchers: [],
-            }});
-        }
-
-        const placeholders = allWatcherIds.map(() => "?").join(",");
-
-        // Total costs across ALL watchers (including deleted)
-        const totals = queryOne<{ total_cost: number; invocations: number; alerts: number }>(
-            `SELECT 
-                COALESCE(SUM(cost_usd), 0) as total_cost,
-                COUNT(*) as invocations,
-                SUM(CASE WHEN tool = 'send_alert' AND result = 'success' THEN 1 ELSE 0 END) as alerts
-             FROM actions WHERE watcher_id IN (${placeholders})`,
-            allWatcherIds
-        ) ?? { total_cost: 0, invocations: 0, alerts: 0 };
-
-        const emailCount = queryOne<{ count: number }>(
-            `SELECT COUNT(*) as count FROM emails WHERE watcher_id IN (${placeholders})`,
-            allWatcherIds
-        );
-
-        // Per-watcher breakdown (active watchers only for display)
-        const perWatcher = activeWatchers.map(w => {
-            const stats = queryOne<{ cost: number; invocations: number; alerts: number; emails: number }>(
-                `SELECT 
-                    COALESCE(SUM(a.cost_usd), 0) as cost,
-                    COUNT(a.id) as invocations,
-                    SUM(CASE WHEN a.tool = 'send_alert' AND a.result = 'success' THEN 1 ELSE 0 END) as alerts,
-                    (SELECT COUNT(*) FROM emails e WHERE e.watcher_id = ?) as emails
-                 FROM actions a WHERE a.watcher_id = ?`,
-                [w.id, w.id]
-            );
-            return {
-                watcher_id: w.id,
-                watcher_name: w.name,
-                cost: stats?.cost ?? 0,
-                invocations: stats?.invocations ?? 0,
-                alerts: stats?.alerts ?? 0,
-                emails: stats?.emails ?? 0,
-            };
-        });
-
-        // Current month costs — use account-level tracking as primary source
-        const summary = await getUsageSummary(user.account_id);
-        const currentMonthCost = summary.current_month_cost;
-
-        // Invocation count still from actions (account-level doesn't track this)
-        const monthStart = new Date();
-        monthStart.setDate(1);
-        monthStart.setHours(0, 0, 0, 0);
-        const monthInvocations = queryOne<{ invocations: number }>(
-            `SELECT COUNT(*) as invocations
-             FROM actions WHERE watcher_id IN (${placeholders}) AND created_at >= ?`,
-            [...allWatcherIds, monthStart.toISOString()]
-        );
-
-        return c.json({
-            usage: {
-                total_cost: totals.total_cost,
-                total_invocations: totals.invocations,
-                total_alerts: totals.alerts,
-                total_emails: emailCount?.count ?? 0,
-                current_month: {
-                    cost: currentMonthCost,
-                    invocations: monthInvocations?.invocations ?? 0,
-                },
-                watchers: perWatcher,
-            },
-        });
-    });
 
     // Models catalog (public, no auth needed for listing)
     protected_.get("/models", async (c) => {

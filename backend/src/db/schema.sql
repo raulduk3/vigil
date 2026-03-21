@@ -8,11 +8,6 @@ CREATE TABLE IF NOT EXISTS accounts (
   password_hash           TEXT,
   oauth_provider          TEXT,
   oauth_id                TEXT,
-  plan                    TEXT DEFAULT 'free',
-  stripe_customer_id      TEXT,
-  stripe_subscription_id  TEXT,
-  has_payment_method      BOOLEAN DEFAULT FALSE,
-  trial_emails_used       INTEGER DEFAULT 0,
   created_at              TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

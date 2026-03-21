@@ -85,27 +85,6 @@ async function runScheduledTicks(): Promise<void> {
     const now = Date.now();
 
     for (const watcher of watchers) {
-        // Billing gate: skip ticks for accounts with exhausted trial and no payment/BYOK
-        const account = queryOne<{
-            has_payment_method: number;
-            trial_emails_used: number;
-            openai_api_key_enc: string | null;
-            anthropic_api_key_enc: string | null;
-            google_api_key_enc: string | null;
-        }>(
-            `SELECT has_payment_method, trial_emails_used, openai_api_key_enc, anthropic_api_key_enc, google_api_key_enc
-             FROM accounts WHERE id = ?`,
-            [watcher.account_id]
-        );
-        const hasBilling = account?.has_payment_method ||
-            account?.openai_api_key_enc || account?.anthropic_api_key_enc || account?.google_api_key_enc;
-        const trialActive = (account?.trial_emails_used ?? 0) < 50;
-
-        if (!hasBilling && !trialActive) {
-            logger.debug("Tick skipped: no billing", { watcherId: watcher.id, accountId: watcher.account_id });
-            continue;
-        }
-
         const lastTickMs = watcher.last_tick_at
             ? new Date(watcher.last_tick_at).getTime()
             : 0;

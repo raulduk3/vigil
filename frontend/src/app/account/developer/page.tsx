@@ -148,7 +148,7 @@ export default function DeveloperPage() {
           <QuickRef method="GET" path="/watchers/:id/threads" desc="List threads for a watcher" apiUrl={API_URL} />
           <QuickRef method="GET" path="/watchers/:id/memory" desc="List watcher memories" apiUrl={API_URL} />
           <QuickRef method="POST" path="/watchers/:id/invoke" desc="Trigger agent invocation" apiUrl={API_URL} />
-          <QuickRef method="GET" path="/usage" desc="Get usage and billing data" apiUrl={API_URL} />
+
         </div>
 
         <Link href="/learn/api" className="text-sm text-vigil-700 hover:text-vigil-900 font-medium inline-block mt-2">

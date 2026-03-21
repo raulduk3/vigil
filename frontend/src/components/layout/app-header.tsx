@@ -42,7 +42,6 @@ export function AppHeader({
 
   const isOnDashboard = pathname === '/dashboard';
   const isOnAccount = pathname?.startsWith('/account');
-  const isOnBilling = pathname === '/account/billing';
 
   return (
     <header className="bg-surface-raised border-b border-gray-200 sticky top-0 z-50">
@@ -110,23 +109,12 @@ export function AppHeader({
                   <Link
                     href="/account"
                     className={`text-base transition-colors whitespace-nowrap ${
-                      isOnAccount && !isOnBilling
+                      isOnAccount
                         ? 'text-gray-900 font-medium'
                         : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
                     Account
-                  </Link>
-
-                  <Link
-                    href="/account/billing"
-                    className={`text-base transition-colors whitespace-nowrap ${
-                      isOnBilling
-                        ? 'text-gray-900 font-medium'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    Billing
                   </Link>
 
                   <button
@@ -181,24 +169,12 @@ export function AppHeader({
                 href="/account"
                 onClick={() => setMobileMenuOpen(false)}
                 className={`block px-3 py-2.5 rounded-md text-base font-medium transition-colors ${
-                  isOnAccount && !isOnBilling
+                  isOnAccount
                     ? 'bg-gray-100 text-gray-900'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                 }`}
               >
                 Account
-              </Link>
-
-              <Link
-                href="/account/billing"
-                onClick={() => setMobileMenuOpen(false)}
-                className={`block px-3 py-2.5 rounded-md text-base font-medium transition-colors ${
-                  isOnBilling
-                    ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                Billing
               </Link>
 
               <div className="border-t border-gray-100 my-2" />

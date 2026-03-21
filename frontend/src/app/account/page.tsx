@@ -62,7 +62,7 @@ function AccountContent() {
 
       <div className="flex gap-3 flex-wrap">
         <Link href="/account/security" className="btn btn-secondary">Security</Link>
-        <Link href="/account/billing" className="btn btn-secondary">Billing</Link>
+
         <Link href="/account/developer" className="btn btn-secondary">Developer</Link>
         <Link href="/account/keys" className="btn btn-secondary">API Keys (BYOK)</Link>
       </div>
@@ -72,7 +72,7 @@ function AccountContent() {
         <h3 className="text-sm font-semibold text-red-700 mb-2">Delete Account</h3>
         <p className="text-sm text-gray-600 mb-4">
           Permanently delete your account and all associated data. This removes all watchers, 
-          threads, memories, action logs, API keys, and billing records. This cannot be undone.
+          threads, memories, action logs, and API keys. This cannot be undone.
         </p>
 
         {!showDelete ? (

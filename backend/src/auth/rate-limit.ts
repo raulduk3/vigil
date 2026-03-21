@@ -77,7 +77,7 @@ export const authRateLimit = rateLimit(5, 15 * 60 * 1000, "auth");
 /**
  * Rate limit for ingestion endpoints.
  * 200 emails per minute per IP (Cloudflare Workers share IPs, needs to be generous).
- * Per-account billing gate is the real limit.
+ * Per-watcher rate limiting for ingest endpoints.
  */
 export const ingestRateLimit = rateLimit(200, 60 * 1000, "ingest");
 

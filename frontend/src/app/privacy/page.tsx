@@ -35,7 +35,7 @@ export default function PrivacyPage() {
               <li><strong>Thread state</strong> — conversation groupings, status (active/watching/resolved/ignored), participant list, email count.</li>
               <li><strong>Agent memories</strong> — atomic facts the agent chose to remember: deadlines, amounts, commitments. Each memory has an importance level and can be viewed, edited, or deleted by you.</li>
               <li><strong>Action log</strong> — every decision the agent made: what tool it used, why, what model processed it, how much it cost, how long it took.</li>
-              <li><strong>Account data</strong> — email address, hashed password, billing information (handled by Stripe).</li>
+              <li><strong>Account data</strong> — email address, hashed password, BYOK API keys (stored encrypted).</li>
             </ul>
 
             <h2>What You Can See and Do</h2>
@@ -112,8 +112,8 @@ export default function PrivacyPage() {
             <h2>Account Deletion</h2>
             <p>
               When you delete your account, all associated data is permanently removed: 
-              watchers, threads, email metadata, memories, action logs, API keys, and billing records. 
-              This action is irreversible. Stripe retains payment history per their own retention policy.
+              watchers, threads, email metadata, memories, action logs, and API keys. 
+              This action is irreversible.
             </p>
 
             <h2>Changes to This Policy</h2>
