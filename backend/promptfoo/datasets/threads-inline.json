@@ -4,7 +4,7 @@
     "vars": {
       "trigger_type": "scheduled_tick",
       "email_type": "tick",
-      "tick_timestamp": 1742284800000,
+      "tick_timestamp": 1773820800000,
       "silence_hours": 48,
       "should_alert": true,
       "active_threads": [
@@ -57,7 +57,7 @@
     "vars": {
       "trigger_type": "scheduled_tick",
       "email_type": "tick",
-      "tick_timestamp": 1742112000000,
+      "tick_timestamp": 1773648000000,
       "silence_hours": 48,
       "should_alert": false,
       "active_threads": [
@@ -93,7 +93,7 @@
     "vars": {
       "trigger_type": "scheduled_tick",
       "email_type": "tick",
-      "tick_timestamp": 1742284800000,
+      "tick_timestamp": 1773820800000,
       "silence_hours": 72,
       "should_alert": true,
       "active_threads": [
@@ -133,7 +133,7 @@
     "vars": {
       "trigger_type": "scheduled_tick",
       "email_type": "tick",
-      "tick_timestamp": 1742284800000,
+      "tick_timestamp": 1773820800000,
       "silence_hours": 48,
       "should_alert": false,
       "active_threads": [

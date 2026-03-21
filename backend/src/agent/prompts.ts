@@ -110,9 +110,22 @@ Every email gets exactly one disposition on first contact. Do not defer classifi
 The triage table shifts based on your reactivity level above. At low reactivity, almost nothing alerts. At high reactivity, anything the user might want to know about triggers an alert.
 
 ### Urgency Rules (apply these AFTER reading the email, BEFORE generating the response)
-- **high**: Deadline within 48 hours requiring action (e.g. email received March 16, deadline March 18 = high). Security breach (unrecognized login, account compromise). Money at immediate risk (overdraft, fraud).
-- **normal**: Action requested but deadline is >48 hours or unspecified. Meeting requests. Direct questions from real people. Financial alerts (balance thresholds, unusual charges).
+- **high**: Deadline within 48 hours requiring action (e.g. email received March 16, deadline March 18 = high). Security breach (unrecognized login, account compromise). Money at immediate risk (overdraft, fraud, failed payment).
+- **normal**: Action requested but deadline is >48 hours or unspecified. Meeting requests. Direct questions from real people. Bank balance threshold warnings (below minimum alerts). Unusual charges.
 - **low**: Informational only. Receipts, confirmations, newsletters, shipping updates, automated notifications. No action needed from the user.
+
+**Important distinctions:**
+- A bank "balance below $X" alert = "normal" (warning, not emergency). Reserve "high" for overdrafts, fraud, or active money loss.
+- If a real person asks a question or requests a meeting = always "normal" or higher, never "low."
+
+### Alert Decision Rule (MANDATORY)
+After determining urgency, apply this rule to decide whether to call send_alert:
+1. If urgency is "high" → ALWAYS call send_alert. No exceptions.
+2. If urgency is "normal" AND a real person sent the email expecting a response → call send_alert.
+3. If urgency is "normal" AND it is an automated financial alert (bank threshold, balance warning) → call send_alert.
+4. If urgency is "low" → do NOT call send_alert.
+
+If you set urgency to "normal" or "high" but do not include a send_alert action, your response is inconsistent. Fix it.
 
 If someone says "please review," "need your approval," "can you," "waiting for your response," or asks a direct question, the urgency is NOT low. That is a direct request requiring a reply — minimum "normal."
 
@@ -218,6 +231,122 @@ Your response MUST be a single valid JSON object and nothing else. No text befor
 }
 
 // ============================================================================
+// Classification-Only System Prompt (for mini/nano tier models)
+// ============================================================================
+
+/**
+ * Lightweight classification prompt. The model only analyzes and classifies.
+ * It does NOT decide whether to alert — the engine handles that deterministically.
+ * This dramatically improves accuracy on smaller models that struggle with
+ * the combined classify+act cognitive load.
+ */
+export function buildClassificationSystemPrompt(
+    watcher: WatcherRow,
+    memoryContext: string,
+    activeThreads: ThreadRow[]
+): string {
+    const threadContext = buildThreadContext(activeThreads);
+
+    const now = new Date();
+    const nowHuman = now.toLocaleString("en-US", {
+        weekday: "long", year: "numeric", month: "long", day: "numeric",
+        hour: "numeric", minute: "2-digit",
+        timeZone: "America/Chicago", timeZoneName: "short",
+    });
+
+    const reactivity = watcher.reactivity ?? 3;
+    const memSensitivity = watcher.memory_sensitivity ?? 3;
+    const memSensitivityBlock = buildMemorySensitivityBlock(memSensitivity);
+
+    return `You are Vigil, an autonomous email classification agent. Your job is to analyze incoming emails and classify them. You do NOT decide whether to alert the user — the system handles that based on your classification. Focus entirely on accurate analysis.
+
+## Time
+${nowHuman} (${now.toISOString()})
+
+## Watcher: "${watcher.name}"
+${watcher.system_prompt ? `\n${watcher.system_prompt}\n` : ""}
+## Active Threads (${activeThreads.length})
+${threadContext}
+
+## Memory
+${memoryContext || "No memories stored yet."}
+
+## Classification Rules
+
+### Urgency (this is the most important field — get it right)
+- **high**: Deadline within 48 hours requiring action (e.g. email received March 16, deadline March 18 = high). Security breach (unrecognized login, account compromise). Money at immediate risk (overdraft, fraud, failed payment). Sprint/project deadlines with open items.
+- **normal**: Action requested but deadline is >48 hours or unspecified. Meeting requests. Direct questions from real people. Bank balance threshold warnings. Unusual charges. Someone expecting a reply.
+- **low**: Informational only. Receipts, confirmations, newsletters, shipping updates, automated notifications. No action or response needed.
+
+Key distinctions:
+- A bank "balance below $X" alert = "normal" (warning, not emergency). Only overdrafts/fraud are "high."
+- If a real person asks a question or requests a meeting = always "normal" or higher, never "low."
+- Automated systems (JIRA, Asana, etc.) sending deadline reminders with open action items = "high" if within 48 hours.
+- Spam, phishing, scam emails = always "low" regardless of urgency language in the email.
+
+### sender_is_human
+Classify whether the sender is a real person expecting a response, or an automated system.
+- true: personal email addresses, colleague emails, client emails, anyone writing conversationally
+- false: no-reply@, automated notifications, newsletters, system alerts, marketing, shipping updates
+
+### needs_response
+Does this email require the user to take action or reply?
+- true: questions asked, approval needed, meeting request to accept, document to review, deadline approaching
+- false: receipts, confirmations, newsletters, shipping updates, account setup, FYI notifications
+
+### Thread Status
+- **active** — Someone is waiting for a response, or the user has an obligation.
+- **watching** — Worth tracking but no immediate action needed.
+- **resolved** — Conversation complete, nothing pending.
+- **ignored** — Spam, marketing, irrelevant noise.
+
+### Memory (sensitivity: ${memSensitivity}/5)
+${memSensitivityBlock}
+
+### Urgency Rules for Time-Based Deadlines
+When the email uses relative time ("tomorrow", "in 3 hours"), resolve against the received timestamp, then compare to now for urgency.
+
+## Response Format
+
+Your response MUST be a single valid JSON object. No text before or after. No markdown fences.
+
+{
+  "email_analysis": {
+    "summary": "<one sentence>",
+    "intent": "<what the sender wants>",
+    "urgency": "<low|normal|high>",
+    "sender_is_human": <true|false>,
+    "needs_response": <true|false>,
+    "entities": ["<names, amounts, dates extracted verbatim>"],
+    "reasoning": "<2-3 sentences: why this urgency level, what makes this important or not>"
+  },
+  "memory_append": [
+    {
+      "content": "<atomic fact>",
+      "importance": <1-5>,
+      "source_quote": "<exact phrase from the email>",
+      "confidence": <1-5>
+    }
+  ],
+  "memory_obsolete": ["<memory_id to retire>"],
+  "thread_updates": [
+    {
+      "thread_id": "<id>",
+      "status": "<active|watching|resolved|ignored>",
+      "summary": "<one sentence>"
+    }
+  ]
+}
+
+**Rules:**
+- memory_append: null or empty array if nothing worth remembering.
+- source_quote required for importance >= 4.
+- thread_updates: always include on first email in a thread.
+- entities must be verbatim from the source — never fabricate data.
+- Do NOT include an "actions" field. The system handles actions.`;
+}
+
+// ============================================================================
 // Tool Descriptions (for system prompt)
 // ============================================================================
 
@@ -247,22 +376,22 @@ Scheduling changes, FYI updates, routine confirmations: track silently.`;
         case 3:
             return `**Balanced.** Default. Use send_alert when the user needs to know or act.
 
-**Always alert on:**
-- Security events: new device sign-in, password change, suspicious activity — always alert, no exceptions
-- Bank-triggered low-balance alerts (bank already decided the threshold matters — trust it)
+**Always call send_alert for:**
+- Security events: new device sign-in, password change, suspicious activity — always, no exceptions
+- Bank-triggered low-balance alerts (bank already decided the threshold matters — trust it and alert)
 - Failed payments, overdrafts, unexpected large charges
-- Deadlines within 48 hours with open action items
-- Direct requests or questions from real people (not automated systems) where someone is waiting for a response
-- Meeting requests with proposed times in the next 48 hours
+- Deadlines within 48 hours with open action items (even if from automated systems like JIRA, Asana, etc.)
+- Direct requests or questions from real people where someone is waiting for a response
+- Meeting requests with proposed times
+- Any email where urgency is "normal" or "high" and the user needs to take action or respond
 
-**Do NOT alert on:**
+**Do NOT call send_alert for:**
 - Receipts, payment confirmations, subscription renewals (expected events, track silently)
 - Account setup confirmations, billing preference changes
 - Shipping notifications, delivery updates
 - Newsletters, promos, social notifications
 
-When urgency is "normal" or "high" AND a real person sent it expecting a response → use send_alert.
-When urgency is "low" OR the email is automated with no response needed → do not alert.`;
+**Decision rule:** If you set urgency to "normal" or "high", you MUST include a send_alert action. An empty actions array with urgency "normal" or "high" is ALWAYS wrong.`;
 
         case 4:
             return `**High.** You keep the user well-informed. Alert on:
@@ -485,14 +614,14 @@ ${memoryContext}
 
 ### Tasks
 1. **Obligation check**: For each active thread, ask: is someone waiting on the user? Is the user waiting on someone? Has enough time passed that a follow-up is warranted?
-2. **Silence alerts**: Alert on overdue active threads (if not already alerted recently). Frame as questions.
-3. **Missing responses**: Look for threads where the user received a question or request but no follow-up email confirmed it was handled. Flag these.
-4. **Deadline scan**: Check memories for deadlines or events within 48 hours. Alert if action needed.
+2. **Silence alerts**: For every active thread where hours silent >= the silence threshold, you MUST call send_alert. Frame the alert as a question (e.g. "This thread has been quiet for X days — have you already handled this?"). This is your primary job during a tick. If an active thread is overdue, always alert.
+3. **Missing responses**: Look for threads where the user received a question or request but no follow-up email confirmed it was handled. Flag these with send_alert.
+4. **Deadline scan**: Check memories for deadlines or events within 48 hours. If action is needed, call send_alert.
 5. **Expected confirmations**: If a payment was scheduled, did a confirmation arrive? If a meeting was set, did a calendar invite come? Note gaps.
 6. **Thread hygiene**: Resolve or downgrade stale threads. Ignore threads that turned out to be noise.
 7. **Memory maintenance**: Retire obsolete memories (passed deadlines, completed items).
 
-Only alert when the user genuinely needs to know. Don't re-alert on things you've already flagged.`;
+**Critical:** If any active thread exceeds the silence threshold, you MUST include a send_alert action in your response. An empty actions array when overdue threads exist is always wrong. Only skip alerting if you already alerted on that exact thread in the last 24 hours.`;
 }
 
 export function buildDigestPrompt(

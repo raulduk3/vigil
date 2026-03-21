@@ -129,6 +129,9 @@ export default class VigilProvider {
     }
 }
 
+// Mini/nano tier uses classification pipeline + deterministic action mapping
+const CLASSIFICATION_TIERS = new Set(["gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o-mini"]);
+
 async function callApiImpl(
     _prompt: string,
     context: ProviderCallContext,
@@ -136,9 +139,14 @@ async function callApiImpl(
 ): Promise<ProviderResponse> {
     const model = options?.config?.model ?? "gpt-4.1-mini";
     const vars = context.vars;
+    const useClassification = CLASSIFICATION_TIERS.has(model)
+        && (vars.trigger_type === "email_received" || vars.trigger_type === "scheduled_tick");
 
     try {
-        const { systemPrompt, userPrompt } = buildPrompts(vars);
+        const { systemPrompt, userPrompt } = buildPrompts({
+            ...vars,
+            use_classification: useClassification,
+        });
 
         const catalog = MODEL_CATALOG[model];
         const provider = catalog?.provider ?? "openai";
@@ -157,8 +165,113 @@ async function callApiImpl(
                 raw = await callOpenAI(systemPrompt, userPrompt, apiModel, maxTokens);
         }
 
-        return { output: stripFences(raw) };
+        const cleaned = stripFences(raw);
+
+        if (useClassification) {
+            // Parse classification, run through action mapper, return full response
+            const classification = JSON.parse(cleaned);
+            const mapped = applyActionMapper(classification, vars);
+            return { output: JSON.stringify(mapped) };
+        }
+
+        return { output: cleaned };
     } catch (err) {
         return { error: String(err) };
     }
+}
+
+/**
+ * Deterministic action mapper — mirrors backend src/agent/action-mapper.ts logic.
+ * Inlined here to avoid Bun/Node module compat issues in the promptfoo provider.
+ */
+function applyActionMapper(classification: any, vars: Record<string, unknown>): any {
+    const analysis = classification.email_analysis;
+    const triggerType = vars.trigger_type as string;
+    const reactivity = (vars.reactivity as number) ?? 3;
+    const threadId = vars.thread_id as string ?? "";
+    const actions: any[] = [];
+
+    if (triggerType === "scheduled_tick") {
+        // Tick: compute overdue threads from test vars and fire silence alerts
+        const activeThreads = (vars.active_threads as any[]) ?? [];
+        const silenceHours = (vars.silence_hours as number) ?? 48;
+        const tickTs = (vars.tick_timestamp as number) ?? Date.now();
+
+        for (const t of activeThreads) {
+            if (t.status !== "active" || !t.last_activity) continue;
+            const hoursSilent = (tickTs - new Date(t.last_activity).getTime()) / 3600000;
+            if (hoursSilent >= silenceHours) {
+                actions.push({
+                    tool: "send_alert",
+                    params: {
+                        thread_id: t.id,
+                        message: `This thread has been quiet for ${Math.round(hoursSilent)} hours — have you already handled this? ${t.summary ?? ""}`,
+                        urgency: "normal",
+                    },
+                    reasoning: `Thread "${t.subject ?? "(no subject)"}" silent for ${Math.round(hoursSilent)}h, exceeds threshold of ${silenceHours}h.`,
+                });
+            }
+        }
+
+        // Also alert if the model's tick analysis flagged high urgency (e.g. deadline from memory)
+        // and no silence-based alerts were generated for those threads
+        if (analysis && (analysis.urgency === "high" || analysis.urgency === "normal")) {
+            const alertedThreadIds = new Set(actions.map((a: any) => a.params?.thread_id));
+            for (const t of activeThreads) {
+                if (t.status !== "active" || alertedThreadIds.has(t.id)) continue;
+                actions.push({
+                    tool: "send_alert",
+                    params: {
+                        thread_id: t.id,
+                        message: analysis.summary ?? `Thread "${t.subject}" needs attention.`,
+                        urgency: analysis.urgency,
+                    },
+                    reasoning: `Tick analysis flagged urgency=${analysis.urgency}. ${analysis.reasoning ?? ""}`,
+                });
+            }
+        }
+    } else if (analysis) {
+        // Email: determine alert based on urgency + classification signals
+        const { urgency, sender_is_human, needs_response } = analysis;
+        let shouldAlert = false;
+
+        if (reactivity <= 1) {
+            shouldAlert = urgency === "high";
+        } else if (reactivity === 2) {
+            shouldAlert = urgency === "high" || (urgency === "normal" && needs_response);
+        } else if (reactivity === 3) {
+            // Balanced: alert on any normal or high urgency
+            shouldAlert = urgency === "high" || urgency === "normal";
+        } else if (reactivity === 4) {
+            shouldAlert = urgency !== "low";
+        } else {
+            shouldAlert = true; // reactivity 5: alert on everything
+        }
+
+        if (shouldAlert) {
+            actions.push({
+                tool: "send_alert",
+                params: {
+                    thread_id: threadId,
+                    message: analysis.summary,
+                    urgency: urgency,
+                },
+                reasoning: `Urgency: ${urgency}, sender_is_human: ${sender_is_human ?? "unknown"}, needs_response: ${needs_response ?? "unknown"}.`,
+            });
+        }
+    }
+
+    return {
+        actions,
+        memory_append: classification.memory_append ?? null,
+        memory_obsolete: classification.memory_obsolete ?? null,
+        thread_updates: classification.thread_updates ?? null,
+        email_analysis: analysis ? {
+            summary: analysis.summary,
+            intent: analysis.intent,
+            urgency: analysis.urgency,
+            entities: analysis.entities,
+            reasoning: analysis.reasoning,
+        } : null,
+    };
 }

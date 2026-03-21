@@ -14,6 +14,7 @@
 
 import {
     buildSystemPrompt,
+    buildClassificationSystemPrompt,
     buildEmailTriggerPrompt,
     buildTickTriggerPrompt,
     buildDigestPrompt,
@@ -47,7 +48,11 @@ const watcher: WatcherRow = {
 const memoryContext = input.memory_context ?? "No memories stored yet.";
 const activeThreads: ThreadRow[] = input.active_threads ?? [];
 
-const systemPrompt = buildSystemPrompt(watcher, memoryContext, activeThreads);
+// Use classification prompt for mini/nano models, full prompt for standard+
+const useClassification = input.use_classification === true;
+const systemPrompt = useClassification
+    ? buildClassificationSystemPrompt(watcher, memoryContext, activeThreads)
+    : buildSystemPrompt(watcher, memoryContext, activeThreads);
 
 let userPrompt: string;
 const triggerType = input.trigger_type ?? "email_received";

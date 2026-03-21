@@ -8,7 +8,7 @@
       "email_to": "me@vigil.run",
       "email_subject": "Your Amazon order #114-7382910-2847361 has shipped",
       "email_body": "Hello,\n\nYour order has shipped! Your package is on the way.\n\nOrder #114-7382910-2847361\nItems: Anker USB-C Hub (1x) \u2014 $34.99\nShipping: Standard (3-5 days)\nTracking: 1Z999AA10123456784 via UPS\n\nExpected delivery: Friday, March 20\n\nThank you for shopping with Amazon.",
-      "email_received_at": 1742112000000,
+      "email_received_at": 1773648000000,
       "thread_id": "thread-amazon-001",
       "expected_urgency": "low",
       "should_alert": false
@@ -49,7 +49,7 @@
       "email_to": "me@vigil.run",
       "email_subject": "Need your approval on the Q1 budget proposal",
       "email_body": "Hey,\n\nI need your sign-off on the Q1 budget proposal before the board meeting on Thursday, March 19, 2026. The finance team can't proceed without your approval.\n\nThe proposal is attached. Key numbers: $240,000 total budget, with $80,000 allocated for the new engineering hires.\n\nCan you review and approve by EOD Wednesday, March 18, 2026?\n\nThanks,\nSarah",
-      "email_received_at": 1742112000000,
+      "email_received_at": 1773648000000,
       "thread_id": "thread-budget-001",
       "expected_urgency": "high",
       "should_alert": true
@@ -90,7 +90,7 @@
       "email_to": "me@vigil.run",
       "email_subject": "CONGRATULATIONS! You've been selected for a $1,000,000 cash prize!",
       "email_body": "Dear Valued Customer,\n\nYou have been RANDOMLY SELECTED to receive ONE MILLION DOLLARS ($1,000,000)!\n\nTo claim your prize, click here immediately and provide your bank details.\n\nThis offer expires in 24 hours. Do not delay!\n\nCongratulations,\nThe Prize Team",
-      "email_received_at": 1742112000000,
+      "email_received_at": 1773648000000,
       "thread_id": "thread-spam-001",
       "expected_urgency": "low",
       "should_alert": false
@@ -131,7 +131,7 @@
       "email_to": "me@vigil.run",
       "email_subject": "Chase: A charge of $127.43 was made on your card",
       "email_body": "A charge of $127.43 was made on your Chase Freedom card ending in 4821.\n\nMerchant: Whole Foods Market\nDate: March 16, 2026\nAmount: $127.43\n\nIf you don't recognize this transaction, call the number on the back of your card immediately.\n\nView your account at chase.com",
-      "email_received_at": 1742112000000,
+      "email_received_at": 1773648000000,
       "thread_id": "thread-chase-001",
       "expected_urgency": "low",
       "should_alert": false
@@ -168,7 +168,7 @@
       "email_to": "me@vigil.run",
       "email_subject": "Can we meet Tuesday to discuss the partnership proposal?",
       "email_body": "Hi,\n\nI wanted to follow up on the partnership proposal we discussed last week. Are you free for a 30-minute call on Tuesday, March 17, 2026 at 2pm CT or Wednesday, March 18, 2026 at 10am CT?\n\nI have some updated numbers I'd like to walk you through.\n\nBest,\nDavid",
-      "email_received_at": 1742112000000,
+      "email_received_at": 1773648000000,
       "thread_id": "thread-david-001",
       "should_alert": true
     },
@@ -208,7 +208,7 @@
       "email_to": "me@vigil.run",
       "email_subject": "JIRA: Sprint deadline reminder \u2014 Project Phoenix closes in 48 hours",
       "email_body": "This is a reminder that Sprint 14 for Project Phoenix closes on March 18, 2026 at 5:00 PM CT.\n\nYou have 3 open tickets assigned to you:\n- PHXN-441: Implement OAuth token refresh (In Progress)\n- PHXN-452: Fix rate limiter bug (To Do)\n- PHXN-461: Write API docs for /v2/emails endpoint (To Do)\n\nAll tickets must be moved to Done or the sprint will close with incomplete items.\n\nView sprint: jira.atlassian.com/project/PHXN/sprint/14",
-      "email_received_at": 1742112000000,
+      "email_received_at": 1773648000000,
       "thread_id": "thread-jira-001",
       "expected_urgency": "high",
       "should_alert": true
@@ -249,7 +249,7 @@
       "email_to": "me@vigil.run",
       "email_subject": "New sign-in to your GitHub account from an unrecognized device",
       "email_body": "We noticed a new sign-in to your GitHub account.\n\nDevice: Windows 10 \u2014 Chrome 122\nLocation: Chongqing, China\nTime: March 16, 2026 at 3:47 AM UTC\n\nIf this was you, you can ignore this email. If you don't recognize this sign-in, please secure your account immediately by changing your password and enabling two-factor authentication.\n\nSecure your account: github.com/settings/security",
-      "email_received_at": 1742112000000,
+      "email_received_at": 1773648000000,
       "thread_id": "thread-github-security-001",
       "expected_urgency": "high",
       "should_alert": true
@@ -286,7 +286,7 @@
       "email_to": "me@vigil.run",
       "email_subject": "TechCrunch Daily: AI funding rounds, OpenAI's new model, and more",
       "email_body": "Good morning! Here's what you need to know in tech today.\n\n1. OpenAI raises $40B at $300B valuation\n2. Anthropic ships Claude 5 with 200K context window\n3. Google DeepMind wins Turing Award\n4. Stripe IPO delayed to Q3 2026\n5. Meta releases Llama 4 open weights\n\nRead more at techcrunch.com\n\nUnsubscribe | Manage preferences",
-      "email_received_at": 1742112000000,
+      "email_received_at": 1773648000000,
       "thread_id": "thread-tc-newsletter-001",
       "expected_urgency": "low",
       "should_alert": false
@@ -327,7 +327,7 @@
       "email_to": "me@vigil.run",
       "email_subject": "FedEx: Package out for delivery today",
       "email_body": "Your FedEx package is out for delivery.\n\nTracking: 783209438209\nStatus: Out for Delivery\nEstimated delivery: Today by 8:00 PM\nAddress: 123 Main St\n\nYou can track your package at fedex.com/tracking",
-      "email_received_at": 1742112000000,
+      "email_received_at": 1773648000000,
       "thread_id": "thread-fedex-001",
       "expected_urgency": "low",
       "should_alert": false
@@ -368,7 +368,7 @@
       "email_to": "me@vigil.run",
       "email_subject": "Quick question about the contract terms",
       "email_body": "Hi,\n\nI've been reviewing the contract you sent over and had a quick question about Section 4.2 \u2014 the liability cap. It's currently set at $50,000 but based on the project scope I think we need it at $100,000 minimum.\n\nCan you confirm if that's negotiable before I send it to our legal team? I'd like to have this resolved by end of week.\n\nThanks,\nAlex",
-      "email_received_at": 1742112000000,
+      "email_received_at": 1773648000000,
       "thread_id": "thread-alex-001",
       "should_alert": true
     },
@@ -408,7 +408,7 @@
       "email_to": "me@vigil.run",
       "email_subject": "Payment of $299.00 received \u2014 Invoice #INV-2026-0042",
       "email_body": "Payment Received\n\nThank you \u2014 your payment has been processed.\n\nInvoice: #INV-2026-0042\nAmount: $299.00\nDate: March 16, 2026\nMethod: Visa ending in 4821\nStatus: Paid\n\nYou can view your invoice at dashboard.stripe.com",
-      "email_received_at": 1742112000000,
+      "email_received_at": 1773648000000,
       "thread_id": "thread-stripe-001",
       "expected_urgency": "low",
       "should_alert": false
@@ -449,7 +449,7 @@
       "email_to": "me@vigil.run",
       "email_subject": "Welcome to Notion! Your account is ready",
       "email_body": "Welcome!\n\nYour Notion account has been created.\n\nEmail: me@example.com\nPlan: Free\nWorkspace: My Workspace\n\nGet started at notion.so/login\n\nQuestions? Visit notion.so/help",
-      "email_received_at": 1742112000000,
+      "email_received_at": 1773648000000,
       "thread_id": "thread-notion-001",
       "expected_urgency": "low",
       "should_alert": false
@@ -490,7 +490,7 @@
       "email_to": "me@vigil.run",
       "email_subject": "Your Alliant account balance is below $500",
       "email_body": "Account Alert\n\nYour Alliant Checking account (ending in 7734) has fallen below your $500 minimum balance alert threshold.\n\nCurrent balance: $487.32\nAccount: Checking \u2022\u2022\u2022\u20227734\nDate: March 16, 2026\n\nConsider transferring funds to avoid any fees. Your savings account (ending in 7735) currently holds $12,450.00.\n\nLog in at alliantcreditunion.org",
-      "email_received_at": 1742112000000,
+      "email_received_at": 1773648000000,
       "thread_id": "thread-alliant-001",
       "expected_urgency": "normal",
       "should_alert": true

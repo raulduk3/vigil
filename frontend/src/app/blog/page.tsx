@@ -5,6 +5,13 @@ import { PublicHeader, Footer } from '@/components/layout';
 
 const posts = [
   {
+    slug: 'freelancers-dont-need-virtual-assistants-they-need-agents',
+    title: 'Freelancers Don\u2019t Need Virtual Assistants. They Need Agents.',
+    date: 'March 21, 2026',
+    excerpt: 'The VA industry is pivoting to "AI operators." But freelancers who never had assistants don\u2019t need to manage AI. They need an agent that watches their email and catches what they forget.',
+    tag: 'industry',
+  },
+  {
     slug: 'salesforce-agentforce-email-and-the-rest-of-us',
     title: 'Salesforce Agentforce Now Does Email. What About the Rest of Us?',
     date: 'March 18, 2026',

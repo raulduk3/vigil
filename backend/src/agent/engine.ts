@@ -19,11 +19,13 @@ import { executeSkill, SKILL_CATALOG } from "../skills/registry";
 import { reportInvocationCost } from "../billing/usage";
 import {
     buildSystemPrompt,
+    buildClassificationSystemPrompt,
     buildEmailTriggerPrompt,
     buildTickTriggerPrompt,
     buildDigestPrompt,
     buildUserQueryPrompt,
 } from "./prompts";
+import { mapClassificationToActions, mapTickToActions } from "./action-mapper";
 import {
     retrieveMemories,
     storeMemories,
@@ -348,8 +350,26 @@ export async function invokeAgent(
     );
     const skillTools = await buildSkillTools(skillRows);
 
-    const systemPrompt = buildSystemPrompt(watcher, memoryContext, activeThreads, customTools, skillTools);
+    // Determine model and tier
+    // Ticks use nano (cheapest model, absorbed by platform). Emails/chat use watcher's model.
+    const model = trigger.type === "scheduled_tick"
+        ? "gpt-4.1-nano"
+        : (watcher.model || process.env.VIGIL_MODEL || "gpt-4.1");
+    const modelTier = MODEL_CATALOG[model]?.tier ?? "standard";
+    const useClassificationPipeline = (modelTier === "mini" || modelTier === "nano")
+        && (trigger.type === "email_received" || trigger.type === "scheduled_tick");
+
+    // Build prompts: classification pipeline for mini/nano email+tick, full prompt for standard+/pro
+    let systemPrompt: string;
     let userPrompt: string;
+
+    if (useClassificationPipeline) {
+        // Classification-only prompt: model classifies, engine decides actions
+        systemPrompt = buildClassificationSystemPrompt(watcher, memoryContext, activeThreads);
+    } else {
+        // Full prompt with tools + action instructions for capable models
+        systemPrompt = buildSystemPrompt(watcher, memoryContext, activeThreads, customTools, skillTools);
+    }
 
     if (trigger.type === "email_received") {
         userPrompt = emailTriggerContext;
@@ -390,34 +410,69 @@ export async function invokeAgent(
         userPrompt = buildUserQueryPrompt(trigger.query);
     }
 
-    // 6. Call Claude API
+    // 6. Call LLM API
     let agentResponse: AgentResponse;
     let inputTokens = 0;
     let outputTokens = 0;
     let costUsd = 0;
 
-    // Ticks use nano (cheapest model, absorbed by platform). Emails/chat use watcher's model.
-    const model = trigger.type === "scheduled_tick"
-        ? "gpt-4.1-nano"
-        : (watcher.model || process.env.VIGIL_MODEL || "gpt-4.1");
-
     try {
         const result = await callLLM(systemPrompt, userPrompt, model, watcher.account_id);
-        agentResponse = result.response;
         inputTokens = result.inputTokens;
         outputTokens = result.outputTokens;
-        // Pricing: marked-up token cost + platform fee per invocation
         const rates = MODEL_CATALOG[model]?.pricing ?? { input: 0.0004, output: 0.0016 };
         costUsd =
             (result.inputTokens / 1000) * rates.input +
             (result.outputTokens / 1000) * rates.output +
             0;
+
+        if (useClassificationPipeline) {
+            // Classification pipeline: model output is classification-only, map to actions deterministically
+            const classification = result.response;
+
+            if (trigger.type === "scheduled_tick") {
+                // For ticks, compute overdue threads and map to silence alerts
+                const overdueThreads = activeThreads
+                    .filter(t => {
+                        if (t.status !== "active" || !t.last_activity) return false;
+                        const hoursSilent = (trigger.timestamp - new Date(t.last_activity).getTime()) / 3600000;
+                        return hoursSilent >= watcher.silence_hours;
+                    })
+                    .map(t => ({
+                        id: t.id,
+                        subject: t.subject ?? "(no subject)",
+                        hoursSilent: t.last_activity
+                            ? (trigger.timestamp - new Date(t.last_activity).getTime()) / 3600000
+                            : 0,
+                        summary: t.summary ?? "no summary",
+                    }));
+
+                agentResponse = mapTickToActions(classification, overdueThreads, {
+                    reactivity: watcher.reactivity ?? 3,
+                    silenceHours: watcher.silence_hours,
+                });
+            } else {
+                // For emails, map classification to alert actions
+                agentResponse = mapClassificationToActions(classification, {
+                    reactivity: watcher.reactivity ?? 3,
+                    threadId: threadId ?? undefined,
+                });
+            }
+
+            logger.info("Classification pipeline used", {
+                watcherId, model, modelTier,
+                urgency: classification.email_analysis?.urgency,
+                actionsGenerated: agentResponse.actions.length,
+            });
+        } else {
+            // Standard path: model returns full response with actions
+            agentResponse = result.response;
+        }
     } catch (err) {
         // Retry once on LLM failure
         logger.warn("LLM call failed, retrying once", { watcherId, err: String(err), model });
         try {
             const retry = await callLLM(systemPrompt, userPrompt, model, watcher.account_id);
-            agentResponse = retry.response;
             inputTokens = retry.inputTokens;
             outputTokens = retry.outputTokens;
             const rates = MODEL_CATALOG[model]?.pricing ?? { input: 0.0024, output: 0.0096 };
@@ -425,6 +480,32 @@ export async function invokeAgent(
                 (retry.inputTokens / 1000) * rates.input +
                 (retry.outputTokens / 1000) * rates.output +
                 0;
+
+            if (useClassificationPipeline) {
+                const classification = retry.response;
+                if (trigger.type === "scheduled_tick") {
+                    const overdueThreads = activeThreads
+                        .filter(t => t.status === "active" && t.last_activity &&
+                            (trigger.timestamp - new Date(t.last_activity).getTime()) / 3600000 >= watcher.silence_hours)
+                        .map(t => ({
+                            id: t.id,
+                            subject: t.subject ?? "(no subject)",
+                            hoursSilent: t.last_activity ? (trigger.timestamp - new Date(t.last_activity).getTime()) / 3600000 : 0,
+                            summary: t.summary ?? "no summary",
+                        }));
+                    agentResponse = mapTickToActions(classification, overdueThreads, {
+                        reactivity: watcher.reactivity ?? 3,
+                        silenceHours: watcher.silence_hours,
+                    });
+                } else {
+                    agentResponse = mapClassificationToActions(classification, {
+                        reactivity: watcher.reactivity ?? 3,
+                        threadId: threadId ?? undefined,
+                    });
+                }
+            } else {
+                agentResponse = retry.response;
+            }
             logger.info("LLM retry succeeded", { watcherId, model });
         } catch (retryErr) {
             logger.error("LLM retry also failed", { watcherId, err: String(retryErr), model });
