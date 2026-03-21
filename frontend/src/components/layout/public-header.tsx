@@ -13,8 +13,7 @@ interface PublicHeaderProps {
 }
 
 const defaultNavLinks = [
-  { href: '/extension', label: 'Get started' },
-  { href: '/pricing', label: 'Pricing' },
+  { href: '/learn/architecture', label: 'Architecture' },
   { href: '/learn/watchers', label: 'Docs' },
 ];
 

@@ -214,7 +214,6 @@ export default function BillingPage() {
   const [billing, setBilling] = useState<BillingStatus | null>(null);
   const [detailed, setDetailed] = useState<DetailedUsage | null>(null);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<'setup' | 'portal' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -246,30 +245,6 @@ export default function BillingPage() {
     }
     loadData();
   }, [loadData]);
-
-  async function handleSetup() {
-    setActionLoading('setup');
-    setError(null);
-    try {
-      const res = await api.setupBilling();
-      window.location.href = res.checkout_url;
-    } catch (err: any) {
-      setError(err.message ?? 'Failed to start billing setup');
-      setActionLoading(null);
-    }
-  }
-
-  async function handlePortal() {
-    setActionLoading('portal');
-    setError(null);
-    try {
-      const res = await api.getBillingPortal();
-      window.location.href = res.portal_url;
-    } catch (err: any) {
-      setError(err.message ?? 'Failed to open billing portal');
-      setActionLoading(null);
-    }
-  }
 
   if (loading) {
     return (
@@ -374,19 +349,6 @@ export default function BillingPage() {
           </div>
         )}
 
-        {/* Actions */}
-        <div className="px-5 py-4 flex flex-wrap gap-3">
-          {!billing?.has_payment_method && billing?.stripe_configured && (
-            <button onClick={handleSetup} disabled={actionLoading === 'setup'} className="btn btn-primary btn-sm">
-              {actionLoading === 'setup' ? 'Redirecting...' : 'Add payment method'}
-            </button>
-          )}
-          {billing?.has_payment_method && billing.stripe_configured && (
-            <button onClick={handlePortal} disabled={actionLoading === 'portal'} className="btn btn-secondary btn-sm">
-              {actionLoading === 'portal' ? 'Redirecting...' : 'Manage billing'}
-            </button>
-          )}
-        </div>
       </div>
 
       {/* ================================================================ */}
@@ -535,10 +497,8 @@ export default function BillingPage() {
       {/* ================================================================ */}
       <div className="rounded-lg bg-gray-50 border border-gray-200 px-4 py-3">
         <p className="text-xs text-gray-500 max-w-none">
-          <span className="font-medium text-gray-700">Pay-per-use, no tiers.</span>{' '}
-          Actual AI token cost + 5% margin on all usage. 50 free emails to start. Billed monthly through Stripe.
-          Bring your own API key for free LLM usage.
-          {!billing?.has_payment_method && ` ${billing?.trial_emails_remaining ?? 50} free emails remaining.`}
+          <span className="font-medium text-gray-700">Usage tracking.</span>{' '}
+          Every LLM call is logged with its model, token count, and cost. Bring your own API key to run at direct API cost.
         </p>
       </div>
     </main>
