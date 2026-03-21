@@ -61,7 +61,7 @@ app/
 └── account/
     ├── page.tsx                # Profile
     ├── security/               # Password, sessions
-    └── billing/                # Plan, usage
+
 ```
 
 ## Backend API (what the frontend consumes)

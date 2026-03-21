@@ -556,7 +556,8 @@ export async function invokeAgent(
     // memory or triggered an alert, urgency should not be "low".
     if (agentResponse.email_analysis) {
         const analysis = agentResponse.email_analysis;
-        const hasHighMemory = (agentResponse.memory_append ?? []).some(
+        const memAppend = agentResponse.memory_append;
+        const hasHighMemory = Array.isArray(memAppend) && memAppend.some(
             (m: any) => (m.importance ?? 3) >= 4
         );
         const hasAlert = (agentResponse.actions ?? []).some(
@@ -623,9 +624,7 @@ export async function invokeAgent(
     for (let i = 0; i < toolResults.length; i++) {
         const action = agentResponse.actions![i]!;
         const result = toolResults[i]!;
-        // Add alert delivery cost to the action's cost if applicable
-        const toolCost = result.result.cost ?? 0;
-        const actionCost = (i === 0 ? costUsd : 0) + toolCost;
+        const actionCost = i === 0 ? costUsd : 0;
         await logAction(
             watcherId, threadId, emailId, trigger.type,
             null,
@@ -635,7 +634,7 @@ export async function invokeAgent(
             result.result.success ? "success" : "failed",
             result.result.error ?? null,
             startMs,
-            null, i === 0 ? inputTokens : 0, i === 0 ? outputTokens : 0, actionCost > 0 ? actionCost : null,
+            null, i === 0 ? inputTokens : 0, i === 0 ? outputTokens : 0, actionCost > 0 ? actionCost : undefined,
             i === 0 ? model : null
         );
     }
@@ -661,15 +660,6 @@ export async function invokeAgent(
         durationMs: Date.now() - startMs,
     });
 
-    // Calculate total cost including tool costs (e.g. alert delivery)
-    let totalToolCost = 0;
-    if (agentResponse?.actions) {
-        for (const action of agentResponse.actions) {
-            if (action.result?.cost) totalToolCost += action.result.cost;
-        }
-    }
-    const totalCostAll = costUsd + totalToolCost;
-
     return agentResponse;
 }
 
@@ -687,6 +677,7 @@ export const MODEL_CATALOG: Record<string, {
     tier: "nano" | "mini" | "standard" | "pro";
     pricing: { input: number; output: number };
     maxTokens: number;
+    apiModel?: string;
 }> = {
     // OpenAI — pricing at direct API rates
     "gpt-4.1-nano": {

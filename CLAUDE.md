@@ -4,7 +4,7 @@ Development guidance for working with the Vigil codebase.
 
 ## Product
 
-Vigil is an AI agent that reads your email so you don't have to. Forward emails to a `@vigil.run` address. The agent reads each one, tracks conversations, builds memory over time, and decides what to do. Most of the time it thinks and remembers. Occasionally it alerts you when something actually needs attention. No inbox access. No email bodies stored. Usage-based pricing at actual LLM cost + 5% margin (~0.25¢/email on GPT-4.1-mini).
+Vigil is an AI agent that reads your email so you don't have to. Forward emails to a `@vigil.run` address. The agent reads each one, tracks conversations, builds memory over time, and decides what to do. Most of the time it thinks and remembers. Occasionally it alerts you when something actually needs attention. No inbox access. No email bodies stored. Free and open source — bring your own API key (BYOK).
 
 **Read PRODUCT.md for the canonical product definition.** Everything derives from that.
 
@@ -92,4 +92,4 @@ NEXT_PUBLIC_API_URL=http://localhost:3001
 
 ## Branch
 
-V2 development on `v2-agent-architecture`. Main is V1 (deprecated).
+Main branch is the current codebase.

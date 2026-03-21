@@ -150,7 +150,6 @@ export function mapTickToActions(
     // alert on active threads that weren't already covered by silence alerts
     const analysis = classification.email_analysis;
     if (analysis && (analysis.urgency === "high" || analysis.urgency === "normal")) {
-        const alertedIds = new Set(actions.map(a => a.params.thread_id));
         // The model may reference specific threads in its analysis.
         // For now, this is a catch-all for deadline-based tick alerts.
     }

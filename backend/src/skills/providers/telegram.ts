@@ -14,6 +14,6 @@ export async function execute(config: any, params: any): Promise<{ ok: boolean; 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chat_id, text: text || 'Vigil alert', parse_mode: 'HTML' }),
     });
-    if (!resp.ok) { const e = await resp.json().catch(() => ({})); return { ok: false, message: e.description || `Telegram error ${resp.status}` }; }
+    if (!resp.ok) { const e = await resp.json().catch(() => ({})) as any; return { ok: false, message: e.description || `Telegram error ${resp.status}` }; }
     return { ok: true, message: `Message sent to ${chat_id}` };
 }

@@ -41,7 +41,8 @@ export async function requireAuth(
             account_id: account.account_id,
             email: account.email,
             role: "user",
-        } as TokenPayload);
+            instance_id: "",
+        } as unknown as TokenPayload);
         await next();
         return;
     }

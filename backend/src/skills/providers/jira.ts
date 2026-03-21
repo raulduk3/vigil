@@ -25,6 +25,6 @@ export async function execute(config: any, params: any): Promise<{ ok: boolean; 
         }),
     });
     if (!resp.ok) { const e = await resp.text(); return { ok: false, message: `Jira error ${resp.status}: ${e.slice(0, 100)}` }; }
-    const data = await resp.json();
+    const data = await resp.json() as any;
     return { ok: true, message: `Created ${data.key}: https://${domain}/browse/${data.key}` };
 }

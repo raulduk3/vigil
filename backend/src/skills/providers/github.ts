@@ -16,6 +16,6 @@ export async function execute(config: any, params: any): Promise<{ ok: boolean; 
         body: JSON.stringify({ title: title || 'Vigil Alert', body: body || '', labels: labels || [] }),
     });
     if (!resp.ok) { const e = await resp.text(); return { ok: false, message: `GitHub error ${resp.status}: ${e.slice(0, 100)}` }; }
-    const data = await resp.json();
+    const data = await resp.json() as any;
     return { ok: true, message: `Created #${data.number}: ${data.html_url}` };
 }

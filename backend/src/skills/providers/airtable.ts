@@ -16,6 +16,6 @@ export async function execute(config: any, params: any): Promise<{ ok: boolean; 
         body: JSON.stringify({ records: [{ fields: fields || {} }] }),
     });
     if (!resp.ok) { const e = await resp.text(); return { ok: false, message: `Airtable error ${resp.status}: ${e.slice(0, 100)}` }; }
-    const data = await resp.json();
+    const data = await resp.json() as any;
     return { ok: true, message: `Created record: ${data.records?.[0]?.id || 'success'}` };
 }

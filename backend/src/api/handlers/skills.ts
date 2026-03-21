@@ -53,7 +53,7 @@ export const skillHandlers = {
     /** GET /api/watchers/:id/skills */
     async list(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
+        const watcherId = c.req.param("id") ?? "";
 
         if (!await verifyWatcherOwnership(watcherId, user.account_id)) {
             return c.json({ error: "Watcher not found" }, 404);
@@ -70,7 +70,7 @@ export const skillHandlers = {
     /** POST /api/watchers/:id/skills */
     async create(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
+        const watcherId = c.req.param("id") ?? "";
 
         if (!await verifyWatcherOwnership(watcherId, user.account_id)) {
             return c.json({ error: "Watcher not found" }, 404);
@@ -114,8 +114,8 @@ export const skillHandlers = {
     /** PUT /api/watchers/:id/skills/:skillId */
     async update(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
-        const skillId = c.req.param("skillId");
+        const watcherId = c.req.param("id") ?? "";
+        const skillId = c.req.param("skillId") ?? "";
 
         if (!await verifyWatcherOwnership(watcherId, user.account_id)) {
             return c.json({ error: "Watcher not found" }, 404);
@@ -162,8 +162,8 @@ export const skillHandlers = {
     /** DELETE /api/watchers/:id/skills/:skillId */
     async delete_(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
-        const skillId = c.req.param("skillId");
+        const watcherId = c.req.param("id") ?? "";
+        const skillId = c.req.param("skillId") ?? "";
 
         if (!await verifyWatcherOwnership(watcherId, user.account_id)) {
             return c.json({ error: "Watcher not found" }, 404);
@@ -182,8 +182,8 @@ export const skillHandlers = {
     /** POST /api/watchers/:id/skills/:skillId/test */
     async test(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
-        const skillId = c.req.param("skillId");
+        const watcherId = c.req.param("id") ?? "";
+        const skillId = c.req.param("skillId") ?? "";
 
         if (!await verifyWatcherOwnership(watcherId, user.account_id)) {
             return c.json({ error: "Watcher not found" }, 404);

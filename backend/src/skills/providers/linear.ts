@@ -16,7 +16,7 @@ export async function execute(config: any, params: any): Promise<{ ok: boolean; 
         body: JSON.stringify({ query: mutation }),
     });
     if (!resp.ok) return { ok: false, message: `Linear API error: ${resp.status}` };
-    const data = await resp.json();
+    const data = await resp.json() as any;
     if (data.data?.issueCreate?.success) {
         return { ok: true, message: `Created ${data.data.issueCreate.issue.identifier}: ${data.data.issueCreate.issue.url}` };
     }

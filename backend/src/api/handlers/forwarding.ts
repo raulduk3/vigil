@@ -7,7 +7,7 @@
  */
 
 import type { Context } from "hono";
-import { queryOne, queryMany, run } from "../../db/client";
+import { queryOne, run } from "../../db/client";
 
 // ============================================================================
 // Schema — auto-create the confirm_codes table if missing

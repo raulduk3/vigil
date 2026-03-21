@@ -49,14 +49,14 @@ const confirmationRelayTimes = new Map<string, number>();
  * Gmail: "Confirmation code: 123456789"
  * Outlook: typically a link, not a code
  */
-function extractConfirmationCode(body: string, from: string): { code: string; provider: string } | null {
+function extractConfirmationCode(body: string, _from: string): { code: string; provider: string } | null {
     // Gmail confirmation code
     const gmailMatch = body.match(/[Cc]onfirmation\s+[Cc]ode[:\s]+([0-9]{6,12})/);
-    if (gmailMatch) return { code: gmailMatch[1], provider: "gmail" };
+    if (gmailMatch) return { code: gmailMatch[1]!, provider: "gmail" };
 
     // Generic numeric code pattern (6-12 digits on their own line or after "code")
     const genericMatch = body.match(/(?:code|verify|confirm)[^0-9]*([0-9]{6,12})/i);
-    if (genericMatch) return { code: genericMatch[1], provider: "unknown" };
+    if (genericMatch) return { code: genericMatch[1]!, provider: "unknown" };
 
     return null;
 }
@@ -74,7 +74,7 @@ function isForwardingConfirmation(from: string, subject: string): boolean {
 async function relayConfirmationEmail(
     accountEmail: string,
     originalFrom: string,
-    subject: string,
+    _subject: string,
     body: string,
     watcherName: string
 ): Promise<boolean> {

@@ -54,7 +54,7 @@ async function verifyWatcherOwnership(watcherId: string, accountId: string): Pro
 export const customToolHandlers = {
     async list(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
+        const watcherId = c.req.param("id") ?? "";
 
         if (!await verifyWatcherOwnership(watcherId, user.account_id)) {
             return c.json({ error: "Watcher not found" }, 404);
@@ -70,7 +70,7 @@ export const customToolHandlers = {
 
     async create(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
+        const watcherId = c.req.param("id") ?? "";
 
         if (!await verifyWatcherOwnership(watcherId, user.account_id)) {
             return c.json({ error: "Watcher not found" }, 404);
@@ -100,8 +100,8 @@ export const customToolHandlers = {
 
     async update(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
-        const toolId = c.req.param("toolId");
+        const watcherId = c.req.param("id") ?? "";
+        const toolId = c.req.param("toolId") ?? "";
 
         if (!await verifyWatcherOwnership(watcherId, user.account_id)) {
             return c.json({ error: "Watcher not found" }, 404);
@@ -137,8 +137,8 @@ export const customToolHandlers = {
 
     async delete_(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
-        const toolId = c.req.param("toolId");
+        const watcherId = c.req.param("id") ?? "";
+        const toolId = c.req.param("toolId") ?? "";
 
         if (!await verifyWatcherOwnership(watcherId, user.account_id)) {
             return c.json({ error: "Watcher not found" }, 404);
@@ -156,8 +156,8 @@ export const customToolHandlers = {
 
     async test(c: Context) {
         const user = c.get("user");
-        const watcherId = c.req.param("id");
-        const toolId = c.req.param("toolId");
+        const watcherId = c.req.param("id") ?? "";
+        const toolId = c.req.param("toolId") ?? "";
 
         if (!await verifyWatcherOwnership(watcherId, user.account_id)) {
             return c.json({ error: "Watcher not found" }, 404);

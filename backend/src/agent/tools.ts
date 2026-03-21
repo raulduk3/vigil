@@ -5,7 +5,7 @@
  * Each tool has a handler that executes when the agent calls it.
  */
 
-import { run, queryOne, queryMany } from "../db/client";
+import { run, queryOne } from "../db/client";
 import { logger } from "../logger";
 import type { ToolResult, WatcherContext } from "./schema";
 import { generateThreadActionToken } from "../api/handlers/thread-actions";
@@ -160,13 +160,9 @@ async function sendAlertHandler(
         );
     }
 
-    // Alert delivery is free (absorbed in infrastructure, no per-alert charge)
-    const alertsCost = 0;
-
     return {
         success: allSucceeded,
         message: allSucceeded ? `Alert sent to ${destinations.length} recipient(s)` : "Some alert deliveries failed",
-        cost: alertsCost,
     };
 }
 

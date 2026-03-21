@@ -133,6 +133,7 @@ export interface AgentResponse {
         intent: string;
         urgency: "low" | "normal" | "high";
         entities: string[];
+        reasoning?: string;
     } | null;
 }
 

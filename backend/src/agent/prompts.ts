@@ -254,7 +254,6 @@ export function buildClassificationSystemPrompt(
         timeZone: "America/Chicago", timeZoneName: "short",
     });
 
-    const reactivity = watcher.reactivity ?? 3;
     const memSensitivity = watcher.memory_sensitivity ?? 3;
     const memSensitivityBlock = buildMemorySensitivityBlock(memSensitivity);
 
