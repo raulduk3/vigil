@@ -6,6 +6,18 @@ import { ReactivitySlider } from './reactivity-slider';
 import { Term } from '@/components/ui/term';
 import { DEFAULT_MODEL_ID, MODEL_OPTIONS, normalizeModelId } from '@/lib/models';
 
+interface KeyStatus {
+  openai: boolean;
+  anthropic: boolean;
+  google: boolean;
+}
+
+const PROVIDER_KEY_MAP: Record<string, keyof KeyStatus> = {
+  OpenAI: 'openai',
+  Anthropic: 'anthropic',
+  Google: 'google',
+};
+
 type Tab = 'watcher' | 'agent' | 'prompt' | 'channels' | 'tools';
 
 interface SettingsModalProps {
@@ -18,7 +30,7 @@ interface SettingsModalProps {
 const TOOLS = [
   { id: 'send_alert', label: 'Send Alert', description: 'Sends you an email when something needs attention. Controlled by reactivity level.' },
   { id: 'update_thread', label: 'Update Thread', description: 'Tracks conversations with status: active, watching, resolved, or ignored.' },
-  { id: 'ignore_thread', label: 'Ignore Thread', description: 'Marks irrelevant threads as noise — they stop being monitored.' },
+  { id: 'ignore_thread', label: 'Ignore Thread', description: 'Marks irrelevant threads as noise - they stop being monitored.' },
   { id: 'webhook', label: 'Webhook', description: 'Sends structured data to any URL you configure.' },
 ];
 
@@ -115,6 +127,20 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
   const [savingTool, setSavingTool] = useState(false);
   const [testingToolId, setTestingToolId] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, { success: boolean; status?: number; error?: string }>>({});
+
+  // Key status for model filtering
+  const [keyStatus, setKeyStatus] = useState<KeyStatus | null>(null);
+
+  useEffect(() => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const token = localStorage.getItem('vigil_access_token');
+    if (token) {
+      fetch(`${apiUrl}/api/account/keys`, { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : null)
+        .then(data => { if (data) setKeyStatus(data); })
+        .catch(() => {});
+    }
+  }, []);
 
   useEffect(() => {
     if (tab === 'channels') {
@@ -371,6 +397,14 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
 
   const selectedModel = MODEL_OPTIONS.find(m => m.id === model);
 
+  // Filter models to only show providers where user has a key
+  const availableModels = keyStatus
+    ? MODEL_OPTIONS.filter(m => {
+        const keyField = PROVIDER_KEY_MAP[m.provider];
+        return keyField ? keyStatus[keyField] : true;
+      })
+    : MODEL_OPTIONS;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
@@ -502,7 +536,12 @@ export function SettingsModal({ watcher, onClose, onUpdate, onDelete }: Settings
               <div className="form-group">
                 <label className="form-label text-sm">Model</label>
                 <div className="space-y-1.5">
-                  {MODEL_OPTIONS.map((option) => (
+                  {availableModels.length === 0 && (
+                    <div className="panel-inset p-3 text-xs text-gray-600">
+                      No models available. <a href="/account/keys" className="text-vigil-700 font-medium hover:text-vigil-800">Add an API key</a> to enable model selection.
+                    </div>
+                  )}
+                  {availableModels.map((option) => (
                     <label key={option.id}
                       className={`flex items-center gap-3 p-3 rounded-md border cursor-pointer transition-all ${
                         model === option.id

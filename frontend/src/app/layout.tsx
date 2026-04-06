@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     default: 'Vigil — AI Email Agent That Reads, Remembers, and Surfaces What Matters',
     template: '%s | Vigil',
   },
-  description: 'Forward emails to an AI agent that reads them, remembers context, and tells you when something matters. No inbox access. No stored email bodies. Pay actual AI cost + 5%. BYOK is free.',
+  description: 'Forward emails to an AI agent that reads them, remembers context, and tells you when something matters. No inbox access. No stored email bodies. Bring your own API key.',
   keywords: ['AI email agent', 'email automation', 'obligation tracking', 'email monitoring', 'email API', 'no inbox access', 'pay per use email', 'email webhook', 'email AI', 'autonomous email agent'],
   metadataBase: new URL('https://vigil.run'),
   openGraph: {
@@ -22,12 +22,12 @@ export const metadata: Metadata = {
     url: 'https://vigil.run',
     siteName: 'Vigil',
     title: 'Vigil — AI Email Agent That Reads, Remembers, and Surfaces What Matters',
-    description: 'Forward emails to an AI agent that reads them, remembers context, and tells you when something matters. No inbox access. Actual AI cost + 5%. BYOK is free.',
+    description: 'Forward emails to an AI agent that reads them, remembers context, and tells you when something matters. No inbox access. Bring your own API key.',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Vigil — AI Email Agent',
-    description: 'Forward emails to an AI agent that reads them, remembers context, and tells you when something matters. No inbox access. Actual AI cost + 5%. BYOK is free.',
+    description: 'Forward emails to an AI agent that reads them, remembers context, and tells you when something matters. No inbox access. Bring your own API key.',
   },
   robots: {
     index: true,
@@ -70,9 +70,9 @@ export default function RootLayout({
               operatingSystem: 'Web',
               offers: {
                 '@type': 'Offer',
-                price: '0.012',
+                price: '0',
                 priceCurrency: 'USD',
-                description: 'Actual AI cost + 5% margin. BYOK is free. 50 free emails to start.',
+                description: 'Free and open source. Bring your own API key.',
               },
             }),
           }}

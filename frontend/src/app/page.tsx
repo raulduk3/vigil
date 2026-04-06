@@ -88,6 +88,33 @@ export default function HomePage() {
         </div>
       </Section>
 
+      {/* BYOK - Bring Your Own Key */}
+      <Section className="landing-section py-14 md:py-20">
+        <div className="max-w-3xl mx-auto text-center mb-12">
+          <p className="landing-section-kicker text-center">Bring Your Own Key</p>
+          <h2 className="landing-section-title text-center mt-3">Your keys. Your models. Your cost.</h2>
+          <p className="text-base text-gray-600 mt-4 leading-relaxed">
+            Vigil is free software. Connect your own OpenAI, Anthropic, or Google API key and pay your provider directly at their published rates. No platform fees, no markup.
+          </p>
+        </div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[
+            { title: 'Any provider', desc: 'Bring your own OpenAI, Anthropic, or Google API key. Switch anytime.' },
+            { title: 'Pick per watcher', desc: 'Nano models for cheap triage, pro models for complex analysis. Mix and match.' },
+            { title: 'No markup', desc: 'You pay your provider directly at their API rates. Vigil adds nothing.' },
+            { title: 'Encrypted at rest', desc: 'Keys are stored with AES-256-GCM encryption. Never logged, never exposed.' },
+          ].map((item) => (
+            <div key={item.title} className="panel p-6">
+              <h3 className="font-semibold text-gray-900 mb-3">{item.title}</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+        <div className="text-center mt-8">
+          <Link href="/pricing" className="text-sm text-vigil-700 font-medium hover:text-vigil-800">See model costs per email →</Link>
+        </div>
+      </Section>
+
       {/* Privacy model */}
       <Section className="landing-section py-14 md:py-18">
         <div className="grid md:grid-cols-2 gap-10 items-center">

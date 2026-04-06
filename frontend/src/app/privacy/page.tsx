@@ -46,7 +46,7 @@ export default function PrivacyPage() {
               <li><strong>Memory tab</strong> — every fact the agent remembers, editable and deletable by you</li>
               <li><strong>Settings</strong> — your agent&apos;s prompt, tools, reactivity, model, and channels</li>
               <li><strong>Developer page</strong> — your API keys with usage tracking</li>
-              <li><strong>Billing page</strong> — your current usage and cost, with Stripe portal access</li>
+              <li><strong>API Keys</strong> — your provider keys and connection status</li>
             </ul>
             <p>You have full visibility into everything Vigil knows about you. There is no hidden data.</p>
 
@@ -86,7 +86,6 @@ export default function PrivacyPage() {
 
             <h2>Third-Party Services</h2>
             <ul>
-              <li><strong>Stripe</strong> — handles payment processing. We never see your full card number. Stripe&apos;s privacy policy applies to payment data.</li>
               <li><strong>OpenAI / Anthropic / Google</strong> — email content is sent to the selected AI model provider for analysis. Their data processing terms apply. Email content is not stored by these providers for model training when using API access.</li>
               <li><strong>Resend</strong> — delivers alert emails. Receives only the alert content (not the original email body).</li>
               <li><strong>Cloudflare</strong> — routes incoming email via MX records. Processes raw MIME data in transit.</li>
