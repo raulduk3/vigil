@@ -25,7 +25,7 @@ export function SubHeader({
 }: SubHeaderProps) {
   return (
     <div className="bg-surface-raised border-b border-gray-200">
-      <div className="max-w-6xl mx-auto px-6">
+      <div className="site-shell">
         <div className="flex items-center justify-between gap-4 py-5 min-h-18">
           {/* Left: Back link + title */}
           <div className="min-w-0 flex-1">

@@ -5,7 +5,7 @@ import { PublicHeader, Footer } from '@/components/layout';
 function Section({ children, className = '', id }: { children: React.ReactNode; className?: string; id?: string }) {
   return (
     <section id={id} className={className}>
-      <div className="max-w-6xl mx-auto px-6 lg:px-8">{children}</div>
+      <div className="site-shell">{children}</div>
     </section>
   );
 }
@@ -21,14 +21,14 @@ export default function HomePage() {
         <div className="absolute inset-0 z-0 bg-[#E5E5E6]/10" />
         <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-b from-[#E5E5E6]/35 via-[#E5E5E6]/20 to-transparent" />
 
-        <div className="max-w-6xl mx-auto px-6 lg:px-8 relative z-10">
-          <div className="relative max-w-4xl mx-auto">
+        <div className="site-shell relative z-10">
+          <div className="relative max-w-3xl mx-auto">
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-vigil-700 mb-5">Research project · Self-hosted · BYOK</p>
             <h1 className="text-5xl md:text-6xl font-display font-semibold text-gray-900 tracking-tight mb-7 text-balance leading-[1.1]" style={{ wordSpacing: '0.08em' }}>
               AI email triage.<br />
               Multi-model pipeline.
             </h1>
-            <p className="text-xl text-gray-600 mb-8 leading-relaxed max-w-2xl">
+            <p className="text-lg md:text-xl text-gray-700 mb-8 leading-relaxed max-w-3xl">
               Vigil is an open source email agent. Forward emails to it. The agent reads each one, tracks
               conversation threads, builds persistent memory, and decides what to do — usually nothing.
               No inbox access. No stored bodies. Bring your own API key.

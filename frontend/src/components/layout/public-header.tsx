@@ -29,7 +29,7 @@ export function PublicHeader({
 
   return (
     <header className={`border-b border-gray-200/80 bg-white/88 backdrop-blur-md supports-[backdrop-filter]:bg-white/76${fixed ? ' fixed top-0 left-0 right-0 z-50' : ''}`}>
-      <div className="max-w-6xl mx-auto px-6">
+      <div className="site-shell">
         <div className="flex justify-between items-center h-18">
           <div className="flex items-center gap-4 sm:gap-5 min-w-0 flex-1">
             <HeaderLogo />

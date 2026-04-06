@@ -45,10 +45,10 @@ export default function LearnLayout({ children }: { children: React.ReactNode })
     <div className="min-h-screen bg-surface-page">
       <PublicHeader />
       <main className="pt-28 pb-20">
-        <div className="max-w-6xl mx-auto px-6 lg:px-8">
-          <div className="flex gap-10">
+        <div className="site-shell">
+          <div className="flex gap-8 xl:gap-10">
             {/* Sidebar ToC */}
-            <aside className="hidden lg:block shrink-0 w-56">
+            <aside className="hidden lg:block shrink-0 w-52 xl:w-56">
               <div className="sticky top-24">
                 <div className="panel p-4">
                   <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider mb-3">
@@ -78,7 +78,7 @@ export default function LearnLayout({ children }: { children: React.ReactNode })
             </aside>
 
             {/* Content */}
-            <div className="flex-1 min-w-0 max-w-3xl">
+            <div className="flex-1 min-w-0 max-w-[44rem] xl:max-w-[46rem]">
               {/* Mobile ToC */}
               <div className="lg:hidden mb-8">
                 <details className="panel p-4">

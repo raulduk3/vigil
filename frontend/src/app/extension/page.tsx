@@ -60,14 +60,14 @@ export default function ExtensionPage() {
 
       <main className="pt-24 md:pt-28 pb-20">
         <section className="px-6 lg:px-8">
-          <div className="max-w-6xl mx-auto">
-            <div className="max-w-4xl mx-auto text-center mb-8 md:mb-10">
+          <div className="site-shell">
+            <div className="max-w-3xl mx-auto text-center mb-8 md:mb-10">
               <div className="landing-section-header text-center items-center mx-auto gap-3 md:gap-4">
                 <div className="landing-section-kicker">Chrome Extension</div>
                 <h1 className="text-4xl md:text-6xl font-display font-semibold text-gray-900 tracking-tight leading-[1.05] text-balance">
                   Set up forwarding without touching email OAuth.
                 </h1>
-                <p className="landing-hero-copy max-w-3xl text-lg md:text-xl text-gray-600 leading-relaxed">
+                <p className="landing-hero-copy text-lg md:text-xl text-gray-700 leading-relaxed">
                   The extension is a setup wizard for Gmail and Outlook. It gets forwarding configured in under 30 seconds,
                   retrieves Gmail confirmation codes, and then gets out of the way.
                 </p>
@@ -141,7 +141,7 @@ export default function ExtensionPage() {
         </section>
 
         <section id="setup-flow" className="landing-section px-6 lg:px-8 mt-18 scroll-mt-28">
-          <div className="max-w-6xl mx-auto">
+          <div className="site-shell">
             <div className="landing-section-header text-center items-center mx-auto mb-10">
               <div className="landing-section-kicker">Setup Flow</div>
               <h2 className="landing-section-title max-w-none">Four clean steps.</h2>
@@ -174,7 +174,7 @@ export default function ExtensionPage() {
         </section>
 
         <section id="local-install" className="landing-section px-6 lg:px-8 mt-18 scroll-mt-28">
-          <div className="max-w-6xl mx-auto flex flex-col gap-6 items-stretch">
+          <div className="site-shell flex flex-col gap-6 items-stretch">
             <div className="panel p-6 md:p-7">
               <p className="text-[11px] uppercase tracking-[0.22em] text-vigil-700/80 mb-3">Install in Chrome</p>
               <h2 className="text-2xl font-display font-semibold text-gray-900 mb-3">Three steps. Under a minute.</h2>

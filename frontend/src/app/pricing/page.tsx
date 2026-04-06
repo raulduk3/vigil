@@ -6,7 +6,7 @@ import { PublicHeader, Footer } from '@/components/layout';
 function Section({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
     <section className={className}>
-      <div className="max-w-6xl mx-auto px-6 lg:px-8">{children}</div>
+      <div className="site-shell">{children}</div>
     </section>
   );
 }

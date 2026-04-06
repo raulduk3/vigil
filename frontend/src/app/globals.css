@@ -135,7 +135,7 @@ html {
   body {
     @apply bg-surface-page text-gray-700;
     font-size: 15px;
-    line-height: 1.6;
+    line-height: 1.62;
     letter-spacing: -0.003em;
   }
 
@@ -166,9 +166,9 @@ html {
 
   /* Readable body text */
   p {
-    @apply text-gray-600;
-    max-width: 68ch;
-    line-height: 1.7;
+    @apply text-gray-700;
+    max-width: 64ch;
+    line-height: 1.68;
   }
 
   /* Learn pages: allow full-width text to avoid premature wrapping */
@@ -637,8 +637,8 @@ html {
   }
 
   .landing-section-header {
-    @apply flex flex-col gap-4;
-    max-width: 52rem;
+    @apply flex flex-col gap-3;
+    max-width: 46rem;
   }
 
   .landing-section-kicker {
@@ -663,8 +663,8 @@ html {
   }
 
   .landing-section-title {
-    @apply text-3xl md:text-4xl font-display font-semibold text-gray-900 tracking-tight;
-    max-width: 22ch;
+    @apply text-3xl md:text-[2.2rem] font-display font-semibold text-gray-900 tracking-tight;
+    max-width: 20ch;
     line-height: 1.08;
   }
 
@@ -675,9 +675,9 @@ html {
   }
 
   .landing-section-copy {
-    @apply text-lg text-gray-600 leading-relaxed;
+    @apply text-base md:text-[1.05rem] text-gray-700 leading-relaxed;
     width: 100%;
-    max-width: none;
+    max-width: 42rem;
     text-wrap: pretty;
   }
 
@@ -687,13 +687,26 @@ html {
 
   .landing-hero-copy {
     width: 100%;
-    max-width: none;
+    max-width: 44rem;
     text-wrap: pretty;
   }
 
   .landing-section-header.text-center .landing-section-title,
   .landing-section-header.text-center .landing-section-copy {
     margin-inline: auto;
+  }
+
+  .site-shell {
+    width: 100%;
+    max-width: 68rem;
+    margin-inline: auto;
+    padding-inline: 1.5rem;
+  }
+
+  @media (min-width: 1024px) {
+    .site-shell {
+      padding-inline: 2rem;
+    }
   }
 
   .landing-step-card,
