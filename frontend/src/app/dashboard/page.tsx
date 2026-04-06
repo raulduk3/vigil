@@ -10,7 +10,6 @@ import {
   InboxPanel,
   ControlPanel,
   SettingsModal,
-  SkillsPanel,
 } from '@/components/dashboard';
 
 function DashboardContent() {
@@ -30,8 +29,7 @@ function DashboardContent() {
   const [localThreads, setLocalThreads] = useState<Record<string, Thread[]>>({});
   const [actions, setActions] = useState<Action[]>([]);
   const [memories, setMemories] = useState<Memory[]>([]);
-  const [mobileTab, setMobileTab] = useState<'inbox' | 'chat' | 'activity' | 'skills'>('inbox');
-  const [skillsOpen, setSkillsOpen] = useState(false);
+  const [mobileTab, setMobileTab] = useState<'inbox' | 'chat' | 'activity'>('inbox');
 
   // Sync from realtime hook
   useEffect(() => {
@@ -140,12 +138,6 @@ function DashboardContent() {
         {selectedWatcher && (
           <div className="flex gap-1.5">
             <button
-              onClick={() => setSkillsOpen(true)}
-              className="text-xs text-vigil-700 px-2 py-1.5 border border-vigil-200 rounded font-medium"
-            >
-              Skills
-            </button>
-            <button
               onClick={() => setSettingsWatcher(selectedWatcher)}
               className="text-xs text-gray-500 px-2 py-1.5 border border-gray-200 rounded"
             >
@@ -163,7 +155,6 @@ function DashboardContent() {
           selectedId={selectedWatcherId}
           onSelect={handleSelectWatcher}
           onSettings={setSettingsWatcher}
-          onSkills={() => setSkillsOpen(true)}
         />
       </div>
 
@@ -211,21 +202,7 @@ function DashboardContent() {
         >
           Activity
         </button>
-        <button
-          onClick={() => setSkillsOpen(true)}
-          className="flex-1 py-3 text-xs font-semibold text-center transition-colors text-vigil-700"
-        >
-          Skills
-        </button>
       </div>
-
-      {/* Skills Modal */}
-      {skillsOpen && (
-        <SkillsPanel
-          watcher={selectedWatcher}
-          onClose={() => setSkillsOpen(false)}
-        />
-      )}
 
       {/* Settings Modal */}
       {settingsWatcher && (

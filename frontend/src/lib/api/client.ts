@@ -458,37 +458,6 @@ export const api = {
     return request(`/api/keys/${id}`, { method: 'DELETE' });
   },
 
-  // Skills
-  async getSkillsCatalog(): Promise<{ catalog: unknown[] }> {
-    return request('/api/skills/catalog');
-  },
-
-  async getSkills(watcherId: string): Promise<{ skills: unknown[] }> {
-    return request(`/api/watchers/${watcherId}/skills`);
-  },
-
-  async createSkill(watcherId: string, data: { provider: string; name: string; config: Record<string, string> }): Promise<{ skill: unknown }> {
-    return request(`/api/watchers/${watcherId}/skills`, {
-      method: 'POST',
-      body: JSON.stringify(data),
-    });
-  },
-
-  async updateSkill(watcherId: string, skillId: string, data: Record<string, unknown>): Promise<{ skill: unknown }> {
-    return request(`/api/watchers/${watcherId}/skills/${skillId}`, {
-      method: 'PUT',
-      body: JSON.stringify(data),
-    });
-  },
-
-  async deleteSkill(watcherId: string, skillId: string): Promise<void> {
-    return request(`/api/watchers/${watcherId}/skills/${skillId}`, { method: 'DELETE' });
-  },
-
-  async testSkill(watcherId: string, skillId: string): Promise<{ success: boolean; status?: number; error?: string }> {
-    return request(`/api/watchers/${watcherId}/skills/${skillId}/test`, { method: 'POST' });
-  },
-
   // Health
   async getHealth(): Promise<{ status: string }> {
     const response = await fetch(`${API_URL}/health`);

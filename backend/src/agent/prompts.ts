@@ -13,13 +13,6 @@ export interface CustomToolDescriptor {
     parameter_schema: Record<string, { type?: string; description?: string }>;
 }
 
-export interface SkillToolDescriptor {
-    tool_name: string;  // e.g. skill_slack_my_alerts
-    provider: string;
-    skill_name: string;
-    description: string;
-}
-
 // ============================================================================
 // System Prompt
 // ============================================================================
@@ -29,7 +22,6 @@ export function buildSystemPrompt(
     memoryContext: string,
     activeThreads: ThreadRow[],
     customTools: CustomToolDescriptor[] = [],
-    skillTools: SkillToolDescriptor[] = []
 ): string {
     const tools = safeParseJson<string[]>(watcher.tools, []);
     const threadContext = buildThreadContext(activeThreads);
@@ -59,12 +51,7 @@ export function buildSystemPrompt(
           }).join("\n")
         : "";
 
-    const skillToolDescs = skillTools.length > 0
-        ? "\n\n**Skills (pre-built integrations — call by tool name):**\n" +
-          skillTools.map(st => `- **${st.tool_name}**: ${st.description}`).join("\n")
-        : "";
-
-    const toolDescriptions = builtinDescs + customToolDescs + skillToolDescs;
+    const toolDescriptions = builtinDescs + customToolDescs;
 
     // Reactivity level (1-5, default 3)
     const reactivity = watcher.reactivity ?? 3;

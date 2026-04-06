@@ -8,4 +8,3 @@ export { AgentChat } from './agent-chat';
 export { StatsCard } from './stats-card';
 export { MemoryPanel } from './memory-panel';
 export { SettingsModal } from './settings-modal';
-export { SkillsPanel } from './skills-panel';

@@ -15,7 +15,6 @@
 import { queryOne, queryMany, run } from "../db/client";
 import { logger } from "../logger";
 import { decrypt } from "../auth/encryption";
-import { executeSkill, SKILL_CATALOG } from "../skills/registry";
 import {
     buildSystemPrompt,
     buildClassificationSystemPrompt,
@@ -325,13 +324,6 @@ export async function invokeAgent(
         parameter_schema: (() => { try { return JSON.parse(row.parameter_schema); } catch { return {}; } })(),
     }));
 
-    // Load enabled skills for this watcher and build skill tools
-    const skillRows = queryMany<{ id: string; provider: string; name: string; config_enc: string | null }>(
-        `SELECT id, provider, name, config_enc FROM skills WHERE watcher_id = ? AND enabled = TRUE`,
-        [watcherId]
-    );
-    const skillTools = await buildSkillTools(skillRows);
-
     // Determine model and tier
     // Ticks use nano (cheapest model, absorbed by platform). Emails/chat use watcher's model.
     const model = trigger.type === "scheduled_tick"
@@ -350,7 +342,7 @@ export async function invokeAgent(
         systemPrompt = buildClassificationSystemPrompt(watcher, memoryContext, activeThreads);
     } else {
         // Full prompt with tools + action instructions for capable models
-        systemPrompt = buildSystemPrompt(watcher, memoryContext, activeThreads, customTools, skillTools);
+        systemPrompt = buildSystemPrompt(watcher, memoryContext, activeThreads, customTools);
     }
 
     if (trigger.type === "email_received") {
@@ -511,30 +503,13 @@ export async function invokeAgent(
             action.params.thread_id = threadId;
         }
 
-        // Check if this is a skill tool (prefix: skill_<provider>_)
-        const skillMatch = action.tool.match(/^skill_([^_]+)_(.+)$/);
-        const matchedSkill = skillMatch
-            ? skillRows.find(s => s.provider === skillMatch[1] && slugifyName(s.name) === skillMatch[2])
-            : null;
-
-        if (matchedSkill) {
-            const result = await executeSkillTool(matchedSkill, action.params);
-            toolResults.push({ tool: action.tool, result });
-            logger.info("Skill tool executed", {
-                tool: action.tool,
-                provider: matchedSkill.provider,
-                skillName: matchedSkill.name,
-                ok: result.success,
-            });
-        } else {
-            const result = await executeTool(action.tool, action.params, ctx, emailThreadCtx);
-            toolResults.push({ tool: action.tool, result });
-            logger.info("Tool executed", {
-                tool: action.tool,
-                success: result.success,
-                reasoning: action.reasoning,
-            });
-        }
+        const result = await executeTool(action.tool, action.params, ctx, emailThreadCtx);
+        toolResults.push({ tool: action.tool, result });
+        logger.info("Tool executed", {
+            tool: action.tool,
+            success: result.success,
+            reasoning: action.reasoning,
+        });
     }
 
     // Persist thread updates from agent response
@@ -1264,63 +1239,4 @@ function safeParseJson<T>(value: string | null | undefined, fallback: T): T {
     }
 }
 
-// ============================================================================
-// Skills Helpers
-// ============================================================================
 
-/** Convert a skill name to a slug usable as part of a tool name */
-function slugifyName(name: string): string {
-    return name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "");
-}
-
-interface SkillRowMin {
-    id: string;
-    provider: string;
-    name: string;
-    config_enc: string | null;
-}
-
-/** Build the SkillToolDescriptor list for the system prompt */
-async function buildSkillTools(rows: SkillRowMin[]): Promise<import("./prompts").SkillToolDescriptor[]> {
-    return rows.map(row => {
-        const catalogEntry = SKILL_CATALOG.find(e => e.provider === row.provider);
-        const description = catalogEntry
-            ? `${catalogEntry.name} — ${catalogEntry.description} (skill: "${row.name}")`
-            : `${row.provider} skill "${row.name}"`;
-        return {
-            tool_name: `skill_${row.provider}_${slugifyName(row.name)}`,
-            provider: row.provider,
-            skill_name: row.name,
-            description,
-        };
-    });
-}
-
-/** Execute a skill tool call from the agent */
-async function executeSkillTool(
-    skill: SkillRowMin,
-    params: Record<string, unknown>
-): Promise<{ success: boolean; error?: string; cost?: number }> {
-    if (!skill.config_enc) {
-        return { success: false, error: `Skill "${skill.name}" has no config — credentials not set` };
-    }
-
-    let config: unknown;
-    try {
-        config = JSON.parse(decrypt(skill.config_enc));
-    } catch (err) {
-        return { success: false, error: `Failed to decrypt skill config: ${String(err)}` };
-    }
-
-    try {
-        const result = await executeSkill(skill.provider, config, params);
-        // Increment execution_count and update last_executed_at
-        run(
-            `UPDATE skills SET execution_count = execution_count + 1, last_executed_at = CURRENT_TIMESTAMP WHERE id = ?`,
-            [skill.id]
-        );
-        return { success: result.ok, error: result.ok ? undefined : result.message };
-    } catch (err) {
-        return { success: false, error: String(err) };
-    }
-}

@@ -52,25 +52,6 @@ export async function initializeDatabase(): Promise<void> {
         try { database.exec(sql); } catch { /* column already exists */ }
     }
 
-    // Migrate: add skills table
-    const skillsMigrations = [
-        `CREATE TABLE IF NOT EXISTS skills (
-          id TEXT PRIMARY KEY,
-          watcher_id TEXT NOT NULL REFERENCES watchers(id),
-          provider TEXT NOT NULL,
-          name TEXT NOT NULL,
-          config_enc TEXT,
-          enabled BOOLEAN DEFAULT TRUE,
-          execution_count INTEGER DEFAULT 0,
-          last_executed_at TIMESTAMP,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )`,
-        `CREATE INDEX IF NOT EXISTS idx_skills_watcher ON skills(watcher_id)`,
-    ];
-    for (const sql of skillsMigrations) {
-        try { database.exec(sql); } catch { /* already exists */ }
-    }
-
     // Migrate: add account-level usage tracking (survives watcher deletion/flush)
     const usageMigrations = [
         `ALTER TABLE accounts ADD COLUMN usage_month TEXT`,       // e.g. "2026-03"
