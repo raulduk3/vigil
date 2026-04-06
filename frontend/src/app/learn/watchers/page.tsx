@@ -7,7 +7,7 @@ export default function WatchersPage() {
       <ul>
         <li>You might have one watcher for work, another for finances, another for package deliveries</li>
         <li>Watchers don't share knowledge and don't interfere with each other</li>
-        <li>Each is completely self-contained, billed at actual AI cost + 5%</li>
+        <li>Each is completely self-contained with its own AI cost tracked separately</li>
       </ul>
 
       <h2>Creating a watcher</h2>
@@ -44,7 +44,7 @@ export default function WatchersPage() {
       <ul>
         <li>Your work watcher can be aggressive about deadlines while your personal watcher sits at low reactivity</li>
         <li>A conversation in one watcher has no influence on decisions made in another</li>
-        <li>Each watcher is billed independently at actual AI cost + 5%</li>
+        <li>Each watcher runs independently — you pay your provider directly for each one</li>
       </ul>
     </div>
   );

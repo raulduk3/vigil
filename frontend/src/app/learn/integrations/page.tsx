@@ -61,9 +61,9 @@ const { response } = await fetch(\`\${BASE}/watchers/\${WATCHER}/invoke\`, {
       <h1>Connect Vigil to Your Agent</h1>
       <p>
         Vigil works as a dedicated email sub-agent for any AI system. Give your assistant,
-        copilot, or autonomous agent full access to your email inbox through a simple REST API.
-        It can check obligations, read thread summaries, take actions, and stay informed about
-        everything happening in your email.
+        copilot, or autonomous agent access to your email through a simple REST API.
+        Check obligations, read thread summaries, take actions, and query everything
+        happening in your inbox.
       </p>
 
       <h2>How It Works</h2>

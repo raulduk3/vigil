@@ -9,7 +9,7 @@ export default function EmailIngestionPage() {
           <div className="grid gap-3 md:grid-cols-3">
             <LinkCard href="/auth/register" label="1. Create account" copy="Start with one watcher and get your forwarding address." />
             <LinkCard href="/extension" label="2. Use the extension" copy="Fastest path for Gmail and Outlook forwarding." />
-            <LinkCard href="/pricing" label="Need the math?" copy="Actual AI cost + 5%. BYOK is free. 50 free emails to start." />
+            <LinkCard href="/pricing" label="Need the math?" copy="See per-email cost estimates by model tier." />
           </div>
         </div>
       </div>

@@ -31,7 +31,7 @@ export default function PricingPage() {
               Free and open source.
             </h1>
             <p className="text-xl text-gray-600 leading-relaxed">
-              Vigil is free software. Bring your own API keys. You pay your provider directly at their published API rates. No platform fees, no markup, no metering.
+              Vigil is free software. Bring your own API keys and pay your provider directly. No platform fees, no markup, no metering.
             </p>
           </div>
 

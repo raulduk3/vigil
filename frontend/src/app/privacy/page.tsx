@@ -14,8 +14,8 @@ export default function PrivacyPage() {
             Your data. Your control.
           </h1>
           <p className="text-xl text-gray-600 leading-relaxed mb-12">
-            Vigil is built on a simple principle: we process your email without keeping it. 
-            This page explains exactly what we store, what we discard, how we protect what remains, 
+            Vigil processes your email without keeping it. 
+            This page explains what we store, what we discard, how we protect what remains, 
             and what rights you have over your data.
           </p>
 

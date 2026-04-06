@@ -29,8 +29,8 @@ export default function HomePage() {
               Multi-model pipeline.
             </h1>
             <p className="text-lg md:text-xl text-gray-700 mb-8 leading-relaxed max-w-3xl">
-              Vigil is an open source email agent. Forward emails to it. The agent reads each one, tracks
-              conversation threads, builds persistent memory, and decides what to do — usually nothing.
+              Vigil is an open source email agent. Forward emails to it and the agent reads each one, tracks
+              conversation threads, builds persistent memory, and decides what to do. Usually nothing.
               No inbox access. No stored bodies. Bring your own API key.
             </p>
             <div className="flex flex-wrap gap-4">
@@ -67,10 +67,10 @@ export default function HomePage() {
       <Section className="landing-section landing-section-banded border-y border-gray-200 py-14 md:py-20">
         <div className="max-w-3xl mx-auto text-center mb-10">
           <p className="landing-section-kicker text-center">Pipeline</p>
-          <h2 className="landing-section-title text-center mt-3">Multi-model classification pipeline.</h2>
+          <h2 className="landing-section-title text-center mt-3">Multi-model classification pipeline</h2>
           <p className="text-base text-gray-600 mt-4 leading-relaxed">
-            A nano model pre-screens every email before full triage. This eliminates roughly 40% of LLM spend
-            on clearly ignorable mail. The full triage model only runs when the pre-screen deems it necessary.
+            A nano model pre-screens every email before full triage, eliminating roughly 40% of LLM spend
+            on clearly ignorable mail. The full triage model only runs when pre-screening deems it necessary.
           </p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 max-w-4xl mx-auto">

@@ -146,7 +146,7 @@ export default function ExtensionPage() {
               <div className="landing-section-kicker">Setup Flow</div>
               <h2 className="landing-section-title max-w-none">Four clean steps.</h2>
               <p className="landing-section-copy">
-                This page should read like instructions, not marketing copy. Install it, sign in, turn on forwarding, done.
+                Install it, sign in, turn on forwarding, done.
               </p>
             </div>
 

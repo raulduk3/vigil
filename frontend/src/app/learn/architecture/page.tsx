@@ -3,7 +3,7 @@ export default function ArchitecturePage() {
     <div className="prose">
       <p className="text-sm font-medium text-vigil-700 uppercase tracking-wider mb-3">Documentation</p>
       <h1>Architecture</h1>
-      <p>Understanding how Vigil is built helps clarify what it can and cannot do with your data. The system is designed around a single constraint: it must be able to process email intelligently without ever storing the email itself.</p>
+      <p>Understanding how Vigil is built clarifies what it can and cannot do with your data. Every architectural decision flows from one constraint: the system must process email intelligently without ever storing the email itself.</p>
       <ul>
         <li>Every architectural decision flows from that requirement</li>
         <li>Privacy is structural, not promised — the system is incapable of exposing data it doesn't have</li>
