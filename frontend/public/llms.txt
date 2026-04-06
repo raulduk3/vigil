@@ -20,7 +20,7 @@ GET  /watchers/:id/threads        — email threads
 POST /watchers/:id/invoke         — chat { message: "..." }
 GET  /watchers/:id/memory         — agent memories
 GET  /watchers/:id/actions        — action log
-GET  /usage                       — cost + usage
+GET  /watchers/:id/export         — full data export with cost summary
 
 ## Files
 

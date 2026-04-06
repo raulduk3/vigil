@@ -19,7 +19,7 @@ Manage Vigil email watchers from OpenClaw. Authenticated via API key (`vk_`).
 
 2. **Set environment variables** (add to your shell profile or OpenClaw config):
    ```bash
-   export VIGIL_API_KEY="vk_your_key_here"       # Required — get from https://vigil.run/settings
+   export VIGIL_API_KEY="vk_your_key_here"       # Required — get from https://vigil.run/account/developer
    export VIGIL_API_URL="https://api.vigil.run"   # Optional — defaults to https://api.vigil.run
    export VIGIL_WATCHER_ID="your-watcher-uuid"    # Optional — auto-detects first watcher
    ```

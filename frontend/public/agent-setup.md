@@ -31,9 +31,9 @@ curl -s https://api.vigil.run/api/watchers/WATCHER_ID/invoke \
 | `POST /api/watchers/:id/invoke` | Chat with the agent (has full email context) |
 | `GET /api/watchers/:id/memory` | What the agent remembers about your correspondences |
 | `GET /api/watchers/:id/actions` | Actions the agent has taken |
-| `GET /api/usage` | Cost and usage breakdown |
+| `GET /api/watchers/:id/export` | Full watcher data export with cost summary |
 
-## MCP integration
+## Agent integration
 
 Vigil exposes a skill definition for agent frameworks:
 

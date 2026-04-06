@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Configuration via environment variables
 API="${VIGIL_API_URL:-https://api.vigil.run}"
-VK="${VIGIL_API_KEY:?VIGIL_API_KEY is required. Get yours at https://vigil.run/settings}"
+VK="${VIGIL_API_KEY:?VIGIL_API_KEY is required. Get yours at https://vigil.run/account/developer}"
 AUTH="Authorization: Bearer $VK"
 
 # Resolve default watcher ID (first watcher on the account)
@@ -59,17 +59,18 @@ case "${1:---help}" in
     ;;
 
   status)
-    echo "=== Vigil Inbox Status ==="
-    curl -sf "$API/api/usage" -H "$AUTH" | python3 -c "
-import json, sys
-u = json.load(sys.stdin)['usage']
-print(f'Emails processed: {u[\"total_emails\"]}')
-print(f'Alerts sent: {u[\"total_alerts\"]}')
-print(f'This month: \${u[\"current_month\"][\"cost\"]:.4f} ({u[\"current_month\"][\"invocations\"]} invocations)')
-for w in u['watchers']:
-    print(f'  {w[\"watcher_name\"]}: {w[\"emails\"]} emails, {w[\"alerts\"]} alerts, \${w[\"cost\"]:.4f}')
-"
     WID=$(get_watcher)
+    echo "=== Vigil Inbox Status ==="
+    curl -sf "$API/api/watchers/$WID/export" -H "$AUTH" | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+cs = data.get('cost_summary', {})
+print(f'Emails processed: {len(data.get(\"emails\", []))}')
+print(f'Total actions: {cs.get(\"total_actions\", 0)}')
+print(f'Total cost: \${float(cs.get(\"total_cost\", 0)):.4f}')
+for m in cs.get('models', []):
+    print(f'  {m[\"model\"]}: {m[\"invocations\"]} calls, \${float(m.get(\"cost_usd\", 0)):.4f}')
+"
     echo ""
     echo "=== Active Threads ==="
     curl -sf "$API/api/watchers/$WID/threads?status=active" -H "$AUTH" | python3 -c "
@@ -143,16 +144,22 @@ print(json.load(sys.stdin).get('message', 'No response'))
     ;;
 
   usage)
-    curl -sf "$API/api/usage" -H "$AUTH" | python3 -c "
+    WID=$(get_watcher)
+    curl -sf "$API/api/watchers/$WID/export" -H "$AUTH" | python3 -c "
 import json, sys
-u = json.load(sys.stdin)['usage']
-print(f'Total cost: \${u[\"total_cost\"]:.4f}')
-print(f'Total invocations: {u[\"total_invocations\"]}')
-print(f'Total emails: {u[\"total_emails\"]}')
-print(f'Total alerts: {u[\"total_alerts\"]}')
-print(f'This month: \${u[\"current_month\"][\"cost\"]:.4f} ({u[\"current_month\"][\"invocations\"]} invocations)')
-for w in u['watchers']:
-    print(f'  {w[\"watcher_name\"]}: \${w[\"cost\"]:.4f} | {w[\"emails\"]} emails | {w[\"alerts\"]} alerts')
+data = json.load(sys.stdin)
+cs = data.get('cost_summary', {})
+print(f'Total cost: \${float(cs.get(\"total_cost\", 0)):.4f}')
+print(f'Total actions: {cs.get(\"total_actions\", 0)}')
+print(f'Emails: {len(data.get(\"emails\", []))}')
+print(f'Threads: {len(data.get(\"threads\", []))}')
+print(f'Memories: {len(data.get(\"memories\", []))}')
+print()
+models = cs.get('models', [])
+if models:
+    print('Model breakdown:')
+    for m in models:
+        print(f'  {m[\"model\"]}: {m[\"invocations\"]} calls, \${float(m.get(\"cost_usd\", 0)):.4f}')
 "
     ;;
 
