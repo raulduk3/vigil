@@ -33,15 +33,12 @@ curl -s https://api.vigil.run/api/watchers/WATCHER_ID/invoke \
 | `GET /api/watchers/:id/actions` | Actions the agent has taken |
 | `GET /api/usage` | Cost and usage breakdown |
 
-## MCP integration
+## Resources
 
-Vigil exposes a skill definition for agent frameworks:
-
-- **Skill file:** [vigil.run/SKILL.md](https://vigil.run/SKILL.md)
 - **CLI wrapper:** [vigil.run/vigil.sh](https://vigil.run/vigil.sh)
 - **LLM context:** [vigil.run/llms.txt](https://vigil.run/llms.txt)
 
-Any agent that can make HTTP calls can use Vigil: OpenClaw, LangChain, CrewAI, AutoGen, Claude tool use, or plain cURL.
+Any agent that can make HTTP calls can use Vigil: LangChain, CrewAI, AutoGen, Claude tool use, or plain cURL.
 
 ## How it works
 

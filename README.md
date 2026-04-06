@@ -188,14 +188,9 @@ vigil/
 ├── frontend/               # Next.js 14 dashboard (App Router)
 ├── chrome-extension/       # Sidepanel: setup, chat, watcher overview
 ├── cloudflare-worker/      # MX-level email ingestion
-├── skills/openclaw/        # OpenClaw agent skill
 ├── backend/promptfoo/      # LLM eval suite (promptfoo)
 └── docs/                   # Architecture and reference docs
 ```
-
-## OpenClaw Integration
-
-Vigil ships with an [OpenClaw](https://openclaw.com) skill for querying watchers, threads, and memories from your assistant. See the `skills/openclaw/` directory for the skill definition and setup instructions.
 
 ## Contributing
 
