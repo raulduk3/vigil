@@ -12,6 +12,7 @@ const PAGES = [
   { href: '/learn/architecture', label: 'Architecture' },
   { href: '/learn/actions', label: 'How the Agent Acts' },
   { href: '/learn/integrations', label: 'Agent Integration' },
+  { href: '/learn/openclaw', label: 'OpenClaw Skill' },
   { href: '/learn/security', label: 'Security & Privacy' },
   { href: '/learn/api', label: 'API Reference' },
 ];

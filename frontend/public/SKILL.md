@@ -1,62 +1,64 @@
 ---
 name: vigil
-description: Query and control Vigil email watchers via API. Check inbox, obligations, threads, memories, tools, and chat with the agent. Use when asked about email, deadlines, obligations, or anything the email agent monitors.
+description: Query and control Vigil email watchers via API key. Check inbox, obligations, threads, memories, tools, and chat with the agent. Use when the user asks about email, obligations, deadlines, or anything Vigil watches.
+metadata:
+  openclaw:
+    emoji: "👁️"
 ---
 
-# Vigil — Email Agent
+# Vigil Integration
 
-API: `https://api.vigil.run`
-Auth: `Authorization: Bearer <your-api-key>`
-
-Get your API key at: https://vigil.run/account/developer
-Get your watcher ID from the dashboard URL.
+Manage Vigil email watchers from OpenClaw. Authenticated via API key (`vk_`).
 
 ## Setup
 
-```bash
-curl -s https://vigil.run/vigil.sh -o vigil.sh
-chmod +x vigil.sh
-# Edit vigil.sh: set VK and WATCHER at the top
-```
+1. **Install the skill** (symlink recommended so updates pull automatically):
+   ```bash
+   ln -s /path/to/vigil/skills/openclaw ~/.openclaw/skills/vigil
+   ```
+
+2. **Set environment variables** (add to your shell profile or OpenClaw config):
+   ```bash
+   export VIGIL_API_KEY="vk_your_key_here"       # Required — get from https://vigil.run/settings
+   export VIGIL_API_URL="https://api.vigil.run"   # Optional — defaults to https://api.vigil.run
+   export VIGIL_WATCHER_ID="your-watcher-uuid"    # Optional — auto-detects first watcher
+   ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `./vigil.sh status` | Inbox overview: email count, alerts, costs, active threads |
-| `./vigil.sh emails [n]` | List recent emails with triage status (default 10) |
-| `./vigil.sh threads [status]` | List threads by status: active, watching, ignored, resolved |
-| `./vigil.sh obligations` | Ask the agent what needs attention right now |
-| `./vigil.sh chat "message"` | Talk to the agent (can take actions, add rules, modify behavior) |
-| `./vigil.sh usage` | Full cost and usage breakdown |
-| `./vigil.sh memories` | List agent memories with importance levels |
-| `./vigil.sh tools` | List custom webhook tools configured on the watcher |
+| `vigil.sh status` | Inbox overview: email count, alerts, costs, active/watching threads |
+| `vigil.sh emails [n]` | List recent emails with triage status (default 10) |
+| `vigil.sh threads [status]` | List threads by status: active, watching, ignored, resolved |
+| `vigil.sh obligations` | Ask the agent what needs attention right now |
+| `vigil.sh chat "message"` | Talk to the Vigil agent (can take actions, add rules) |
+| `vigil.sh usage` | Full cost and usage breakdown |
+| `vigil.sh memories` | List agent memories with importance levels |
+| `vigil.sh tools` | List custom tools configured on the watcher |
+| `vigil.sh models` | List available AI models |
+| `vigil.sh config` | Show all watcher configurations |
+| `vigil.sh set-model <id> <model>` | Change a watcher's AI model |
+| `vigil.sh flush [watcher_id]` | Flush all threads, emails, and memories |
 
-## API Endpoints
+Script path: `~/.openclaw/skills/vigil/scripts/vigil.sh`
 
-All endpoints use `Authorization: Bearer vk_...`
+## When to use
 
-### Watchers
-- `GET /api/watchers` — list watchers
-- `POST /api/watchers` — create watcher `{ name, system_prompt }`
-- `GET /api/watchers/:id` — watcher detail
-- `PATCH /api/watchers/:id` — update watcher `{ system_prompt, model, ... }`
+- "Check my email" / "Any new emails?" → `vigil.sh status` or `vigil.sh emails`
+- "What obligations do I have?" → `vigil.sh obligations`
+- "Tell Vigil to ignore GitHub" → `vigil.sh chat "ignore all GitHub emails"`
+- "How much has Vigil cost?" → `vigil.sh usage`
+- "What does Vigil remember?" → `vigil.sh memories`
+- "What tools are set up?" → `vigil.sh tools`
+- "What models can Vigil use?" → `vigil.sh models`
+- "Show watcher config" → `vigil.sh config`
+- "Switch watcher to gpt-4o" → `vigil.sh set-model <watcher_id> gpt-4o`
 
-### Threads
-- `GET /api/watchers/:id/threads` — list email threads
-- `GET /api/watchers/:id/threads/:threadId` — thread detail
+## Chat commands through Vigil
 
-### Agent
-- `POST /api/watchers/:id/invoke` — chat `{ message: "..." }`
-- `GET /api/watchers/:id/memory` — agent memories
-- `GET /api/watchers/:id/actions` — action history
-
-### Account
-- `GET /api/usage` — cost and usage
-- `GET /api/keys` — API keys
-
-## Integration
-
-Works with any system that can make HTTP calls: LangChain, CrewAI, AutoGen, MCP, cron jobs, custom scripts.
-
-Full docs: https://vigil.run/learn/integrations
+The chat endpoint can take actions:
+- "Ignore emails from X" → ignores threads + adds persistent rule
+- "Resolve the payment thread" → changes thread status
+- "Never alert me about receipts" → adds behavioral rule
+- "Be more aggressive about deadlines" → modifies agent prompt

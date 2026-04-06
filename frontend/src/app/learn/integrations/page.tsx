@@ -209,6 +209,7 @@ const { response } = await fetch(\`\${BASE}/watchers/\${WATCHER}/invoke\`, {
         <li><strong>AutoGen / Semantic Kernel</strong> — register Vigil endpoints as function calls. The planner invokes them when email context is needed.</li>
         <li><strong>MCP (Model Context Protocol)</strong> — expose Vigil&apos;s API as MCP tools. Any MCP-compatible client can query the inbox.</li>
         <li><strong>Cron / scripts</strong> — call the digest endpoint on a schedule, pipe the result to Slack, email, or a dashboard.</li>
+        <li><strong><a href="/learn/openclaw">OpenClaw</a></strong> — one-command install. Drop the Vigil skill into your OpenClaw agent and talk to your inbox in natural language.</li>
       </ul>
     </div>
   );
