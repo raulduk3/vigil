@@ -142,8 +142,8 @@ export const authHandlers = {
         const passwordHash = await Bun.password.hash(password);
 
         run(
-            `INSERT INTO accounts (id, email, name, password_hash, plan, created_at)
-             VALUES (?, ?, ?, ?, 'free', CURRENT_TIMESTAMP)`,
+            `INSERT INTO accounts (id, email, name, password_hash, created_at)
+             VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
             [id, email, name ?? null, passwordHash]
         );
 

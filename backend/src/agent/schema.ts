@@ -82,7 +82,6 @@ export interface AccountRow {
     password_hash: string | null;
     oauth_provider: string | null;
     oauth_id: string | null;
-    plan: string;
     created_at: string;
 }
 

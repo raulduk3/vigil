@@ -53,6 +53,8 @@ CREATE TABLE IF NOT EXISTS emails (
   to_addr         TEXT,
   subject         TEXT,
   received_at     TIMESTAMP,
+  original_date   TIMESTAMP,
+  recipient_received_at TEXT,
   body_hash       TEXT,
   analysis        TEXT,
   processed       BOOLEAN DEFAULT FALSE,
@@ -74,6 +76,8 @@ CREATE TABLE IF NOT EXISTS actions (
   model           TEXT,
   memory_delta    TEXT,
   context_tokens  INTEGER,
+  input_tokens    INTEGER,
+  output_tokens   INTEGER,
   cost_usd        REAL,
   duration_ms     INTEGER,
   created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP

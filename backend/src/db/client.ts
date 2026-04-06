@@ -89,6 +89,15 @@ export async function initializeDatabase(): Promise<void> {
         try { database.exec(sql); } catch { /* column already exists */ }
     }
 
+    // Migrate: add email metadata fields used for forwarded-message threading
+    const emailMigrations = [
+        `ALTER TABLE emails ADD COLUMN original_date TIMESTAMP`,
+        `ALTER TABLE emails ADD COLUMN recipient_received_at TEXT`,
+    ];
+    for (const sql of emailMigrations) {
+        try { database.exec(sql); } catch { /* column already exists */ }
+    }
+
     // Rebuild FTS5 index to keep it in sync (handles schema changes, manual data wipes)
     try {
         database.exec(`INSERT INTO memories_fts(memories_fts) VALUES('rebuild')`);

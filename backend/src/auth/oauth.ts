@@ -282,8 +282,8 @@ async function findOrCreateUser(
     const id = crypto.randomUUID();
 
     query(
-        `INSERT INTO accounts (id, email, oauth_provider, plan, created_at)
-         VALUES (?, ?, ?, 'free', CURRENT_TIMESTAMP)`,
+        `INSERT INTO accounts (id, email, oauth_provider, created_at)
+         VALUES (?, ?, ?, CURRENT_TIMESTAMP)`,
         [id, email, provider]
     );
 
