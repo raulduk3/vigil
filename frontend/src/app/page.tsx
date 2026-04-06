@@ -23,7 +23,7 @@ export default function HomePage() {
 
         <div className="site-shell relative z-10">
           <div className="relative max-w-3xl mx-auto">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-vigil-700 mb-5">Research project · Self-hosted · BYOK</p>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-vigil-700 mb-5">Open source · Self-hosted · BYOK</p>
             <h1 className="text-5xl md:text-6xl font-display font-semibold text-gray-900 tracking-tight mb-7 text-balance leading-[1.1]" style={{ wordSpacing: '0.08em' }}>
               AI email triage.<br />
               Multi-model pipeline.
