@@ -26,7 +26,7 @@ export default function HomePage() {
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-vigil-700 mb-5">Open source · Self-hosted · BYOK</p>
             <h1 className="text-5xl md:text-6xl font-display font-semibold text-gray-900 tracking-tight mb-7 text-balance leading-[1.1]" style={{ wordSpacing: '0.08em' }}>
               AI email triage.<br />
-              Multi-model pipeline.
+              Your model. Your key.
             </h1>
             <p className="text-lg md:text-xl text-gray-700 mb-8 leading-relaxed max-w-3xl">
               Vigil is an open source email agent. Forward emails to it and the agent reads each one, tracks
@@ -34,7 +34,7 @@ export default function HomePage() {
               No inbox access. No stored bodies. Bring your own API key.
             </p>
             <div className="flex flex-wrap gap-4">
-              <Link href="/learn/architecture" className="btn btn-primary">Architecture</Link>
+              <Link href="/auth/register" className="btn btn-primary">Get Started</Link>
               <Link href="/learn/agent" className="text-sm text-vigil-700 font-medium hover:text-vigil-800 flex items-center">How the agent works →</Link>
             </div>
           </div>
@@ -67,18 +67,17 @@ export default function HomePage() {
       <Section className="landing-section landing-section-banded border-y border-gray-200 py-14 md:py-20">
         <div className="max-w-3xl mx-auto text-center mb-10">
           <p className="landing-section-kicker text-center">Pipeline</p>
-          <h2 className="landing-section-title text-center mt-3">Multi-model classification pipeline</h2>
+          <h2 className="landing-section-title text-center mt-3">How Vigil processes email</h2>
           <p className="text-base text-gray-600 mt-4 leading-relaxed">
-            A nano model pre-screens every email before full triage, eliminating roughly 40% of LLM spend
-            on clearly ignorable mail. The full triage model only runs when pre-screening deems it necessary.
+            You choose a model per watcher. Each email goes through a single triage call. Smaller models like gpt-4.1-nano cost fractions of a cent. Larger models give deeper analysis. You control the tradeoff.
           </p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 max-w-4xl mx-auto">
           {[
-            { stage: '1. Pre-screen', detail: 'gpt-4.1-nano classifies urgency. ~$0.0001/email.' },
+            { stage: '1. Ingest', detail: 'Email arrives via forwarding. Body is read, never stored.' },
             { stage: '2. Context load', detail: 'Relevant memories retrieved via BM25 + time decay.' },
-            { stage: '3. Full triage', detail: 'gpt-4.1-mini analyzes, extracts entities, decides.' },
-            { stage: '4. Tool execution', detail: 'Alert, webhook, thread update — or nothing.' },
+            { stage: '3. Triage', detail: 'Your chosen model analyzes, extracts entities, decides.' },
+            { stage: '4. Action', detail: 'Alert, webhook, thread update — or nothing.' },
           ].map((item) => (
             <div key={item.stage} className="panel p-5">
               <p className="text-xs font-bold uppercase tracking-wider text-vigil-700 mb-2">{item.stage}</p>

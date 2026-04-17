@@ -119,14 +119,7 @@ export default function LoginPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center gap-2 text-gray-600">
-                  <input 
-                    type="checkbox" 
-                    className="rounded border-gray-300 text-vigil-900 focus:ring-vigil-500/20" 
-                  />
-                  Remember me
-                </label>
+              <div className="flex items-center justify-end text-sm">
                 <Link href="/auth/forgot-password" className="link-subtle">
                   Forgot password?
                 </Link>

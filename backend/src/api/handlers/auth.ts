@@ -6,6 +6,7 @@
  */
 
 import type { Context } from "hono";
+import { setCookie, getCookie } from "hono/cookie";
 import {
     generateTokenPair,
     verifyRefreshToken,
@@ -288,8 +289,16 @@ export const authHandlers = {
 
         const baseUrl = process.env.APP_BASE_URL ?? "http://localhost:4000";
         const redirectUri = `${baseUrl}/api/auth/oauth/${provider}/callback`;
-        const state = crypto.randomUUID();
+        const state = await signOAuthState();
         const authUrl = generateAuthUrl(provider, redirectUri, state);
+
+        setCookie(c, "oauth_state", state, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "Lax",
+            path: "/",
+            maxAge: 600, // 10 minutes
+        });
 
         return c.redirect(authUrl);
     },
@@ -298,11 +307,27 @@ export const authHandlers = {
         const provider = (c.req.param("provider") ?? "") as OAuthProvider;
         const code = c.req.query("code");
         const errorParam = c.req.query("error");
+        const stateParam = c.req.query("state");
+        const stateCookie = getCookie(c, "oauth_state");
         const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:3000";
+
+        // Clear the state cookie regardless of outcome
+        setCookie(c, "oauth_state", "", { httpOnly: true, path: "/", maxAge: 0 });
 
         if (errorParam) {
             const params = new URLSearchParams({ error: errorParam });
             return c.redirect(`${frontendUrl}/auth/callback?${params}`);
+        }
+
+        // Verify CSRF: state param must match cookie and be validly signed
+        if (!stateParam || !stateCookie || stateParam !== stateCookie) {
+            logger.warn("OAuth state mismatch", { provider, hasState: !!stateParam, hasCookie: !!stateCookie });
+            return c.redirect(`${frontendUrl}/auth/callback?error=invalid_state`);
+        }
+
+        if (!(await verifyOAuthState(stateParam))) {
+            logger.warn("OAuth state signature invalid", { provider });
+            return c.redirect(`${frontendUrl}/auth/callback?error=invalid_state`);
         }
 
         if (!code) {
@@ -329,3 +354,52 @@ export const authHandlers = {
         return c.redirect(`${frontendUrl}/auth/callback?${params}`);
     },
 };
+
+// ============================================================================
+// OAuth State CSRF Protection
+// ============================================================================
+
+const OAUTH_STATE_MAX_AGE_MS = 10 * 60 * 1000; // 10 minutes
+
+async function signOAuthState(): Promise<string> {
+    const nonce = crypto.randomUUID();
+    const timestamp = Date.now().toString();
+    const payload = `${nonce}:${timestamp}`;
+    const secret = process.env.JWT_SECRET ?? "";
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+        "raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    );
+    const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(payload));
+    const hex = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
+    return `${payload}:${hex}`;
+}
+
+async function verifyOAuthState(state: string): Promise<boolean> {
+    const parts = state.split(":");
+    if (parts.length !== 3) return false;
+    const [nonce, timestamp, signature] = parts;
+    if (!nonce || !timestamp || !signature) return false;
+
+    // Check age
+    const age = Date.now() - parseInt(timestamp, 10);
+    if (isNaN(age) || age < 0 || age > OAUTH_STATE_MAX_AGE_MS) return false;
+
+    // Verify HMAC
+    const payload = `${nonce}:${timestamp}`;
+    const secret = process.env.JWT_SECRET ?? "";
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+        "raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+    );
+    const sig = await crypto.subtle.sign("HMAC", key, encoder.encode(payload));
+    const expected = Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("");
+
+    // Constant-time comparison
+    if (expected.length !== signature.length) return false;
+    let mismatch = 0;
+    for (let i = 0; i < expected.length; i++) {
+        mismatch |= expected.charCodeAt(i) ^ signature.charCodeAt(i);
+    }
+    return mismatch === 0;
+}

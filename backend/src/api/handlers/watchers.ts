@@ -59,9 +59,34 @@ export const watcherHandlers = {
         if (!system_prompt)
             return c.json({ error: "system_prompt required" }, 400);
 
-        // Validate model
-        const allowedModels = ["gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini"];
+        // Validate model against full catalog
+        const allowedModels = [
+            "gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini",
+            "claude-haiku-4", "claude-sonnet-4",
+            "gemini-2.5-flash", "gemini-2.5-pro",
+        ];
         const selectedModel = allowedModels.includes(model) ? model : "gpt-4.1";
+
+        // BYOK guard: require API key for the selected model's provider
+        const { MODEL_CATALOG } = await import("../../agent/engine");
+        const modelConfig = MODEL_CATALOG[selectedModel];
+        if (modelConfig) {
+            const provider = modelConfig.provider;
+            const columnMap = {
+                openai: "openai_api_key_enc",
+                anthropic: "anthropic_api_key_enc",
+                google: "google_api_key_enc",
+            } as const;
+            const keyRow = queryOne<{ enc: string | null }>(
+                `SELECT ${columnMap[provider]} AS enc FROM accounts WHERE id = ?`,
+                [user.account_id]
+            );
+            if (!keyRow?.enc) {
+                return c.json({
+                    error: `No ${provider.charAt(0).toUpperCase() + provider.slice(1)} API key configured. Add your ${provider} key in Account → API Keys before creating a watcher with ${modelConfig.label}.`,
+                }, 400);
+            }
+        }
 
         const id = crypto.randomUUID();
         const ingestToken = generateIngestToken();

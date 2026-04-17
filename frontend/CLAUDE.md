@@ -34,9 +34,9 @@ npm run lint
 
 ## Tech Stack
 
-- Next.js 14 (App Router)
+- Next.js 16 (App Router)
 - Tailwind CSS (custom palette: vigil teal, status colors)
-- React Query for server state
+- Zustand for client state
 - JWT auth (access + refresh tokens in localStorage)
 
 ## Key Pages

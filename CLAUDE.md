@@ -68,7 +68,7 @@ Agent-based. Each watcher has its own LLM agent with memory, tools, and configur
 
 Receives raw MIME from Cloudflare Email Routing. Forwards to backend `/ingest/:token`. Backend parses MIME via `postal-mime`.
 
-### Frontend (Next.js 14)
+### Frontend (Next.js 16)
 
 Display layer. All state from backend API. No business logic.
 

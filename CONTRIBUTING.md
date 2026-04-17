@@ -27,7 +27,7 @@ npm run dev              # Dev server on port 3000
 - TypeScript strict mode throughout
 - No file over 1,000 lines. If it's getting long, split it.
 - Backend uses Bun + Hono + SQLite
-- Frontend uses Next.js 14 (App Router), no business logic in frontend
+- Frontend uses Next.js 16 (App Router), no business logic in frontend
 - All mutations go through the backend API
 
 ## Testing

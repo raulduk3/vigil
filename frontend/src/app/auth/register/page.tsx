@@ -67,7 +67,7 @@ function RegisterContent() {
               Create your account
             </h1>
             <p className="text-sm text-gray-500">
-              50 emails free. No credit card required.
+              Free and open source. Bring your own API key.
             </p>
           </div>
 

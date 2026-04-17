@@ -7,6 +7,8 @@
  */
 
 import jwt from "jsonwebtoken";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
+import { join, dirname } from "path";
 import { queryOne, run } from "../db/client";
 import { logger } from "../logger";
 
@@ -17,7 +19,37 @@ import { logger } from "../logger";
 const ACCESS_TOKEN_EXPIRY = "1h";
 const REFRESH_TOKEN_EXPIRY = "24h";
 
-const SERVER_INSTANCE_ID = crypto.randomUUID();
+/**
+ * Persist instance ID to data/instance-id so tokens survive restarts.
+ */
+function loadOrCreateInstanceId(): string {
+    const dataDir = process.env.DB_PATH
+        ? dirname(process.env.DB_PATH)
+        : "./data";
+    const idPath = join(dataDir, "instance-id");
+
+    try {
+        if (existsSync(idPath)) {
+            const id = readFileSync(idPath, "utf-8").trim();
+            if (id) {
+                logger.info("Loaded server instance ID from disk");
+                return id;
+            }
+        }
+    } catch {}
+
+    const id = crypto.randomUUID();
+    try {
+        mkdirSync(dataDir, { recursive: true });
+        writeFileSync(idPath, id, "utf-8");
+        logger.info("Created new server instance ID");
+    } catch (err) {
+        logger.warn("Could not persist instance ID to disk", { err: String(err) });
+    }
+    return id;
+}
+
+const SERVER_INSTANCE_ID = loadOrCreateInstanceId();
 
 function getJwtSecret(): string {
     const secret = process.env.JWT_SECRET;

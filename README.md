@@ -60,7 +60,7 @@ Vigil supports 9 models across three providers. Pick any model per watcher.
 | Gemini 2.5 Flash | Google | mini | $0.0006 | 1,024 |
 | Gemini 2.5 Pro | Google | standard | $0.010 | 2,048 |
 
-Costs are approximate per-email at direct API rates. The multi-model pipeline uses a nano pre-screen gate before full triage, eliminating ~40% of LLM spend on ignorable email.
+Costs are approximate per-email at direct API rates. Each watcher uses a single model for email triage. Mini/nano models use a classification pipeline with deterministic action mapping; standard models use the full agent prompt.
 
 See [docs/MODELS.md](docs/MODELS.md) for the full breakdown.
 
@@ -85,9 +85,9 @@ See [docs/BYOK.md](docs/BYOK.md) for details.
 | **Agent engine** | Multi-model (OpenAI, Anthropic, Google), JSON mode, 8-step loop |
 | **Memory** | SQLite FTS5, BM25 ranking, time-decay scoring |
 | **Thread detection** | In-Reply-To header + subject normalization |
-| **Pre-screen gate** | Nano model classifies email before full triage |
+| **Classification pipeline** | Mini/nano models classify, deterministic action mapping |
 | **Alerts** | Resend API |
-| **Frontend** | Next.js 14, three-panel dashboard |
+| **Frontend** | Next.js 16, three-panel dashboard |
 | **Extension** | Chrome sidepanel for setup and watcher management |
 
 ### Agent Output Schema
@@ -185,7 +185,7 @@ vigil/
 │   ├── src/auth/           # JWT + OAuth (Google, GitHub)
 │   ├── src/db/             # SQLite client + schema
 │   └── src/ingestion/      # Email pipeline, body prep, MIME parsing
-├── frontend/               # Next.js 14 dashboard (App Router)
+├── frontend/               # Next.js 16 dashboard (App Router)
 ├── chrome-extension/       # Sidepanel: setup, chat, watcher overview
 ├── cloudflare-worker/      # MX-level email ingestion
 ├── backend/promptfoo/      # LLM eval suite (promptfoo)

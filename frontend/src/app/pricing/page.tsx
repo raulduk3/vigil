@@ -15,7 +15,7 @@ const tiers = [
   { tier: 'Nano', models: 'GPT-4.1 Nano', cost: '~$0.0001', desc: 'Pre-screening and scheduled checks' },
   { tier: 'Mini', models: 'GPT-4.1 Mini, GPT-4o Mini, Gemini 2.5 Flash, Claude Haiku 4', cost: '~$0.0025', desc: 'Good balance of cost and quality' },
   { tier: 'Standard', models: 'GPT-4.1, GPT-4o, Gemini 2.5 Pro', cost: '~$0.01', desc: 'Best triage accuracy' },
-  { tier: 'Pro', models: 'Claude Sonnet 4', cost: '~$0.03', desc: 'Top reasoning quality' },
+  { tier: 'Pro', models: 'Claude Sonnet 4', cost: '~$0.02', desc: 'Top reasoning quality' },
 ];
 
 export default function PricingPage() {

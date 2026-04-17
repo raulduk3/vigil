@@ -79,6 +79,18 @@ export async function initializeDatabase(): Promise<void> {
         try { database.exec(sql); } catch { /* column already exists */ }
     }
 
+    // Migrate: add normalized_subject to threads for unique constraint (race condition fix)
+    try { database.exec(`ALTER TABLE threads ADD COLUMN normalized_subject TEXT`); } catch {}
+    try {
+        database.exec(`UPDATE threads SET normalized_subject = LOWER(TRIM(
+            REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(
+                COALESCE(subject, ''), 'Re: ', ''), 're: ', ''), 'Fwd: ', ''), 'fwd: ', ''), 'FW: ', ''), 'fw: ', '')
+        )) WHERE normalized_subject IS NULL AND subject IS NOT NULL`);
+    } catch {}
+    try {
+        database.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_threads_watcher_norm_subject ON threads(watcher_id, normalized_subject) WHERE normalized_subject IS NOT NULL`);
+    } catch {}
+
     // Rebuild FTS5 index to keep it in sync (handles schema changes, manual data wipes)
     try {
         database.exec(`INSERT INTO memories_fts(memories_fts) VALUES('rebuild')`);

@@ -213,15 +213,31 @@ export async function invokeAgent(
                 [threadId]
             );
         } else {
-            // Create new thread
+            // Create new thread with INSERT OR IGNORE to handle race condition
+            // (unique index on watcher_id + normalized_subject prevents duplicates)
             threadId = crypto.randomUUID();
             const participants = JSON.stringify([effectiveFrom]);
+            const normSubject = normalizeSubject(email.subject);
             run(
-                `INSERT INTO threads
-                 (id, watcher_id, subject, participants, status, first_seen, last_activity, email_count, created_at)
-                 VALUES (?, ?, ?, ?, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP)`,
-                [threadId, watcherId, email.subject, participants]
+                `INSERT OR IGNORE INTO threads
+                 (id, watcher_id, subject, normalized_subject, participants, status, first_seen, last_activity, email_count, created_at)
+                 VALUES (?, ?, ?, ?, ?, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 1, CURRENT_TIMESTAMP)`,
+                [threadId, watcherId, email.subject, normSubject, participants]
             );
+
+            // If INSERT was ignored (race: another thread with same normalized subject already exists),
+            // find and use the existing thread instead
+            const inserted = queryOne<{ id: string }>(`SELECT id FROM threads WHERE id = ?`, [threadId]);
+            if (!inserted) {
+                const existing = queryOne<{ id: string }>(
+                    `SELECT id FROM threads WHERE watcher_id = ? AND normalized_subject = ?`,
+                    [watcherId, normSubject]
+                );
+                if (existing) {
+                    threadId = existing.id;
+                    run(`UPDATE threads SET email_count = email_count + 1, last_activity = CURRENT_TIMESTAMP WHERE id = ?`, [threadId]);
+                }
+            }
         }
 
         // Attach email to thread
