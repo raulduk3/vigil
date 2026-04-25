@@ -49,3 +49,24 @@ backend/vigil.db
 .vercel
 backend/dist/
 backend/promptfoo/results/
+
+# Build artifacts
+white-doc.aux
+white-doc.out
+white-doc.synctex.gz
+*.db
+*.db-shm
+*.db-wal
+
+# IDE / OS
+.DS_Store
+.vercel
+
+# Backups
+*.backup
+
+# Duplicate zips
+/vigil-chrome-extension.zip
+
+# Empty dirs
+/skills/
