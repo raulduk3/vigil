@@ -47,3 +47,5 @@ ENV/
 vigil.db
 backend/vigil.db
 .vercel
+backend/dist/
+backend/promptfoo/results/
